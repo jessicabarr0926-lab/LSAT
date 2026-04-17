@@ -1479,6 +1479,7 @@ tbody tr:last-child td {
 
 .lesson-practice,
 .lesson-kit,
+.lesson-drill-brief,
 .practice-question,
 .full-test-card,
 .explanation-directory,
@@ -1499,6 +1500,20 @@ tbody tr:last-child td {
   line-height: 1.15;
 }
 
+.lesson-drill-brief {
+  padding: 16px;
+  border: 1px solid rgba(143, 95, 116, 0.28);
+  border-radius: 8px;
+  background: #fff8fb;
+}
+
+.lesson-drill-brief ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+
 .practice-question {
   padding: 12px;
   border: 1px solid var(--line);
@@ -1511,6 +1526,18 @@ tbody tr:last-child td {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.practice-explanation {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.practice-explanation summary {
+  cursor: pointer;
+  font-weight: 900;
 }
 
 .full-test-panel,
@@ -2148,7 +2175,9 @@ tbody tr:last-child td {
 
 .dark-mode .lesson-stepper div,
 .dark-mode .logic-map,
-.dark-mode .translation-sidebar {
+.dark-mode .translation-sidebar,
+.dark-mode .lesson-drill-brief,
+.dark-mode .practice-explanation {
   background: rgba(36, 32, 41, 0.96);
 }
 

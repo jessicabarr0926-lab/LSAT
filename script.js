@@ -684,6 +684,101 @@ const techniquePracticeQuestions = [
     explanation:
       "The speaker targets the person/source, not the substance of the report.",
   },
+  {
+    id: "technique-concession-1",
+    source: "Technique Drill 6",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    answer: "B",
+    prompt:
+      "A dean admits that online office hours are less personal than in-person meetings, but argues that they should continue because they allow many more students to get help. Which best describes the technique?",
+    choices: {
+      A: "It rejects a proposal by attacking the motives of its supporters.",
+      B: "It concedes a drawback while arguing that a benefit outweighs it.",
+      C: "It proves a general rule by citing a single unusual case.",
+      D: "It shows that two statistical claims are mathematically impossible.",
+      E: "It treats a condition that is required as though it guarantees success.",
+    },
+    explanation:
+      "The argument acknowledges a weakness, then says the competing benefit is more important.",
+  },
+  {
+    id: "technique-phenomenon-1",
+    source: "Technique Drill 7",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 2,
+    answer: "D",
+    prompt:
+      "A school explains that library visits rose after exams not because students suddenly liked the library more, but because teachers required research conferences that week. Which best describes the technique?",
+    choices: {
+      A: "It draws a comparison between two unrelated institutions.",
+      B: "It concludes that a policy should be rejected because it is unpopular.",
+      C: "It restates the phenomenon instead of explaining it.",
+      D: "It explains a surprising pattern by identifying a specific cause.",
+      E: "It applies a moral principle to a legal dispute.",
+    },
+    explanation:
+      "The argument explains why the rise occurred by naming a cause for the observed pattern.",
+  },
+  {
+    id: "technique-distinction-1",
+    source: "Technique Drill 8",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 4,
+    answer: "A",
+    prompt:
+      "A critic argues that the proposal is not unfair merely because it affects people differently; unfairness requires unjustified unequal treatment, not every unequal outcome. Which best describes the technique?",
+    choices: {
+      A: "It draws a distinction between two ideas that the opposing view treats as the same.",
+      B: "It supports a prediction by citing a repeated trend.",
+      C: "It rejects evidence because the source is biased.",
+      D: "It uses an analogy to a familiar everyday choice.",
+      E: "It weakens a causal claim by offering an alternate cause.",
+    },
+    explanation:
+      "The argument separates unequal effect from unfair treatment and uses that distinction to challenge the opposing view.",
+  },
+  {
+    id: "technique-definition-1",
+    source: "Technique Drill 9",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    answer: "C",
+    prompt:
+      "A policy analyst argues that the program counts as successful because success should mean serving the intended group reliably, and the program did that. Which best describes the technique?",
+    choices: {
+      A: "It attacks an opponent's character instead of the opponent's argument.",
+      B: "It resolves a paradox by denying that both facts are true.",
+      C: "It defines a key standard and then applies that standard to the case.",
+      D: "It proves a conditional claim by reversing the conditional relationship.",
+      E: "It rejects a universal claim with one counterexample.",
+    },
+    explanation:
+      "The argument states what success should mean, then uses that definition to classify the program.",
+  },
+  {
+    id: "technique-comparison-1",
+    source: "Technique Drill 10",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 4,
+    answer: "E",
+    prompt:
+      "A report argues that the pilot program should be expanded because a similar program worked in a neighboring county with the same budget, population size, and staffing model. Which best describes the technique?",
+    choices: {
+      A: "It rejects a statistical pattern because the sample is too small.",
+      B: "It proves that a plan is necessary by showing that it is sufficient.",
+      C: "It explains why two claims cannot both be accurate.",
+      D: "It concedes that a plan is flawed and therefore rejects it.",
+      E: "It supports a recommendation by comparing the case to a similar successful case.",
+    },
+    explanation:
+      "The argument relies on a comparison to a similar case where the relevant plan worked.",
+  },
 ];
 
 const scenarioBank = [
@@ -1807,14 +1902,140 @@ function renderContentCard(item) {
         <div class="lesson-actions">
           <button class="mini-button" type="button" data-open-content="${item.id}">Watch lesson</button>
           <button class="mini-button" type="button" data-save-content="${item.id}">${saved ? "Saved" : "Save"}</button>
-          <button class="mini-button" type="button" data-complete-content="${item.id}">${completed ? "Completed" : "Mark complete"}</button>
+          <button class="mini-button" type="button" data-open-content="${item.id}">${completed ? "Review again" : "Mastery gate"}</button>
         </div>
       </div>
     </article>
   `;
 }
 
+const lessonDeepDives = {
+  "argument-basics": {
+    scenes: [
+      ["Argument skeleton", "Every LR argument has a claim the author wants you to accept and a reason offered for that claim."],
+      ["Plain English move", "Before answer choices, say: because of this evidence, the author thinks this conclusion follows."],
+      ["Your anchor", "If the question gets wordy, return to one line: evidence, arrow, conclusion."],
+    ],
+    concept: "An argument is not a topic. It is a support relationship: evidence is supposed to make a conclusion more believable.",
+    example: "Applications rose after the school added evening events, so the events caused the increase.",
+    breakdown: "Evidence: applications rose after the events. Conclusion: the events caused the rise. The argument needs a bridge that rules out other causes.",
+    trap: "A tempting answer may discuss applications or events but fail to evaluate the support relationship.",
+    practice: "Mark E for evidence and C for conclusion. Then ask: does E really prove C?",
+  },
+  "conclusion-evidence": {
+    scenes: [
+      ["Find the defended claim", "The conclusion is the sentence the author is trying to prove, not necessarily the final sentence."],
+      ["Use the because test", "If one sentence explains why another should be believed, the explained sentence is usually the conclusion."],
+      ["Avoid detail traps", "True supporting facts can be wrong answers when the stem asks for the main conclusion."],
+    ],
+    concept: "Conclusion questions reward sentence jobs. The right answer is the claim supported by the other parts of the stimulus.",
+    example: "Because the pilot program reduced wait times, the city should expand it.",
+    breakdown: "Reduced wait times is evidence. Expand the program is the conclusion.",
+    trap: "A trap answer repeats the evidence and sounds safe, but it is not what the author is trying to prove.",
+    practice: "Ask: which sentence makes the other sentences sound like reasons?",
+  },
+  "flaws-fast": {
+    scenes: [
+      ["Name the gap", "A flaw is the missing bridge between evidence and conclusion."],
+      ["Classify the pattern", "Most misses come from causal gaps, comparison gaps, sampling gaps, or conditional reversals."],
+      ["Pick the precise diagnosis", "The right answer describes the mistake actually made, not a mistake that could have appeared in a similar argument."],
+    ],
+    concept: "Flaw questions ask you to diagnose why the proof is not enough.",
+    example: "Students who used flashcards scored higher, so flashcards caused the higher scores.",
+    breakdown: "The argument ignores that stronger students may have chosen flashcards before the study began.",
+    trap: "A trap answer says the argument ignores a benefit or drawback, but the real problem is cause versus correlation.",
+    practice: "Say the flaw in five words before answer choices: correlation is not causation.",
+  },
+  "assumption-bridge": {
+    scenes: [
+      ["Necessary protects", "A necessary assumption is something the argument needs to survive."],
+      ["Sufficient proves", "A sufficient assumption is strong enough to complete the argument."],
+      ["Use the right test", "Negate necessary assumptions. For sufficient assumptions, plug the answer into the gap and see if the conclusion follows."],
+    ],
+    concept: "Assumption work is bridge work. Necessary answers keep the bridge from collapsing; sufficient answers build the whole bridge.",
+    example: "The new reading plan improved scores, so every student should use it.",
+    breakdown: "Necessary: the improvement was not caused by a different change. Sufficient: any plan that improves scores should be required for every student.",
+    trap: "A helpful answer can strengthen the argument without being required or sufficient.",
+    practice: "Label the stem first: necessary or sufficient. Then use the matching test.",
+  },
+  "conditional-basics": {
+    scenes: [
+      ["Triggers and results", "If A then B means A guarantees B. It does not mean B guarantees A."],
+      ["Contrapositive only", "If A then B also means if not B, then not A."],
+      ["Slow down on unless", "Unless means the required condition is the thing that must be present to avoid the result."],
+    ],
+    concept: "Conditional logic is about guaranteed relationships, not common sense likelihood.",
+    example: "If a class is recorded, students receive a link.",
+    breakdown: "Recorded -> link. No link -> not recorded. Link does not prove recorded.",
+    trap: "Mistaken reversal: link -> recorded.",
+    practice: "Write one arrow and one contrapositive. Do not write the reversal.",
+  },
+  "rc-map": {
+    scenes: [
+      ["Read for jobs", "Each paragraph has a job: background, old view, problem, response, implication, or author position."],
+      ["Track viewpoint shifts", "Words like however, although, critics, and proponents tell you the passage is turning."],
+      ["Answer from structure", "Main point and function questions become easier when you know why each paragraph exists."],
+    ],
+    concept: "RC is not memorization. It is structure plus proof.",
+    example: "Paragraph 1 introduces a theory. Paragraph 2 gives a criticism. Paragraph 3 defends a narrower version of the theory.",
+    breakdown: "The passage movement is theory, challenge, qualified defense.",
+    trap: "A detail can be true but too narrow for main point or structure questions.",
+    practice: "After each paragraph, write one tiny job label in plain English.",
+  },
+  "lr-strengthen": {
+    scenes: [
+      ["Find the bridge", "Strengthen answers make the evidence support the conclusion better."],
+      ["Predict the help", "Before answers, ask what missing fact would make the conclusion more likely."],
+      ["Small can be enough", "A strengthen answer does not need to prove the conclusion. It only needs to help."],
+    ],
+    concept: "Strengthen questions reward support movement. The credited answer pushes the conclusion upward.",
+    example: "A tutoring program is credited with score gains after participants improved.",
+    breakdown: "A strong answer says participants were not already improving before the program.",
+    trap: "An answer praising tutoring generally may be true but not connected to this evidence.",
+    practice: "Ask: does this answer make the evidence matter more?",
+  },
+  "lr-weaken": {
+    scenes: [
+      ["Attack the bridge", "Weaken answers make the evidence support the conclusion less well."],
+      ["Look for alternatives", "Causal arguments are weakened by other causes, reverse causation, biased samples, or measurement problems."],
+      ["Do not overkill", "The answer does not need to destroy the conclusion; it only needs to damage support."],
+    ],
+    concept: "Weaken questions are precision attacks on the support relationship.",
+    example: "A school says its new app caused higher attendance because attendance rose after launch.",
+    breakdown: "A weakening answer says a new attendance policy started the same week.",
+    trap: "A negative fact about the app is irrelevant unless it touches the attendance explanation.",
+    practice: "State the bridge, then ask what would make that bridge less believable.",
+  },
+  "pacing-skip": {
+    scenes: [
+      ["Protect easy points", "Skipping is not quitting. It is preserving time for questions you can win."],
+      ["Use a 20-second check", "If the task, conclusion, or answer type is unclear after a short check, flag and move."],
+      ["Return with a label", "When you come back, your task label tells your brain where to restart."],
+    ],
+    concept: "Pacing is an accuracy tool. It prevents one hard question from stealing several easier points.",
+    example: "A parallel flaw stem with dense conditional answer choices appears at question 22.",
+    breakdown: "Mark it, write 'match flaw skeleton,' and secure the next easier question first.",
+    trap: "Staying longer can feel disciplined while actually lowering your section score.",
+    practice: "Practice leaving on purpose: flag, label, breathe, next.",
+  },
+  "argumentative-writing": {
+    scenes: [
+      ["Pick a side fast", "The writing sample rewards organized reasoning, not a perfect moral answer."],
+      ["Use both criteria", "Tie your choice to the stated goals and explain why the other side is weaker."],
+      ["Keep structure visible", "Use clear paragraphs: thesis, reason one, reason two, concession, conclusion."],
+    ],
+    concept: "LSAT Writing is an argument task. Your job is to choose a position and defend it with organized tradeoffs.",
+    example: "A city must choose between a cheaper short-term plan and a more expensive long-term plan.",
+    breakdown: "Strong writing names the decision criteria, picks a side, and explains why the tradeoff is acceptable.",
+    trap: "Summarizing both sides without committing creates a weak essay.",
+    practice: "Write a one-sentence thesis before drafting anything else.",
+  },
+};
+
 function getLessonScenes(item) {
+  if (lessonDeepDives[item.id]?.scenes) {
+    return lessonDeepDives[item.id].scenes.map(([title, body]) => ({ title, body }));
+  }
   const skill = item.skill || "LSAT";
   return [
     {
@@ -1833,6 +2054,7 @@ function getLessonScenes(item) {
 }
 
 function getLessonKit(item) {
+  if (lessonDeepDives[item.id]) return lessonDeepDives[item.id];
   const kits = {
     Flaws: {
       concept: "A flaw answer describes the exact place where the evidence stops proving the conclusion.",
@@ -1972,6 +2194,15 @@ function renderLessonPlayer() {
           <h2>Practice rule</h2>
           <p>${escapeHtml(kit.practice)}</p>
         </section>
+        <section class="lesson-drill-brief" aria-label="How to use this lesson on a real question">
+          <h2>One-question routine</h2>
+          <ol>
+            <li><strong>Task:</strong> name exactly what the stem is asking.</li>
+            <li><strong>Proof:</strong> underline the sentence or relationship that controls the answer.</li>
+            <li><strong>Prediction:</strong> say the answer in your own words before looking down.</li>
+            <li><strong>Trap check:</strong> reject answers that only reuse familiar words.</li>
+          </ol>
+        </section>
         <h2>ADHD + dyslexia supports</h2>
         <ul>
           <li>Use the lesson in one sprint: watch, drill, journal, stop.</li>
@@ -1982,7 +2213,7 @@ function renderLessonPlayer() {
         <p>Do not just watch. Run a short ${escapeHtml(item.skill)} drill while the pattern is warm.</p>
         <section class="lesson-practice" aria-label="Lesson mastery practice">
           <h2>Mastery practice</h2>
-          <p>You need 90% or higher before this lesson counts as complete. Current lesson mastery: ${masteryScore}%.</p>
+          <p>You need 90% or higher on 10 attempts before this lesson counts as complete. Current lesson mastery: ${masteryScore}% after ${mastery.answered} attempts.</p>
           ${practice.map(renderLessonPracticeQuestion).join("")}
           <div class="mastery-meter">Lesson gate: ${mastery.passed ? "Unlocked" : "Locked until 90%."}</div>
         </section>
@@ -1999,7 +2230,7 @@ function renderLessonPlayer() {
 function getLessonPractice(item) {
   if (item.id === "describe-technique") return techniquePracticeQuestions;
   const pool = questionBank.filter((question) => question.skill === item.skill);
-  return (pool.length ? pool : questionBank).slice(0, 5);
+  return (pool.length ? pool : questionBank).slice(0, 10);
 }
 
 function renderLessonPracticeQuestion(question) {
@@ -2018,6 +2249,10 @@ function renderLessonPracticeQuestion(question) {
           )
           .join("")}
       </div>
+      <details class="practice-explanation">
+        <summary>Show explanation after you try it</summary>
+        <p>${escapeHtml(question.explanation || "Name the task, prove the answer from the stimulus, and write the trap in your journal if you miss it.")}</p>
+      </details>
     </article>
   `;
 }
@@ -2086,7 +2321,7 @@ function answerLessonPractice(questionId, choice) {
   const mastery = state.lessonMastery[lessonId] || { answered: 0, correct: 0, passed: false };
   mastery.answered += 1;
   if (choice === question.answer) mastery.correct += 1;
-  mastery.passed = mastery.answered >= 5 && mastery.correct / mastery.answered >= 0.9;
+  mastery.passed = mastery.answered >= 10 && mastery.correct / mastery.answered >= 0.9;
   state.lessonMastery[lessonId] = mastery;
   saveState();
   showToast(choice === question.answer ? "Correct practice answer." : `Not quite. Answer: ${question.answer}.`);
