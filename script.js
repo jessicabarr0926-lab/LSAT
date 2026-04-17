@@ -813,6 +813,9 @@ const defaultState = {
   contentCategory: "all",
   lessonMastery: {},
   writingDrafts: [],
+  targetScore: 170,
+  weeklyHours: 8,
+  dashboardTestDate: "",
   accessibility: {
     dyslexia: true,
     focus: true,
@@ -980,7 +983,52 @@ function renderDashboard() {
   $("#readinessScore").textContent = `${readiness}%`;
   $("#readinessBar").style.width = `${readiness}%`;
   $("#readinessText").textContent = `Next target: ${weakSkill}. Complete one focused drill, review every miss, then log a timed set.`;
+  renderDashboardDrillPreview();
+  renderDashboardCharts();
+  hydrateDashboardSettings();
   renderContinueLearning();
+}
+
+function renderDashboardDrillPreview() {
+  if (!has("#dashboardDrillPreview")) return;
+  const weakSkill = getWeakSkills()[0];
+  const pool = questionBank.filter((question) => question.skill === weakSkill || getQuestionStatus(question) === "missed").slice(0, 6);
+  $("#dashboardDrillPreview").innerHTML = `
+    <h3>${escapeHtml(weakSkill)} drill</h3>
+    <p>${pool.length} questions queued from missed patterns and weakest local skill data.</p>
+    <div class="lesson-meta">
+      <span class="tag">Difficulty ${Math.max(...pool.map((question) => question.difficulty)) || 2}</span>
+      <span class="tag">90% mastery gate</span>
+      <span class="tag">Video explanations</span>
+    </div>
+    <button class="button primary" type="button" data-start-drill>Start this drill</button>
+  `;
+}
+
+function renderDashboardCharts() {
+  if (has("#scoreTrendChart")) {
+    const scores = [148, 151, 149, 154, Math.max(154, Math.min(180, Number(state.targetScore || 170) - 8))];
+    $("#scoreTrendChart").innerHTML = scores
+      .map((score, index) => {
+        const height = Math.max(18, (score - 120) * 2.2);
+        return `<div class="trend-bar" style="height: ${height}px"><span>${score}</span><small>PT ${index + 126}</small></div>`;
+      })
+      .join("");
+  }
+  if (has("#dashboardSkillBars")) {
+    $("#dashboardSkillBars").innerHTML = Object.keys(baseSkillScores)
+      .map((skill) => {
+        const score = getSkillScore(skill);
+        return `<div class="skill-row"><header><span>${escapeHtml(skill)}</span><span>${score}%</span></header><div class="skill-bar"><span style="width: ${score}%"></span></div></div>`;
+      })
+      .join("");
+  }
+}
+
+function hydrateDashboardSettings() {
+  if (has("#targetScoreInput")) $("#targetScoreInput").value = state.targetScore || 170;
+  if (has("#dashboardWeeklyHours")) $("#dashboardWeeklyHours").value = String(state.weeklyHours || 8);
+  if (has("#dashboardTestDate")) $("#dashboardTestDate").value = state.dashboardTestDate || state.testDate || "";
 }
 
 function getRecommendedContent() {
@@ -2040,6 +2088,16 @@ function saveWritingPractice() {
   showToast("Writing practice saved.");
 }
 
+function saveDashboardSettings() {
+  state.targetScore = Number($("#targetScoreInput")?.value || 170);
+  state.weeklyHours = Number($("#dashboardWeeklyHours")?.value || 8);
+  state.dashboardTestDate = $("#dashboardTestDate")?.value || "";
+  saveState();
+  renderDashboard();
+  addActivity(`Updated profile settings: target ${state.targetScore}, ${state.weeklyHours} hours/week.`);
+  showToast("Dashboard settings saved.");
+}
+
 function startTimer() {
   if (timerId) return;
   timerId = setInterval(() => {
@@ -2279,6 +2337,17 @@ function bindEvents() {
       buildRecommendedDrill();
     }
 
+    const askToggle = event.target.closest("[data-toggle-ask]");
+    if (askToggle && has("#quickAskPanel")) {
+      $("#quickAskPanel").hidden = !$("#quickAskPanel").hidden;
+      if (!$("#quickAskPanel").hidden) $("#quickAskInput")?.focus();
+    }
+
+    const mobileMenu = event.target.closest("[data-toggle-mobile-menu]");
+    if (mobileMenu) {
+      document.body.classList.toggle("nav-open");
+    }
+
     const testChoice = event.target.closest("[data-test-choice]");
     if (testChoice && fullTest.questions.length && !fullTest.submitted) {
       const question = fullTest.questions[fullTest.index];
@@ -2373,6 +2442,26 @@ function bindEvents() {
     showToast("Practice result logged.");
   });
 
+  on("#quickAskForm", "submit", (event) => {
+    event.preventDefault();
+    const textarea = $("#quickAskInput");
+    const text = textarea.value.trim();
+    if (!text) {
+      showToast("Add a question before saving.");
+      return;
+    }
+    state.supportQueue.unshift({
+      text,
+      date: new Date().toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+    });
+    state.supportQueue = state.supportQueue.slice(0, 8);
+    textarea.value = "";
+    $("#quickAskPanel").hidden = true;
+    saveState();
+    addActivity("Saved a dashboard ask.");
+    showToast("Ask saved to support queue.");
+  });
+
   on("#journalForm", "submit", (event) => {
     event.preventDefault();
     const question = questionBank.find((item) => item.id === $("#journalQuestion").value);
@@ -2440,6 +2529,7 @@ function bindEvents() {
 
   on("#downloadIcs", "click", downloadCalendarFile);
   on("#downloadBackup", "click", downloadBackup);
+  on("#saveDashboardSettings", "click", saveDashboardSettings);
 
   on("#restoreBackup", "change", (event) => {
     const file = event.target.files[0];

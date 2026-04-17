@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LexiPrep | Dashboard</title>
     <meta name="description" content="Adaptive LSAT dashboard for Jessica's study plan.">
+    <meta name="theme-color" content="#8f5f74">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%238f5f74'/%3E%3Cpath d='M20 17h9v23h16v8H20z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <div class="app-shell">
+      <button class="mobile-menu-button" type="button" data-toggle-mobile-menu aria-label="Open navigation">Menu</button>
       <aside class="sidebar" aria-label="Study navigation">
         <a class="brand" href="index.html" aria-label="LexiPrep dashboard"><span class="brand-mark">L</span><span>LexiPrep</span></a>
         <nav class="nav-list" aria-label="Primary">
@@ -35,10 +38,22 @@
             <h1>Jessica's adaptive study command center</h1>
           </div>
           <div class="topbar-actions">
-            <button class="button secondary dark" type="button" data-page-target="support.html">Ask</button>
+            <button class="button secondary dark" type="button" data-toggle-ask>Ask</button>
             <button class="button primary" type="button" data-start-drill>Start next drill</button>
           </div>
         </header>
+
+        <section class="panel quick-ask-panel" id="quickAskPanel" hidden>
+          <div class="section-heading compact">
+            <p class="eyebrow">Ask support</p>
+            <h2>Save the question while it is fresh.</h2>
+          </div>
+          <form class="ask-form" id="quickAskForm">
+            <label for="quickAskInput">What feels confusing?</label>
+            <textarea id="quickAskInput" rows="4" placeholder="Example: PT130 S1 Q19. I can see the topic, but I cannot name the flaw."></textarea>
+            <button class="button primary" type="submit">Save ask</button>
+          </form>
+        </section>
 
         <section class="hero" id="dashboard" aria-labelledby="dashboard-title">
           <div class="hero-copy">
@@ -64,6 +79,58 @@
           <div><span class="metric-label">Raw score</span><strong>49</strong></div>
           <div><span class="metric-label">Scaled score</span><strong>154</strong></div>
           <div><span class="metric-label">Section 1</span><strong>15/27</strong></div>
+        </section>
+
+        <section class="dashboard-grid" aria-label="Dashboard analytics">
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Next drill preview</p>
+              <h2>Know what you are about to practice.</h2>
+            </div>
+            <div class="drill-preview" id="dashboardDrillPreview">
+              <h3>Flaws + assumptions</h3>
+              <p>6 questions. Focus on conclusion, evidence, and missing bridge.</p>
+              <span class="tag">90% mastery gate</span>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Score trend</p>
+              <h2>Recent practice movement.</h2>
+            </div>
+            <div class="trend-chart" id="scoreTrendChart" aria-label="Scaled score trend"></div>
+          </article>
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Section balance</p>
+              <h2>Strengths and weak spots.</h2>
+            </div>
+            <div class="skill-chart" id="dashboardSkillBars"></div>
+          </article>
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Time breakdown</p>
+              <h2>Where study time is going.</h2>
+            </div>
+            <div class="time-breakdown" id="timeBreakdown">
+              <div><span>Logical Reasoning</span><strong>78m</strong></div>
+              <div><span>Reading Comp</span><strong>34m</strong></div>
+              <div><span>Review + journal</span><strong>27m</strong></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel settings-panel" id="profileSettings">
+          <div class="section-heading compact">
+            <p class="eyebrow">Profile settings</p>
+            <h2>Keep the plan personal.</h2>
+          </div>
+          <div class="settings-grid">
+            <label>Target score<input id="targetScoreInput" type="number" min="120" max="180" value="170"></label>
+            <label>Test date<input id="dashboardTestDate" type="date"></label>
+            <label>Weekly hours<select id="dashboardWeeklyHours"><option value="6">6 hours</option><option value="8" selected>8 hours</option><option value="10">10 hours</option><option value="12">12 hours</option></select></label>
+            <button class="button primary" type="button" id="saveDashboardSettings">Save settings</button>
+          </div>
         </section>
 
         <section class="panel continue-panel" id="continue-learning">
@@ -100,6 +167,25 @@
           <button class="action-tile" type="button" data-page-target="drills.html"><span>03</span><h2>Adaptive drilling engine</h2><p>Build short sets from PrepTest 130 misses, weak areas, and pacing data.</p></button>
           <button class="action-tile" type="button" data-page-target="tests.html"><span>04</span><h2>Timed sections</h2><p>Run 35-minute sections, 17-minute checkpoints, blind review, and score logging.</p></button>
         </section>
+
+        <section class="panel faq-panel" aria-label="Dashboard help">
+          <div class="section-heading compact">
+            <p class="eyebrow">Help</p>
+            <h2>How LexiPrep decides what to show.</h2>
+          </div>
+          <details open><summary>How is Study Readiness calculated?</summary><p>It starts from your baseline, then rises when you complete lessons, answer drills, and improve accuracy. Weak areas keep the recommendation focused.</p></details>
+          <details><summary>How should I use Blind Review?</summary><p>After a timed section, review uncertain questions before checking explanations. Write one plain-language rule for every miss.</p></details>
+          <details><summary>Why does the app use LawHub links?</summary><p>Official LSAT questions should stay in LawHub. LexiPrep tells you what to do next and stores your patterns, journal notes, and study plan.</p></details>
+        </section>
+
+        <footer class="site-footer">
+          <p>&copy; 2026 LexiPrep. Built for Jessica's LSAT study system.</p>
+          <nav aria-label="Footer">
+            <a href="support.html">Contact</a>
+            <a href="platform-audit.md">Roadmap</a>
+            <a href="plan.html">Study plan</a>
+          </nav>
+        </footer>
       </main>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div>
