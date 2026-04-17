@@ -313,6 +313,7 @@ h3 {
 .dark-mode .video-link-card,
 .dark-mode .lesson-card,
 .dark-mode .command-card,
+.dark-mode .checkin-card,
 .dark-mode .streak-pill,
 .dark-mode .today-step,
 .dark-mode .roadmap-status div,
@@ -666,6 +667,44 @@ h3 {
   transform: translateY(-2px);
   border-color: rgba(143, 95, 116, 0.45);
   box-shadow: 0 14px 28px rgba(31, 36, 48, 0.1);
+}
+
+.study-checkin-grid {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(0, 0.8fr));
+  gap: 14px;
+}
+
+.checkin-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 178px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.checkin-card strong {
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+.checkin-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.primary-checkin {
+  background: linear-gradient(135deg, #ffffff 0%, #fff4f7 52%, #eff7f3 100%);
+  box-shadow: var(--shadow);
+}
+
+.checkin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .continue-grid,
@@ -2215,6 +2254,7 @@ tbody tr:last-child td {
   .analytics-grid,
   .dashboard-grid,
   .command-center-grid,
+  .study-checkin-grid,
   .video-library-grid,
   .video-embed-card,
   .planning-grid,

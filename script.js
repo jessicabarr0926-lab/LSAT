@@ -1265,6 +1265,7 @@ function renderDashboard() {
   $("#readinessBar").style.width = `${readiness}%`;
   $("#readinessText").textContent = `Next target: ${weakSkill}. Complete one focused drill, review every miss, then log a timed set.`;
   renderDashboardCommandCenter();
+  renderStudyCheckIn();
   renderDashboardDrillPreview();
   renderDashboardCharts();
   renderRoadmap();
@@ -1366,6 +1367,46 @@ function renderDashboardTodayFlow() {
         )
         .join("")}
     </ol>
+  `;
+}
+
+function renderStudyCheckIn() {
+  if (!has("#studyCheckIn")) return;
+  const weakSkill = getWeakSkills()[0];
+  const lesson = contentLibrary.find((item) => item.skill === weakSkill) || getRecommendedContent();
+  const pendingReviews = state.reviewItems.filter((item) => !item.mastered).length;
+  const answered = state.drillStats.answered || 0;
+  const accuracy = answered ? Math.round((state.drillStats.correct / answered) * 100) : 0;
+  const completedToday = state.activity.slice(0, 3);
+  const blockType = pendingReviews >= 4 ? "Blind review reset" : accuracy && accuracy < 80 ? "Accuracy repair" : "New points block";
+  const nextStep = pendingReviews >= 4 ? "Clear 4 journal items before new questions." : `Run a ${weakSkill} lesson-to-drill block.`;
+  $("#studyCheckIn").innerHTML = `
+    <article class="checkin-card primary-checkin">
+      <span class="metric-label">Next block</span>
+      <strong>${escapeHtml(blockType)}</strong>
+      <p>${escapeHtml(nextStep)}</p>
+      <div class="checkin-actions">
+        <button class="button primary" type="button" data-open-content="${escapeHtml(lesson.id)}">Open lesson</button>
+        <button class="button secondary dark" type="button" data-start-content-drill="${escapeHtml(weakSkill)}">Start drill</button>
+        <button class="button secondary dark" type="button" data-log-study-block="${escapeHtml(weakSkill)}">Log done</button>
+      </div>
+    </article>
+    <article class="checkin-card">
+      <span class="metric-label">Weakest skill</span>
+      <strong>${escapeHtml(weakSkill)}</strong>
+      <p>Current local mastery: ${getSkillScore(weakSkill)}%. Your goal is 90% before raising difficulty.</p>
+    </article>
+    <article class="checkin-card">
+      <span class="metric-label">Review queue</span>
+      <strong>${pendingReviews}</strong>
+      <p>${pendingReviews ? "Review these before a full timed section." : "Queue clear. Add misses from the next drill."}</p>
+      <button class="mini-button" type="button" data-page-target="journal.html">Open journal</button>
+    </article>
+    <article class="checkin-card">
+      <span class="metric-label">Latest progress</span>
+      <strong>${state.completedContent.length}</strong>
+      <p>Completed lessons. Recent work: ${escapeHtml(completedToday.join(" | ") || "Start with today's block.")}</p>
+    </article>
   `;
 }
 
@@ -3126,6 +3167,13 @@ function bindEvents() {
       const automation = automations.find((item) => item.id === automationRun.dataset.runAutomation);
       addActivity(`Automation ran: ${automation.title}.`);
       showToast("Automation ran and updated activity.");
+    }
+
+    const studyBlock = event.target.closest("[data-log-study-block]");
+    if (studyBlock) {
+      addActivity(`Completed study block: ${studyBlock.dataset.logStudyBlock}.`);
+      renderDashboard();
+      showToast("Study block logged. Nice and clean.");
     }
 
     const scrollButton = event.target.closest("[data-scroll-target]");
