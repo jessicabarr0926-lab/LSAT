@@ -810,22 +810,56 @@ questionBank.push(...buildGeneratedQuestions());
 
 const classes = [
   {
+    id: "lr-traps",
     title: "Logical Reasoning Trap Answers",
     time: "Thursday, 7:00 PM",
     match: "Flaws + assumptions",
     recording: "Trap answer replay",
+    mood: "stuck",
+    status: "Next up",
+    duration: "18 min",
+    focus: "Basic theory and answer translation",
+    skill: "Flaws",
+    preview: "Trap answers feel familiar because they borrow words. Your job is to match the move, not the topic.",
   },
   {
+    id: "rc-structure",
     title: "Reading Comp Structure Lab",
     time: "Saturday, 11:00 AM",
     match: "Passage mapping",
     recording: "RC structure replay",
+    mood: "drill",
+    status: "Replay",
+    duration: "24 min",
+    focus: "Strategy lab plus passage map drill",
+    skill: "Reading Structure",
+    preview: "Listen for paragraph jobs: view, objection, response, and author attitude.",
   },
   {
+    id: "timed-review",
     title: "Timed Section Review",
     time: "Tuesday, 6:30 PM",
     match: "Pacing",
     recording: "Pacing checkpoint replay",
+    mood: "tired",
+    status: "Short recap",
+    duration: "10 min",
+    focus: "Low-energy timing reset",
+    skill: "Pacing",
+    preview: "When you are tired, protect the section with a 20-second task check and a clean skip.",
+  },
+  {
+    id: "assumption-lab",
+    title: "Assumption Bridge Lab",
+    time: "Friday, 5:30 PM",
+    match: "Necessary + sufficient assumptions",
+    recording: "Bridge method replay",
+    mood: "drill",
+    status: "Replay",
+    duration: "21 min",
+    focus: "Prediction, negation test, and three-question gate",
+    skill: "Assumptions",
+    preview: "Find the evidence, say the missing bridge, then test whether the answer is required.",
   },
 ];
 
@@ -910,6 +944,7 @@ const defaultState = {
   completedContent: [],
   watchedContent: [],
   contentCategory: "all",
+  classMood: "all",
   lessonMastery: {},
   writingDrafts: [],
   targetScore: 170,
@@ -1841,16 +1876,21 @@ function renderTechniqueSupport() {
 
 function readLesson() {
   const target = $("#lessonText") || $("#lessonDetail") || $("#dynamicLesson");
-  if (!target || !("speechSynthesis" in window)) {
+  if (!target) return;
+  speakText(target.innerText);
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) {
     showToast("Read aloud is not available in this browser.");
     return;
   }
   window.speechSynthesis.cancel();
-  const speech = new SpeechSynthesisUtterance(target.innerText);
+  const speech = new SpeechSynthesisUtterance(text);
   speech.rate = 0.88;
   speech.pitch = 1;
   window.speechSynthesis.speak(speech);
-  showToast("Reading lesson aloud.");
+  showToast("Playing audio preview.");
 }
 
 function answerLessonPractice(questionId, choice) {
@@ -1913,20 +1953,58 @@ function startContentDrill(skill) {
 
 function renderClasses() {
   if (!has("#classList")) return;
-  $("#classList").innerHTML = classes
+  const mood = state.classMood || "all";
+  const visible = classes.filter((item) => mood === "all" || item.mood === mood);
+  const spotlight = visible[0] || classes[0];
+  $("[data-class-mood]") &&
+    $$("[data-class-mood]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.classMood === mood);
+    });
+  if (has("#classSpotlight")) {
+    $("#classSpotlight").innerHTML = `
+      <div>
+        <p class="eyebrow">${escapeHtml(spotlight.status)}</p>
+        <h2>${escapeHtml(spotlight.title)}</h2>
+        <p>${escapeHtml(spotlight.preview)}</p>
+        <div class="lesson-meta">
+          <span class="tag">${escapeHtml(spotlight.time)}</span>
+          <span class="tag">${escapeHtml(spotlight.duration)}</span>
+          <span class="tag">${escapeHtml(spotlight.match)}</span>
+        </div>
+      </div>
+      <div class="spotlight-actions">
+        <button class="button primary" type="button" data-class-action="${escapeHtml(spotlight.id)}">Join or watch -></button>
+        <button class="button secondary dark" type="button" data-class-drill="${escapeHtml(spotlight.skill)}">Start class drill -></button>
+      </div>
+    `;
+  }
+  $("#classList").innerHTML = visible
     .map(
-      (item) => `
-        <article class="class-item">
+      (item, index) => `
+        <article class="class-item class-card" data-mood="${escapeHtml(item.mood)}">
+          <span class="timeline-dot" aria-hidden="true">${index + 1}</span>
           <header>
-            <h3>${escapeHtml(item.title)}</h3>
+            <div>
+              <p class="eyebrow">${escapeHtml(item.status)}</p>
+              <h3>${escapeHtml(item.title)}</h3>
+            </div>
             <span class="tag">${escapeHtml(item.time)}</span>
           </header>
-          <p>Best match: ${escapeHtml(item.match)}</p>
-          <button class="mini-button" type="button" data-class-action="${escapeHtml(item.title)}">Use recording: ${escapeHtml(item.recording)}</button>
+          <p>${escapeHtml(item.focus)} Best match: ${escapeHtml(item.match)}.</p>
+          <div class="class-checklist" aria-label="Class study loop">
+            <label><input type="checkbox"> Watch ${escapeHtml(item.duration)} segment</label>
+            <label><input type="checkbox"> Complete 3-question trap drill</label>
+            <label><input type="checkbox"> Log one takeaway in journal</label>
+          </div>
+          <div class="class-actions">
+            <button class="mini-button" type="button" data-class-action="${escapeHtml(item.id)}">Watch replay -> ${escapeHtml(item.recording)}</button>
+            <button class="mini-button" type="button" data-class-drill="${escapeHtml(item.skill)}">Drill this skill -></button>
+            <button class="mini-button" type="button" data-class-preview="${escapeHtml(item.id)}">Play preview</button>
+          </div>
         </article>
       `
     )
-    .join("");
+    .join("") || `<p>No class matches that filter yet. Try All or use the shortest recap.</p>`;
 }
 
 function renderSupportQueue() {
@@ -2529,8 +2607,28 @@ function bindEvents() {
 
     const classButton = event.target.closest("[data-class-action]");
     if (classButton) {
-      addActivity(`Opened class recording plan: ${classButton.dataset.classAction}.`);
-      showToast("Recording added to today's plan.");
+      const classItem = classes.find((item) => item.id === classButton.dataset.classAction);
+      addActivity(`Opened class recording plan: ${classItem?.title || classButton.dataset.classAction}.`);
+      showToast("Class added to today's study loop.");
+    }
+
+    const classDrill = event.target.closest("[data-class-drill]");
+    if (classDrill) {
+      startContentDrill(classDrill.dataset.classDrill);
+    }
+
+    const classPreview = event.target.closest("[data-class-preview]");
+    if (classPreview) {
+      const classItem = classes.find((item) => item.id === classPreview.dataset.classPreview);
+      speakText(classItem?.preview || "This class preview is ready.");
+    }
+
+    const classMood = event.target.closest("[data-class-mood]");
+    if (classMood) {
+      state.classMood = classMood.dataset.classMood;
+      saveState();
+      renderClasses();
+      showToast(`Class filter: ${classMood.textContent.trim()}.`);
     }
 
     const openContentButton = event.target.closest("[data-open-content]");
