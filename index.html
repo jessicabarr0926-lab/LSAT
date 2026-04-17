@@ -45,8 +45,13 @@
 
         <section class="panel quick-ask-panel" id="quickAskPanel" hidden>
           <div class="section-heading compact">
-            <p class="eyebrow">Ask support</p>
-            <h2>Save the question while it is fresh.</h2>
+            <p class="eyebrow">Ask + quick find</p>
+            <h2>Find a lesson, PT, or save the question while it is fresh.</h2>
+          </div>
+          <label class="quick-find-label" for="quickFindInput">Quick find</label>
+          <div class="quick-find">
+            <input id="quickFindInput" type="search" placeholder="Try flaw, sufficient assumption, PT130, pacing, RC structure">
+            <div class="quick-find-results" id="quickFindResults" aria-live="polite"></div>
           </div>
           <form class="ask-form" id="quickAskForm">
             <label for="quickAskInput">What feels confusing?</label>
@@ -117,6 +122,20 @@
               <div><span>Reading Comp</span><strong>34m</strong></div>
               <div><span>Review + journal</span><strong>27m</strong></div>
             </div>
+          </article>
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Blind review</p>
+              <h2>Questions waiting for a second look.</h2>
+            </div>
+            <div class="review-snapshot" id="blindReviewSnapshot"></div>
+          </article>
+          <article class="panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Confidence + fatigue</p>
+              <h2>Protect focus before accuracy drops.</h2>
+            </div>
+            <div class="focus-signals" id="focusSignals"></div>
           </article>
         </section>
 

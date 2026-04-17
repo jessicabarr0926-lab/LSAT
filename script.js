@@ -993,9 +993,15 @@ function renderDashboardDrillPreview() {
   if (!has("#dashboardDrillPreview")) return;
   const weakSkill = getWeakSkills()[0];
   const pool = questionBank.filter((question) => question.skill === weakSkill || getQuestionStatus(question) === "missed").slice(0, 6);
+  const localScore = getSkillScore(weakSkill);
+  const masteryPercent = Math.min(90, Math.max(24, localScore));
   $("#dashboardDrillPreview").innerHTML = `
     <h3>${escapeHtml(weakSkill)} drill</h3>
     <p>${pool.length} questions queued from missed patterns and weakest local skill data.</p>
+    <div class="mastery-meter">
+      <div class="mastery-ring" style="--mastery: ${masteryPercent}%">${masteryPercent}%</div>
+      <p>Gate target: score 90% or higher before moving to the next level.</p>
+    </div>
     <div class="lesson-meta">
       <span class="tag">Difficulty ${Math.max(...pool.map((question) => question.difficulty)) || 2}</span>
       <span class="tag">90% mastery gate</span>
@@ -1008,12 +1014,27 @@ function renderDashboardDrillPreview() {
 function renderDashboardCharts() {
   if (has("#scoreTrendChart")) {
     const scores = [148, 151, 149, 154, Math.max(154, Math.min(180, Number(state.targetScore || 170) - 8))];
-    $("#scoreTrendChart").innerHTML = scores
-      .map((score, index) => {
-        const height = Math.max(18, (score - 120) * 2.2);
-        return `<div class="trend-bar" style="height: ${height}px"><span>${score}</span><small>PT ${index + 126}</small></div>`;
-      })
-      .join("");
+    const points = scores.map((score, index) => {
+      const x = 34 + index * 62;
+      const y = 150 - (score - 140) * 4.4;
+      return { score, x, y, label: `PT ${index + 126}` };
+    });
+    $("#scoreTrendChart").innerHTML = `
+      <svg viewBox="0 0 320 190" role="img" aria-label="Scaled score trend from 148 to ${scores.at(-1)}">
+        <path d="M30 154H300" stroke="#eadde6" stroke-width="2"/>
+        <path d="M30 110H300" stroke="#eadde6" stroke-width="2"/>
+        <path d="M30 66H300" stroke="#eadde6" stroke-width="2"/>
+        <polyline points="${points.map((point) => `${point.x},${point.y}`).join(" ")}" fill="none" stroke="#8f5f74" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        ${points
+          .map(
+            (point) => `
+              <circle cx="${point.x}" cy="${point.y}" r="6" fill="#d96b7b"/>
+              <text class="chart-label" x="${point.x}" y="${point.y - 12}" text-anchor="middle">${point.score}</text>
+              <text class="chart-label" x="${point.x}" y="178" text-anchor="middle">${point.label}</text>
+            `
+          )
+          .join("")}
+      </svg>`;
   }
   if (has("#dashboardSkillBars")) {
     $("#dashboardSkillBars").innerHTML = Object.keys(baseSkillScores)
@@ -1023,6 +1044,66 @@ function renderDashboardCharts() {
       })
       .join("");
   }
+  renderBlindReviewSnapshot();
+  renderFocusSignals();
+}
+
+function renderBlindReviewSnapshot() {
+  if (!has("#blindReviewSnapshot")) return;
+  const pending = state.reviewItems.filter((item) => !item.mastered).length;
+  const missed = questionBank.filter((question) => getQuestionStatus(question) === "missed").length;
+  const nearMisses = Math.max(3, Math.round(missed * 0.6));
+  $("#blindReviewSnapshot").innerHTML = `
+    <div><strong>${pending}</strong><span>pending blind-review items</span></div>
+    <div><strong>${nearMisses}</strong><span>near misses to re-check before explanations</span></div>
+    <button class="button primary" type="button" data-page-target="journal.html">Open review queue</button>
+  `;
+}
+
+function renderFocusSignals() {
+  if (!has("#focusSignals")) return;
+  const answered = state.drillStats.answered || 0;
+  const accuracy = answered ? Math.round((state.drillStats.correct / answered) * 100) : 64;
+  const fatigueRisk = answered > 18 && accuracy < 75 ? "High" : answered > 8 ? "Moderate" : "Low";
+  $("#focusSignals").innerHTML = `
+    <div class="focus-signal"><strong>${accuracy}%</strong><span>current drill accuracy</span></div>
+    <div class="focus-signal"><strong>${fatigueRisk}</strong><span>fatigue risk after long sessions</span></div>
+    <div class="focus-signal"><strong>Track</strong><span>confidence before checking answers: high-confidence misses become priority lessons.</span></div>
+  `;
+}
+
+function quickFindItems(query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return [];
+  const lessonMatches = contentLibrary
+    .filter((item) => `${item.title} ${item.skill} ${item.topicLabel} ${item.description}`.toLowerCase().includes(normalized))
+    .slice(0, 3)
+    .map((item) => ({ title: item.title, meta: `${item.skill} lesson`, action: `content.html?lesson=${item.id}` }));
+  const questionMatches = questionBank
+    .filter((item) => `${item.source} ${item.section} ${item.skill} ${item.prompt}`.toLowerCase().includes(normalized))
+    .slice(0, 3)
+    .map((item) => ({ title: item.source, meta: `${item.skill} practice`, action: "question-bank.html" }));
+  return [...lessonMatches, ...questionMatches].slice(0, 5);
+}
+
+function renderQuickFind() {
+  if (!has("#quickFindResults")) return;
+  const query = $("#quickFindInput")?.value || "";
+  const matches = quickFindItems(query);
+  $("#quickFindResults").innerHTML = matches.length
+    ? matches
+        .map(
+          (item) => `
+            <a class="quick-find-result" href="${escapeHtml(item.action)}">
+              <span>${escapeHtml(item.title)}</span>
+              <strong>${escapeHtml(item.meta)}</strong>
+            </a>
+          `
+        )
+        .join("")
+    : query.trim()
+      ? `<p>No exact match yet. Save it as an ask and LexiPrep will keep it in your support queue.</p>`
+      : "";
 }
 
 function hydrateDashboardSettings() {
@@ -2391,6 +2472,23 @@ function bindEvents() {
   on("#contentTopicFilter", "change", renderContentHub);
   on("#contentDifficultyFilter", "change", renderContentHub);
   on("#contentStatusFilter", "change", renderContentHub);
+  on("#quickFindInput", "input", renderQuickFind);
+  on("#dashboardWeeklyHours", "change", () => {
+    state.weeklyHours = Number($("#dashboardWeeklyHours")?.value || 8);
+    saveState();
+    showToast(`Weekly hours saved: ${state.weeklyHours}.`);
+  });
+  on("#targetScoreInput", "change", () => {
+    state.targetScore = Number($("#targetScoreInput")?.value || 170);
+    saveState();
+    renderDashboard();
+    showToast(`Target score saved: ${state.targetScore}.`);
+  });
+  on("#dashboardTestDate", "change", () => {
+    state.dashboardTestDate = $("#dashboardTestDate")?.value || "";
+    saveState();
+    showToast("Test date saved.");
+  });
 
   on("#buildFilteredDrill", "click", () => {
     const pool = getFilteredQuestions();

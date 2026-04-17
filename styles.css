@@ -112,6 +112,10 @@ a {
   box-shadow: inset 3px 0 0 rgba(243, 210, 122, 0.92);
 }
 
+.nav-list a.active {
+  outline: 1px solid rgba(255, 255, 255, 0.22);
+}
+
 .workspace {
   min-width: 0;
   padding: 24px clamp(18px, 4vw, 48px) 48px;
@@ -262,6 +266,22 @@ h3 {
   backdrop-filter: blur(8px);
 }
 
+.panel,
+.action-tile,
+.video-embed-card,
+.video-link-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.panel:hover,
+.action-tile:hover,
+.video-embed-card:hover,
+.video-link-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(143, 95, 116, 0.34);
+  box-shadow: 0 20px 42px rgba(31, 36, 48, 0.11);
+}
+
 .hero-panel {
   padding: 22px;
   color: var(--ink);
@@ -402,9 +422,59 @@ h3 {
   display: none;
 }
 
+.quick-find-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.quick-find {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.quick-find-results {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-find-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  text-decoration: none;
+}
+
 .drill-preview {
   display: grid;
   gap: 12px;
+}
+
+.mastery-meter {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.mastery-ring {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-weight: 900;
+  background:
+    radial-gradient(circle at center, #ffffff 0 52%, transparent 53%),
+    conic-gradient(var(--green) var(--mastery, 0%), #eadde6 0);
 }
 
 .trend-chart {
@@ -412,6 +482,17 @@ h3 {
   min-height: 170px;
   align-items: end;
   gap: 12px;
+}
+
+.trend-chart svg {
+  width: 100%;
+  min-height: 190px;
+}
+
+.chart-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .trend-bar {
@@ -432,6 +513,8 @@ h3 {
 }
 
 .time-breakdown,
+.review-snapshot,
+.focus-signals,
 .settings-grid,
 .site-footer {
   display: grid;
@@ -446,6 +529,20 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+}
+
+.review-snapshot div,
+.focus-signal {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.review-snapshot strong,
+.focus-signal strong {
+  display: block;
+  font-size: 1.5rem;
 }
 
 .settings-grid {
