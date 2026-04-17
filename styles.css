@@ -1,17 +1,17 @@
 :root {
-  --ink: #20242a;
-  --muted: #65707a;
-  --paper: #f4f7f3;
+  --ink: #1f2430;
+  --muted: #6f7785;
+  --paper: #fff7fb;
   --surface: #ffffff;
-  --soft: #eef5f1;
-  --line: #d8e1d8;
-  --teal: #12736d;
-  --teal-dark: #0d5c57;
-  --red: #c94d3f;
-  --yellow: #f2c94c;
-  --green: #3d7a47;
+  --soft: #f8edf3;
+  --line: #eadde6;
+  --teal: #8f5f74;
+  --teal-dark: #74485c;
+  --red: #d96b7b;
+  --yellow: #f3d27a;
+  --green: #6f9d7e;
   --charcoal: #252a30;
-  --shadow: 0 18px 40px rgba(32, 36, 42, 0.1);
+  --shadow: 0 16px 36px rgba(31, 36, 48, 0.08);
 }
 
 * {
@@ -25,7 +25,9 @@ html {
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--paper);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 251, 0.94), rgba(247, 250, 252, 0.98)),
+    var(--paper);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
 }
@@ -63,8 +65,8 @@ a {
   padding: 26px 20px;
   color: #ffffff;
   background:
-    linear-gradient(rgba(18, 47, 45, 0.94), rgba(32, 36, 42, 0.9)),
-    url("https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80") center / cover;
+    linear-gradient(180deg, rgba(43, 34, 48, 0.98) 0%, rgba(111, 78, 96, 0.96) 58%, rgba(37, 42, 48, 0.98) 100%);
+  box-shadow: 10px 0 30px rgba(31, 36, 48, 0.08);
 }
 
 .brand {
@@ -75,16 +77,18 @@ a {
   font-size: 1.15rem;
   font-weight: 900;
   text-decoration: none;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .brand-mark {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border-radius: 8px;
-  color: var(--ink);
-  background: var(--yellow);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--red), var(--teal));
+  box-shadow: 0 10px 20px rgba(31, 36, 48, 0.18);
 }
 
 .nav-list {
@@ -96,7 +100,7 @@ a {
   min-height: 40px;
   padding: 9px 12px;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(255, 255, 255, 0.82);
   font-weight: 780;
   text-decoration: none;
 }
@@ -104,7 +108,8 @@ a {
 .nav-list a:hover,
 .nav-list a.active {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 3px 0 0 rgba(243, 210, 122, 0.92);
 }
 
 .workspace {
@@ -122,8 +127,10 @@ a {
 
 .topbar h1 {
   margin: 0;
-  font-size: clamp(1.8rem, 4vw, 3.4rem);
-  line-height: 1;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .topbar-actions,
@@ -146,7 +153,7 @@ a {
   border-radius: 8px;
   color: #ffffff;
   background:
-    linear-gradient(90deg, rgba(25, 41, 43, 0.88), rgba(25, 41, 43, 0.34)),
+    linear-gradient(90deg, rgba(43, 34, 48, 0.86), rgba(143, 95, 116, 0.36)),
     url("https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1800&q=80") center / cover;
 }
 
@@ -156,9 +163,9 @@ a {
 
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--red);
-  font-size: 0.78rem;
-  font-weight: 900;
+  color: #b05c7a;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -179,12 +186,14 @@ h2 {
   margin: 0;
   font-size: clamp(1.7rem, 5vw, 4.5rem);
   line-height: 0.98;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 h3 {
   margin: 0 0 8px;
   font-size: 1.25rem;
   line-height: 1.15;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .hero p {
@@ -200,24 +209,26 @@ h3 {
 
 .button {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
-  padding: 10px 15px;
-  border: 2px solid transparent;
+  padding: 10px 18px;
+  border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 850;
   text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 .button.primary {
   color: #ffffff;
-  background: var(--teal);
+  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
 }
 
 .button.primary:hover {
-  background: var(--teal-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(116, 72, 92, 0.18);
 }
 
 .button.secondary {
@@ -229,7 +240,7 @@ h3 {
 .button.secondary.dark {
   color: var(--ink);
   border-color: var(--line);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .button:disabled {
@@ -242,8 +253,9 @@ h3 {
 .start-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
 }
 
 .hero-panel {
@@ -276,14 +288,14 @@ h3 {
   margin-top: 18px;
   overflow: hidden;
   border-radius: 8px;
-  background: #e5ebe4;
+  background: #f1e6ee;
 }
 
 .progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--teal), var(--green));
+  background: linear-gradient(90deg, var(--teal), var(--red), var(--green));
 }
 
 .score-strip {
@@ -696,14 +708,17 @@ tbody tr:last-child td {
   padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.94);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 850;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .mini-button:hover {
   border-color: var(--teal);
+  box-shadow: 0 8px 18px rgba(116, 72, 92, 0.12);
+  transform: translateY(-1px);
 }
 
 .tag,
@@ -719,12 +734,12 @@ tbody tr:last-child td {
 
 .tag {
   color: var(--teal-dark);
-  background: #e9f4ef;
+  background: #f7e8f0;
 }
 
 .status-pill {
   color: var(--ink);
-  background: #f2f3f1;
+  background: #f7f2f6;
 }
 
 .status-pill.missed,
@@ -847,11 +862,25 @@ tbody tr:last-child td {
 }
 
 .lesson-practice,
+.lesson-kit,
 .practice-question,
 .full-test-card,
+.explanation-directory,
 .writing-grid {
   display: grid;
   gap: 14px;
+}
+
+.lesson-kit {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.lesson-kit h2 {
+  font-size: 1.15rem;
+  line-height: 1.15;
 }
 
 .practice-question {
@@ -869,8 +898,22 @@ tbody tr:last-child td {
 }
 
 .full-test-panel,
+.official-panel,
 .writing-panel {
   margin-top: 22px;
+}
+
+.explanation-directory {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.explanation-link-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
 }
 
 .writing-grid {

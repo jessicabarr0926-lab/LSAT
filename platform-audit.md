@@ -60,3 +60,4 @@ The local question bank can use original LSAT-style material. Official LSAT ques
 - LSAT Lab: adaptive study plan, adaptive drill engine, class recordings, video library, granular analytics, and official-test modes.
 - Blueprint: live classes, AI-powered question bank, proctored exams, live review sessions, study planning, downloadable guides, and score reports.
 - Magoosh: video lessons, thousands of official questions through LSAC integration, timed tests, study schedules, tutor email help, transcripts/notes/bookmarks, and mobile/offline study.
+- LSATHacks: free explanation index for PrepTests 101-158, with right-answer and wrong-answer explanations where available; best used after self-review with the official question open.
