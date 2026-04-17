@@ -47,6 +47,29 @@ body.dark-mode {
     #18141b;
 }
 
+body.high-contrast {
+  color: #ffff00;
+  background: #000000;
+}
+
+.high-contrast .sidebar,
+.high-contrast .accessibility-dock {
+  opacity: 0.32;
+}
+
+.high-contrast .workspace,
+.high-contrast .panel,
+.high-contrast .lesson-notes,
+.high-contrast .lesson-video {
+  color: #ffff00;
+  background: #000000;
+}
+
+.high-contrast .lesson-page,
+.high-contrast #dynamicLesson {
+  border: 3px solid #ffff00;
+}
+
 button,
 input,
 select,
@@ -445,6 +468,43 @@ h3 {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
   gap: 20px;
   align-items: stretch;
+}
+
+.lesson-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+
+.lesson-stepper div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.lesson-stepper span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--muted);
+  font-weight: 900;
+}
+
+.lesson-stepper .done {
+  border-color: rgba(111, 157, 126, 0.5);
+  background: #eef6f3;
+}
+
+.lesson-stepper .done span {
+  background: var(--green);
 }
 
 .quick-ask-panel[hidden] {
@@ -1623,6 +1683,67 @@ tbody tr:last-child td {
   background: #342c20;
 }
 
+.technique-lab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.75fr);
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.logic-map,
+.translation-sidebar {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.map-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.map-row strong {
+  text-align: center;
+}
+
+.map-row em {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 850;
+}
+
+.translation-sidebar {
+  position: sticky;
+  top: 22px;
+  align-self: start;
+}
+
+.translation-sidebar div {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.translation-sidebar span {
+  color: var(--muted);
+}
+
+.dark-mode .lesson-stepper div,
+.dark-mode .logic-map,
+.dark-mode .translation-sidebar {
+  background: rgba(36, 32, 41, 0.96);
+}
+
 .focus-mode .panel,
 .focus-mode .lesson-card,
 .focus-mode .question-card,
@@ -1662,6 +1783,8 @@ tbody tr:last-child td {
   .continue-grid,
   .content-hero,
   .lesson-layout,
+  .lesson-stepper,
+  .technique-lab,
   .writing-grid {
     grid-template-columns: 1fr;
   }
@@ -1766,6 +1889,14 @@ tbody tr:last-child td {
 
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lesson-stepper {
+    grid-template-columns: 1fr;
+  }
+
+  .translation-sidebar {
+    position: static;
   }
 
   .hero {

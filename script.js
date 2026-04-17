@@ -588,6 +588,104 @@ const officialPrepTests = [
   103, 102, 101,
 ];
 
+const techniquePracticeQuestions = [
+  {
+    id: "technique-analogy-1",
+    source: "Technique Drill 1",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 2,
+    answer: "C",
+    prompt:
+      "A city planner argues that the city should test a smaller bus route before expanding service, just as restaurants test a new dish before adding it to the permanent menu. Which best describes the technique?",
+    choices: {
+      A: "It rejects a proposal by attacking the person who made it.",
+      B: "It treats a necessary condition as sufficient.",
+      C: "It supports a recommendation by drawing an analogy to a familiar decision process.",
+      D: "It explains a surprising result by identifying a hidden cause.",
+      E: "It concludes that a plan failed because it was not attempted.",
+    },
+    explanation:
+      "The argument says the city case is like the restaurant case. The move is an analogy used to support the recommendation.",
+  },
+  {
+    id: "technique-alternatives-1",
+    source: "Technique Drill 2",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    answer: "B",
+    prompt:
+      "A researcher argues that a new tutoring program caused the score increase because class size, study time, and prior scores were the same across groups. Which best describes the technique?",
+    choices: {
+      A: "It infers a broad rule from one unusually strong example.",
+      B: "It strengthens a causal claim by ruling out several alternate explanations.",
+      C: "It attacks the reliability of the students instead of the data.",
+      D: "It shows that two claims cannot both be true.",
+      E: "It defines a key term in two different ways.",
+    },
+    explanation:
+      "The argument protects the causal conclusion by eliminating competing causes.",
+  },
+  {
+    id: "technique-counterexample-1",
+    source: "Technique Drill 3",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    answer: "D",
+    prompt:
+      "A columnist says the claim that all effective study plans require four-hour blocks is false, because one student improved using only 45-minute blocks. Which best describes the technique?",
+    choices: {
+      A: "It gives a definition of effectiveness.",
+      B: "It explains why a plan was difficult to follow.",
+      C: "It assumes that every student has the same schedule.",
+      D: "It uses a counterexample to challenge a universal claim.",
+      E: "It draws an analogy between two unrelated habits.",
+    },
+    explanation:
+      "One case can disprove an all/every/never claim. The technique is a counterexample.",
+  },
+  {
+    id: "technique-principle-1",
+    source: "Technique Drill 4",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 4,
+    answer: "A",
+    prompt:
+      "An advocate argues that the clinic should extend evening hours because public services should be available when working people can use them. Which best describes the technique?",
+    choices: {
+      A: "It applies a general principle to support a specific policy.",
+      B: "It undermines an expert by questioning that expert's motives.",
+      C: "It resolves a contradiction by rejecting both sides.",
+      D: "It predicts the future from a repeated trend.",
+      E: "It weakens a conclusion by introducing a competing cause.",
+    },
+    explanation:
+      "The broad rule about public services is used to justify the specific clinic policy.",
+  },
+  {
+    id: "technique-source-1",
+    source: "Technique Drill 5",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    answer: "E",
+    prompt:
+      "A speaker rejects a budget report because the committee chair who presented it has supported unpopular proposals before. Which best describes the technique?",
+    choices: {
+      A: "It explains a phenomenon by comparing two populations.",
+      B: "It proves a conclusion by eliminating all other possibilities.",
+      C: "It makes a prediction from a long-term pattern.",
+      D: "It concedes a minor point before defending the main claim.",
+      E: "It attacks the source instead of addressing the report's reasoning.",
+    },
+    explanation:
+      "The speaker targets the person/source, not the substance of the report.",
+  },
+];
+
 const scenarioBank = [
   "a city transit study",
   "a university tutoring program",
@@ -822,6 +920,7 @@ const defaultState = {
     focus: true,
     reducedMotion: false,
     darkMode: false,
+    highContrast: false,
   },
   activity: ["PrepTest 130 review plan loaded."],
   automations: {
@@ -1577,7 +1676,7 @@ function getLessonKit(item) {
 function renderLessonPlayer() {
   if (!has("#dynamicLesson")) return;
   const params = new URLSearchParams(window.location.search);
-  const id = params.get("id") || state.lastContentId || contentLibrary[0].id;
+  const id = params.get("id") || $("#dynamicLesson")?.dataset.lessonId || state.lastContentId || contentLibrary[0].id;
   const item = contentLibrary.find((lesson) => lesson.id === id) || contentLibrary[0];
   const scenes = getLessonScenes(item);
   const kit = getLessonKit(item);
@@ -1585,11 +1684,29 @@ function renderLessonPlayer() {
   const mastery = state.lessonMastery[item.id] || { answered: 0, correct: 0, passed: false };
   const masteryScore = mastery.answered ? Math.round((mastery.correct / mastery.answered) * 100) : 0;
   const completed = state.completedContent.includes(item.id);
+  const stepItems = [
+    ["Watch/Read", true],
+    ["Translate", mastery.answered > 0],
+    ["Practice", mastery.answered >= Math.min(2, practice.length)],
+    ["Mastery Check", mastery.passed || completed],
+  ];
   $("#dynamicLesson").innerHTML = `
     <div class="section-heading">
       <p class="eyebrow">${escapeHtml(item.category)}</p>
       <h1>${escapeHtml(item.title)}</h1>
       <p>${escapeHtml(item.description)}</p>
+    </div>
+    <div class="lesson-stepper" aria-label="Lesson progress">
+      ${stepItems
+        .map(
+          ([label, done], index) => `
+            <div class="${done ? "done" : ""}">
+              <span>${done ? "✓" : index + 1}</span>
+              <strong>${escapeHtml(label)}</strong>
+            </div>
+          `,
+        )
+        .join("")}
     </div>
     <div class="lesson-layout">
       <div class="lesson-video animated-video" aria-label="Animated lesson for ${escapeHtml(item.title)}">
@@ -1612,13 +1729,17 @@ function renderLessonPlayer() {
           <span class="tag">${escapeHtml(item.skill)}</span>
         </div>
         <h2>Transcript</h2>
-        <p>${escapeHtml(scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" "))}</p>
+        <div id="lessonText">
+          <p>${escapeHtml(scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" "))}</p>
+        </div>
+        <button class="button secondary dark" type="button" data-read-lesson>Listen and read</button>
         <section class="plain-english-box" aria-label="Plain English simplifier">
           <h2>Plain English Summary</h2>
           <p id="simpleLogic">Paste a confusing LSAT sentence below, then simplify it into core logic.</p>
           <textarea id="simplifierInput" rows="3" placeholder="Paste a confusing sentence here."></textarea>
           <button class="button secondary dark" type="button" data-simplify-text>Simplify now</button>
         </section>
+        ${item.id === "describe-technique" ? renderTechniqueSupport() : ""}
         <section class="lesson-kit" aria-label="Concept example breakdown trap and practice">
           <h2>Short concept</h2>
           <p>${escapeHtml(kit.concept)}</p>
@@ -1656,6 +1777,7 @@ function renderLessonPlayer() {
 }
 
 function getLessonPractice(item) {
+  if (item.id === "describe-technique") return techniquePracticeQuestions;
   const pool = questionBank.filter((question) => question.skill === item.skill);
   return (pool.length ? pool : questionBank).slice(0, 5);
 }
@@ -1680,11 +1802,62 @@ function renderLessonPracticeQuestion(question) {
   `;
 }
 
+function renderTechniqueSupport() {
+  const rows = [
+    ["Draws an analogy", "Says: this is like that other thing."],
+    ["Rules out alternatives", "Shows other explanations do not work."],
+    ["Uses a counterexample", "Breaks an all/every/never claim with one case."],
+    ["Applies a principle", "Uses a broad rule to justify a specific choice."],
+    ["Calls into question", "Gives a reason to doubt the other side."],
+    ["Implicitly assumes", "Leaves out a needed bridge."],
+    ["Counters a phenomenon", "Explains why something happened."],
+    ["Attacks the source", "Focuses on the person/source instead of the reasoning."],
+  ];
+  return `
+    <section class="technique-lab" aria-label="Describe the Technique support tools">
+      <div class="logic-map">
+        <h2>Logic map</h2>
+        <div class="map-row"><span>Premise</span><strong>→</strong><span>Conclusion</span><em>Basic support</em></div>
+        <div class="map-row"><span>Case A</span><strong>≈</strong><span>Case B</span><em>Analogy</em></div>
+        <div class="map-row"><span>Other causes</span><strong>✕</strong><span>Main cause</span><em>Eliminating alternatives</em></div>
+        <div class="map-row"><span>Universal claim</span><strong>✕</strong><span>One exception</span><em>Counterexample</em></div>
+      </div>
+      <aside class="translation-sidebar" aria-label="Technique translation guide">
+        <h2>Translation guide</h2>
+        ${rows
+          .map(
+            ([phrase, meaning]) => `
+              <div>
+                <strong>${escapeHtml(phrase)}</strong>
+                <span>${escapeHtml(meaning)}</span>
+              </div>
+            `,
+          )
+          .join("")}
+      </aside>
+    </section>
+  `;
+}
+
+function readLesson() {
+  const target = $("#lessonText") || $("#lessonDetail") || $("#dynamicLesson");
+  if (!target || !("speechSynthesis" in window)) {
+    showToast("Read aloud is not available in this browser.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const speech = new SpeechSynthesisUtterance(target.innerText);
+  speech.rate = 0.88;
+  speech.pitch = 1;
+  window.speechSynthesis.speak(speech);
+  showToast("Reading lesson aloud.");
+}
+
 function answerLessonPractice(questionId, choice) {
-  const question = questionBank.find((item) => item.id === questionId);
+  const question = [...questionBank, ...techniquePracticeQuestions].find((item) => item.id === questionId);
   if (!question || !has("#dynamicLesson")) return;
   const params = new URLSearchParams(window.location.search);
-  const lessonId = params.get("id") || state.lastContentId || contentLibrary[0].id;
+  const lessonId = params.get("id") || $("#dynamicLesson")?.dataset.lessonId || state.lastContentId || contentLibrary[0].id;
   const mastery = state.lessonMastery[lessonId] || { answered: 0, correct: 0, passed: false };
   mastery.answered += 1;
   if (choice === question.answer) mastery.correct += 1;
@@ -1982,6 +2155,7 @@ function applyAccessibility() {
   document.body.classList.toggle("focus-mode", Boolean(state.accessibility?.focus));
   document.body.classList.toggle("reduced-motion-mode", Boolean(state.accessibility?.reducedMotion));
   document.body.classList.toggle("dark-mode", Boolean(state.accessibility?.darkMode));
+  document.body.classList.toggle("high-contrast", Boolean(state.accessibility?.highContrast));
 }
 
 function renderAccessibilityDock() {
@@ -1993,6 +2167,7 @@ function renderAccessibilityDock() {
       <button class="mini-button" type="button" data-toggle-accessibility="dyslexia">Dyslexia font</button>
       <button class="mini-button" type="button" data-toggle-accessibility="focus">Focus spacing</button>
       <button class="mini-button" type="button" data-toggle-accessibility="darkMode">Dark mode</button>
+      <button class="mini-button" type="button" data-toggle-accessibility="highContrast">High contrast</button>
       <button class="mini-button" type="button" data-toggle-accessibility="reducedMotion">Reduce motion</button>
     </div>`,
   );
@@ -2500,6 +2675,10 @@ function bindEvents() {
 
     if (event.target.closest("[data-simplify-text]")) {
       simplifyText();
+    }
+
+    if (event.target.closest("[data-read-lesson]")) {
+      readLesson();
     }
   });
 
