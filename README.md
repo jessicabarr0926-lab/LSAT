@@ -1,4 +1,4 @@
-# LexiPrep LSAT Study Dashboard
+# JessiPreps LSAT Study Dashboard
 
 Open `index.html` in a browser. The app is now a multi-page local website that shares one `styles.css` file and one `script.js` study engine.
 
@@ -69,9 +69,9 @@ The Content Hub works like a mini course library:
 - start a related drill from a lesson
 - show recommended content on the dashboard
 
-`content-system-plan.md` is the source-informed production plan for the first lesson set, animated video scripts, tagging taxonomy, and recommendation rules. It is written as original LexiPrep teaching material rather than copied book text.
+`content-system-plan.md` is the source-informed production plan for the first lesson set, animated video scripts, tagging taxonomy, and recommendation rules. It is written as original JessiPreps teaching material rather than copied book text.
 
-`platform-audit.md` compares LexiPrep against premium LSAT prep features and lists the next upgrades needed for a serious custom study system.
+`platform-audit.md` compares JessiPreps against premium LSAT prep features and lists the next upgrades needed for a serious custom study system.
 
 ## Notes
 

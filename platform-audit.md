@@ -1,4 +1,4 @@
-# LexiPrep Premium Feature Audit
+# JessiPreps Premium Feature Audit
 
 Research checked April 2026 against LSAC/LawHub, 7Sage, LSAT Demon, LSAT Lab, Blueprint, Magoosh, and Khan Academy/LawHub resources.
 
@@ -10,7 +10,7 @@ Research checked April 2026 against LSAC/LawHub, 7Sage, LSAT Demon, LSAT Lab, Bl
 
 ## Competitor Feature Checklist
 
-| Premium feature | Why it matters | LexiPrep status |
+| Premium feature | Why it matters | JessiPreps status |
 | --- | --- | --- |
 | Official-style timed tests | Builds test-day pacing and interface familiarity | Built locally with timers and score logging; official questions must stay in LawHub/licensed tools |
 | Large question bank | Enough repetition for pattern recognition | Built with 132 original LSAT-style questions |
@@ -50,7 +50,7 @@ Research checked April 2026 against LSAC/LawHub, 7Sage, LSAT Demon, LSAT Lab, Bl
 
 ## Content Expansion Rule
 
-The local question bank can use original LSAT-style material. Official LSAT questions and copyrighted prep-book text should not be copied into the app. Use LawHub or licensed prep platforms for official questions, then log results and mistake patterns inside LexiPrep.
+The local question bank can use original LSAT-style material. Official LSAT questions and copyrighted prep-book text should not be copied into the app. Use LawHub or licensed prep platforms for official questions, then log results and mistake patterns inside JessiPreps.
 
 ## Research Sources
 

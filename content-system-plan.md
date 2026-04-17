@@ -1,6 +1,6 @@
-# LexiPrep Content System Seed
+# JessiPreps Content System Seed
 
-This seed turns the starter LSAT files into original platform content. It uses the source files as a high-level curriculum reference only; lessons, scripts, drills, and explanations below are newly written for LexiPrep.
+This seed turns the starter LSAT files into original platform content. It uses the source files as a high-level curriculum reference only; lessons, scripts, drills, and explanations below are newly written for JessiPreps.
 
 ## Curriculum Map
 

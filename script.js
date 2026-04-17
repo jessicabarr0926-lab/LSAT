@@ -1,4 +1,5 @@
-const STORE_KEY = "lexiprep-study-state-v2";
+const STORE_KEY = "jessipreps-study-state-v2";
+const LEGACY_STORE_KEY = "lexiprep-study-state-v2";
 
 const questionBank = [
   {
@@ -692,7 +693,7 @@ function buildGeneratedQuestions() {
     });
     generated.push({
       id: `lexi-original-${number}`,
-      source: `LexiPrep Original Q${number}`,
+      source: `JessiPreps Original Q${number}`,
       section: blueprint.section,
       skill: blueprint.skill,
       difficulty: (index % 5) + 1,
@@ -820,6 +821,7 @@ const defaultState = {
     dyslexia: true,
     focus: true,
     reducedMotion: false,
+    darkMode: false,
   },
   activity: ["PrepTest 130 review plan loaded."],
   automations: {
@@ -866,9 +868,11 @@ function on(selector, eventName, handler) {
 
 function loadState() {
   try {
-    const saved = localStorage.getItem(STORE_KEY);
+    const saved = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
     if (!saved) return freshDefaultState();
-    return { ...freshDefaultState(), ...JSON.parse(saved) };
+    const parsed = { ...freshDefaultState(), ...JSON.parse(saved) };
+    localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+    return parsed;
   } catch {
     return freshDefaultState();
   }
@@ -1102,7 +1106,7 @@ function renderQuickFind() {
         )
         .join("")
     : query.trim()
-      ? `<p>No exact match yet. Save it as an ask and LexiPrep will keep it in your support queue.</p>`
+      ? `<p>No exact match yet. Save it as an ask and JessiPreps will keep it in your support queue.</p>`
       : "";
 }
 
@@ -1609,6 +1613,12 @@ function renderLessonPlayer() {
         </div>
         <h2>Transcript</h2>
         <p>${escapeHtml(scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" "))}</p>
+        <section class="plain-english-box" aria-label="Plain English simplifier">
+          <h2>Plain English Summary</h2>
+          <p id="simpleLogic">Paste a confusing LSAT sentence below, then simplify it into core logic.</p>
+          <textarea id="simplifierInput" rows="3" placeholder="Paste a confusing sentence here."></textarea>
+          <button class="button secondary dark" type="button" data-simplify-text>Simplify now</button>
+        </section>
         <section class="lesson-kit" aria-label="Concept example breakdown trap and practice">
           <h2>Short concept</h2>
           <p>${escapeHtml(kit.concept)}</p>
@@ -1971,6 +1981,7 @@ function applyAccessibility() {
   document.body.classList.toggle("dyslexia-mode", Boolean(state.accessibility?.dyslexia));
   document.body.classList.toggle("focus-mode", Boolean(state.accessibility?.focus));
   document.body.classList.toggle("reduced-motion-mode", Boolean(state.accessibility?.reducedMotion));
+  document.body.classList.toggle("dark-mode", Boolean(state.accessibility?.darkMode));
 }
 
 function renderAccessibilityDock() {
@@ -1981,9 +1992,32 @@ function renderAccessibilityDock() {
       <strong>Jessica mode</strong>
       <button class="mini-button" type="button" data-toggle-accessibility="dyslexia">Dyslexia font</button>
       <button class="mini-button" type="button" data-toggle-accessibility="focus">Focus spacing</button>
+      <button class="mini-button" type="button" data-toggle-accessibility="darkMode">Dark mode</button>
       <button class="mini-button" type="button" data-toggle-accessibility="reducedMotion">Reduce motion</button>
     </div>`,
   );
+}
+
+function simplifyText() {
+  if (!has("#simpleLogic")) return;
+  const text = $("#simplifierInput")?.value.trim();
+  if (!text) {
+    $("#simpleLogic").textContent = "Paste one confusing sentence first. Short chunks work best.";
+    return;
+  }
+  const cleaned = text.replace(/\s+/g, " ");
+  const becauseParts = cleaned.split(/\b(because|since|given that|as)\b/i);
+  const contrastParts = cleaned.split(/\b(however|but|although|nevertheless)\b/i);
+  const resultParts = cleaned.split(/\b(therefore|thus|so|hence|consequently)\b/i);
+  let summary = `Core idea: ${cleaned}`;
+  if (resultParts.length > 2) {
+    summary = `Conclusion: ${resultParts.slice(2).join(" ").trim()} Evidence: ${resultParts[0].trim()}`;
+  } else if (becauseParts.length > 2) {
+    summary = `Conclusion: ${becauseParts[0].trim()} Evidence: ${becauseParts.slice(2).join(" ").trim()}`;
+  } else if (contrastParts.length > 2) {
+    summary = `Contrast: ${contrastParts[0].trim()} / ${contrastParts.slice(2).join(" ").trim()}`;
+  }
+  $("#simpleLogic").textContent = `${summary}. Ask: what is the author trying to prove, and what support did they give?`;
 }
 
 function downloadText(filename, mimeType, text) {
@@ -2001,10 +2035,10 @@ function downloadText(filename, mimeType, text) {
 function downloadBackup() {
   const backup = {
     exportedAt: new Date().toISOString(),
-    app: "LexiPrep",
+    app: "JessiPreps",
     state,
   };
-  downloadText("lexiprep-study-backup.json", "application/json", JSON.stringify(backup, null, 2));
+  downloadText("jessipreps-study-backup.json", "application/json", JSON.stringify(backup, null, 2));
   showToast("Backup downloaded.");
 }
 
@@ -2021,7 +2055,7 @@ function downloadCalendarFile() {
       const format = (date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
       return [
         "BEGIN:VEVENT",
-        `UID:lexiprep-${index}-${eventDate.getTime()}@local`,
+        `UID:jessipreps-${index}-${eventDate.getTime()}@local`,
         `DTSTAMP:${format(new Date())}`,
         `DTSTART:${format(eventDate)}`,
         `DTEND:${format(endDate)}`,
@@ -2031,8 +2065,8 @@ function downloadCalendarFile() {
       ].join("\n");
     })
     .join("\n");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//LexiPrep//Study Plan//EN", events, "END:VCALENDAR"].join("\n");
-  downloadText("lexiprep-weekly-study-plan.ics", "text/calendar", ics);
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//JessiPreps//Study Plan//EN", events, "END:VCALENDAR"].join("\n");
+  downloadText("jessipreps-weekly-study-plan.ics", "text/calendar", ics);
   showToast("Calendar file downloaded.");
 }
 
@@ -2462,6 +2496,10 @@ function bindEvents() {
       saveState();
       applyAccessibility();
       showToast("Personal reading settings updated.");
+    }
+
+    if (event.target.closest("[data-simplify-text]")) {
+      simplifyText();
     }
   });
 
