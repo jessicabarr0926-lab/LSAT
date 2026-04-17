@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LexiPrep | Test Review</title><link rel="stylesheet" href="styles.css"></head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Study navigation"><a class="brand" href="index.html"><span class="brand-mark">L</span><span>LexiPrep</span></a><nav class="nav-list" aria-label="Primary"><a href="index.html">Dashboard</a><a href="content.html">Content</a><a href="question-bank.html">Question bank</a><a href="drills.html">Adaptive drills</a><a href="review.html">Test review</a><a href="explanations.html">Explanations</a><a href="tests.html">Timed tests</a><a href="lessons.html">Lessons</a><a href="classes.html">Classes</a><a href="support.html">Ask support</a><a href="analytics.html">Analytics</a><a href="journal.html">Wrong-answer journal</a><a href="plan.html">Study plan</a><a href="automations.html">Automations</a><a href="plugins.html">Plugins</a></nav></aside>
+      <main class="workspace">
+        <header class="topbar"><div><p class="eyebrow">Official-style test review</p><h1>PrepTest 130 section review.</h1></div><div class="topbar-actions"><button class="button primary" type="button" data-page-target="journal.html">Journal a miss</button></div></header>
+        <section class="panel test-review" id="review">
+          <div class="section-tabs" role="tablist" aria-label="PrepTest sections"><button class="tab active" type="button" data-section-tab="section1">Section 1</button><button class="tab" type="button" data-section-tab="section2">Section 2</button><button class="tab" type="button" data-section-tab="variable">Section 3 (*)</button><button class="tab" type="button" data-section-tab="section4">Section 4</button></div>
+          <div class="review-summary" aria-label="Selected section summary"><div><span class="metric-label">Section time</span><strong id="sectionTime">34m</strong></div><div><span class="metric-label">Raw score</span><strong id="sectionScore">15/27</strong></div><div><span class="metric-label">Review priority</span><strong id="sectionPriority">Flaws + assumptions</strong></div></div>
+          <div class="table-wrap"><table><thead><tr><th>#</th><th>Response</th><th>Answer</th><th>Status</th><th>Subtype</th><th>Difficulty</th><th>Next action</th></tr></thead><tbody id="reviewRows"></tbody></table></div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div><script src="script.js"></script>
+  </body>
+</html>

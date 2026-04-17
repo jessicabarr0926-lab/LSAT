@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LexiPrep | Dashboard</title>
+    <meta name="description" content="Adaptive LSAT dashboard for Jessica's study plan.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Study navigation">
+        <a class="brand" href="index.html" aria-label="LexiPrep dashboard"><span class="brand-mark">L</span><span>LexiPrep</span></a>
+        <nav class="nav-list" aria-label="Primary">
+          <a href="index.html">Dashboard</a>
+          <a href="question-bank.html">Question bank</a>
+          <a href="drills.html">Adaptive drills</a>
+          <a href="review.html">Test review</a>
+          <a href="explanations.html">Explanations</a>
+          <a href="tests.html">Timed tests</a>
+          <a href="lessons.html">Lessons</a>
+          <a href="classes.html">Classes</a>
+          <a href="support.html">Ask support</a>
+          <a href="analytics.html">Analytics</a>
+          <a href="journal.html">Wrong-answer journal</a>
+          <a href="plan.html">Study plan</a>
+          <a href="automations.html">Automations</a>
+          <a href="plugins.html">Plugins</a>
+        </nav>
+      </aside>
+      <main class="workspace">
+        <header class="topbar" aria-label="Current student">
+          <div>
+            <p class="eyebrow">Personal LSAT workspace</p>
+            <h1>Jessica's adaptive study command center</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="button secondary dark" type="button" data-page-target="support.html">Ask</button>
+            <button class="button primary" type="button" data-start-drill>Start next drill</button>
+          </div>
+        </header>
+
+        <section class="hero" id="dashboard" aria-labelledby="dashboard-title">
+          <div class="hero-copy">
+            <p class="eyebrow">PrepTest 130 review plan</p>
+            <h2 id="dashboard-title">Turn a 154 into the next score jump.</h2>
+            <p>Your latest full report shows a 49 raw score, 154 scaled score, and a clear opportunity in Logical Reasoning accuracy, assumptions, flaws, and late-section pacing.</p>
+            <div class="hero-actions" aria-label="Dashboard actions">
+              <button class="button primary" type="button" data-page-target="drills.html">Drill missed patterns</button>
+              <button class="button secondary" type="button" data-page-target="review.html">Review PrepTest 130</button>
+              <button class="button secondary" type="button" data-page-target="plan.html">Build study plan</button>
+            </div>
+          </div>
+          <div class="hero-panel" aria-label="Readiness score">
+            <span class="metric-label">Study readiness</span>
+            <strong id="readinessScore">64%</strong>
+            <div class="progress-track" aria-hidden="true"><span id="readinessBar" style="width: 64%"></span></div>
+            <p id="readinessText">Review 12 misses, complete one flaw drill, and run one timed LR section.</p>
+          </div>
+        </section>
+
+        <section class="score-strip" aria-label="PrepTest 130 score summary">
+          <div><span class="metric-label">Total time</span><strong>2h 19m</strong></div>
+          <div><span class="metric-label">Raw score</span><strong>49</strong></div>
+          <div><span class="metric-label">Scaled score</span><strong>154</strong></div>
+          <div><span class="metric-label">Section 1</span><strong>15/27</strong></div>
+        </section>
+
+        <section class="panel continue-panel" id="continue-learning">
+          <div class="section-heading compact">
+            <p class="eyebrow">Continue learning</p>
+            <h2>Pick up the lesson that fits your next drill.</h2>
+          </div>
+          <div class="continue-grid">
+            <div class="insight-card" id="continueLessonCard">
+              <h3>Recommended lesson loading</h3>
+              <p>Your next lesson will appear here.</p>
+              <button class="button primary" type="button" data-page-target="content.html">Open Content Hub</button>
+            </div>
+            <div class="skill-chart" id="contentProgressMini" aria-label="Content progress"></div>
+          </div>
+        </section>
+
+        <section class="start-panel" aria-labelledby="use-title">
+          <div class="section-heading">
+            <p class="eyebrow">How to use it</p>
+            <h2 id="use-title">A study loop you can repeat every day.</h2>
+          </div>
+          <ol class="study-loop">
+            <li><strong>Pick the recommendation.</strong> Start with the weakest area the dashboard names.</li>
+            <li><strong>Drill 6 to 12 questions.</strong> Answer, review the explanation, and tag your miss.</li>
+            <li><strong>Run timing practice.</strong> Use a 17-minute checkpoint or a 35-minute section.</li>
+            <li><strong>Ask for help.</strong> Save a question note when the reasoning still feels fuzzy.</li>
+          </ol>
+        </section>
+
+        <section class="quick-grid" aria-label="Core prep areas">
+          <button class="action-tile" type="button" data-page-target="question-bank.html"><span>01</span><h2>Question bank</h2><p>Filter practice by section, subtype, difficulty, missed status, and review state.</p></button>
+          <button class="action-tile" type="button" data-page-target="content.html"><span>02</span><h2>Content Hub</h2><p>Watch visual lessons, save guides, and connect learning to drills.</p></button>
+          <button class="action-tile" type="button" data-page-target="drills.html"><span>03</span><h2>Adaptive drilling engine</h2><p>Build short sets from PrepTest 130 misses, weak areas, and pacing data.</p></button>
+          <button class="action-tile" type="button" data-page-target="tests.html"><span>04</span><h2>Timed sections</h2><p>Run 35-minute sections, 17-minute checkpoints, blind review, and score logging.</p></button>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div>
+    <script src="script.js"></script>
+  </body>
+</html>

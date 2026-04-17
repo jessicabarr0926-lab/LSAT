@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LexiPrep | Question Bank</title><link rel="stylesheet" href="styles.css"></head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Study navigation"><a class="brand" href="index.html"><span class="brand-mark">L</span><span>LexiPrep</span></a><nav class="nav-list" aria-label="Primary"><a href="index.html">Dashboard</a><a href="content.html">Content</a><a href="question-bank.html">Question bank</a><a href="drills.html">Adaptive drills</a><a href="review.html">Test review</a><a href="explanations.html">Explanations</a><a href="tests.html">Timed tests</a><a href="lessons.html">Lessons</a><a href="classes.html">Classes</a><a href="support.html">Ask support</a><a href="analytics.html">Analytics</a><a href="journal.html">Wrong-answer journal</a><a href="plan.html">Study plan</a><a href="automations.html">Automations</a><a href="plugins.html">Plugins</a></nav></aside>
+      <main class="workspace">
+        <header class="topbar"><div><p class="eyebrow">Question bank</p><h1>Build a targeted set.</h1></div><div class="topbar-actions"><button class="button primary" type="button" data-page-target="drills.html">Go to drills</button></div></header>
+        <section class="panel tool-panel" id="question-bank">
+          <div class="filters" aria-label="Question filters">
+            <label>Section<select id="sectionFilter"><option value="all">All</option><option value="Logical Reasoning">Logical Reasoning</option><option value="Reading Comprehension">Reading Comprehension</option></select></label>
+            <label>Skill<select id="skillFilter"><option value="all">All skills</option><option value="Flaws">Flaws</option><option value="Assumptions">Assumptions</option><option value="Strengthen or Weaken">Strengthen or Weaken</option><option value="Conditional Logic">Conditional Logic</option><option value="Reading Structure">Reading Structure</option><option value="Pacing">Pacing</option></select></label>
+            <label>Status<select id="statusFilter"><option value="all">All statuses</option><option value="missed">Missed</option><option value="unseen">Unseen</option><option value="reviewed">Reviewed</option></select></label>
+          </div>
+          <div class="bank-actions"><button class="button primary" type="button" id="buildFilteredDrill">Build filtered drill</button><button class="button secondary dark" type="button" id="resetProgress">Reset local progress</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Source</th><th>Section</th><th>Skill</th><th>Difficulty</th><th>Status</th><th>Action</th></tr></thead><tbody id="questionRows"></tbody></table></div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div><script src="script.js"></script>
+  </body>
+</html>

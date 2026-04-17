@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LexiPrep | Adaptive Drills</title><link rel="stylesheet" href="styles.css"></head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Study navigation"><a class="brand" href="index.html"><span class="brand-mark">L</span><span>LexiPrep</span></a><nav class="nav-list" aria-label="Primary"><a href="index.html">Dashboard</a><a href="content.html">Content</a><a href="question-bank.html">Question bank</a><a href="drills.html">Adaptive drills</a><a href="review.html">Test review</a><a href="explanations.html">Explanations</a><a href="tests.html">Timed tests</a><a href="lessons.html">Lessons</a><a href="classes.html">Classes</a><a href="support.html">Ask support</a><a href="analytics.html">Analytics</a><a href="journal.html">Wrong-answer journal</a><a href="plan.html">Study plan</a><a href="automations.html">Automations</a><a href="plugins.html">Plugins</a></nav></aside>
+      <main class="workspace">
+        <header class="topbar"><div><p class="eyebrow">Adaptive drilling engine</p><h1>Practice the weakness that matters next.</h1></div><div class="topbar-actions"><button class="button primary" type="button" data-start-drill>Start next drill</button><button class="button secondary dark" type="button" data-page-target="question-bank.html">Choose questions</button></div></header>
+        <section class="panel tool-panel" id="drills">
+          <div class="section-heading compact"><p class="eyebrow">Current drill</p><h2 id="drillTitle">Next best drill</h2></div>
+          <div class="drill-meta" aria-label="Drill details"><span id="drillCount">0 questions queued</span><span id="drillFocus">Focus: Flaws</span></div>
+          <div class="drill-card" id="drillCard"><p class="prompt" id="drillPrompt">Start a drill to load your first question.</p><div class="choices" id="answerChoices"></div><div class="drill-actions"><button class="button primary" type="button" id="submitAnswer">Submit answer</button><button class="button secondary dark" type="button" id="nextQuestion" disabled>Next question</button></div><div class="mastery-meter" id="drillMastery">Mastery gate: score 90% or higher to clear this set.</div><div class="feedback" id="drillFeedback" aria-live="polite"></div></div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div><script src="script.js"></script>
+  </body>
+</html>

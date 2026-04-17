@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LexiPrep | Content Hub</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Study navigation">
+        <a class="brand" href="index.html"><span class="brand-mark">L</span><span>LexiPrep</span></a>
+        <nav class="nav-list" aria-label="Primary">
+          <a href="index.html">Dashboard</a><a href="content.html">Content</a><a href="question-bank.html">Question bank</a><a href="drills.html">Adaptive drills</a><a href="review.html">Test review</a><a href="explanations.html">Explanations</a><a href="tests.html">Timed tests</a><a href="lessons.html">Lessons</a><a href="classes.html">Classes</a><a href="support.html">Ask support</a><a href="analytics.html">Analytics</a><a href="journal.html">Wrong-answer journal</a><a href="plan.html">Study plan</a><a href="automations.html">Automations</a><a href="plugins.html">Plugins</a>
+        </nav>
+      </aside>
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Content Hub</p>
+            <h1>Browse lessons, videos, and strategy guides.</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="button primary" type="button" data-start-drill>Start drill after learning</button>
+          </div>
+        </header>
+
+        <section class="panel content-panel" id="content">
+          <div class="content-hero">
+            <div>
+              <p class="eyebrow">Featured lesson</p>
+              <h2 id="featuredContentTitle">How to Spot Flaw Questions Faster</h2>
+              <p id="featuredContentBody">Learn the most common flaw patterns and how to identify them under time pressure.</p>
+              <div class="hero-actions">
+                <button class="button primary" type="button" data-open-featured-content>Watch featured lesson</button>
+                <button class="button secondary dark" type="button" data-save-featured-content>Save for later</button>
+              </div>
+            </div>
+            <div class="video-mock" aria-label="Animated lesson preview">
+              <span>Conclusion</span>
+              <span>Evidence</span>
+              <strong>Find the gap</strong>
+            </div>
+          </div>
+
+          <div class="content-filters" aria-label="Content filters">
+            <label>Search<input id="contentSearch" type="search" placeholder="Search flaws, timing, RC, assumptions"></label>
+            <label>Topic<select id="contentTopicFilter"><option value="all">All topics</option><option value="lr">Logical Reasoning</option><option value="rc">Reading Comprehension</option><option value="timing">Timing</option><option value="strategy">Strategy</option></select></label>
+            <label>Difficulty<select id="contentDifficultyFilter"><option value="all">All levels</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option></select></label>
+            <label>Status<select id="contentStatusFilter"><option value="all">All statuses</option><option value="unwatched">Unwatched</option><option value="saved">Saved</option><option value="completed">Completed</option><option value="short">Short lessons</option></select></label>
+          </div>
+
+          <div class="content-rails">
+            <button class="tab active" type="button" data-content-category="all">All</button>
+            <button class="tab" type="button" data-content-category="Start here">Start here</button>
+            <button class="tab" type="button" data-content-category="Core concepts">Core concepts</button>
+            <button class="tab" type="button" data-content-category="Question types">Question types</button>
+            <button class="tab" type="button" data-content-category="Strategy">Strategy</button>
+            <button class="tab" type="button" data-content-category="Timed test training">Timed test training</button>
+            <button class="tab" type="button" data-content-category="Mindset and test day">Mindset</button>
+          </div>
+
+          <div class="content-summary" id="contentSummary"></div>
+          <div class="content-grid" id="contentGrid"></div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Ready.</div>
+    <script src="script.js"></script>
+  </body>
+</html>
