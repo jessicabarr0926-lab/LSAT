@@ -581,6 +581,12 @@ contentLibrary.forEach((lesson) => {
   lesson.page = "lesson-player.html";
 });
 
+const officialPrepTests = [
+  158, 157, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131,
+  130, 129, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104,
+  103, 102, 101,
+];
+
 const scenarioBank = [
   "a city transit study",
   "a university tutoring program",
@@ -1374,12 +1380,74 @@ function getLessonScenes(item) {
   ];
 }
 
+function getLessonKit(item) {
+  const kits = {
+    Flaws: {
+      concept: "A flaw answer describes the exact place where the evidence stops proving the conclusion.",
+      example: "The report came out before applications rose, so the report caused the rise.",
+      breakdown: "The evidence is sequence. The conclusion is cause. The missing proof is that no other change explains the rise.",
+      trap: "A trap answer talks about the same topic but names a flaw the argument did not make.",
+      practice: "Before answering, say: evidence, conclusion, missing bridge, then choose.",
+    },
+    Assumptions: {
+      concept: "An assumption is the quiet bridge the argument needs but does not say.",
+      example: "Students using a new schedule improved, so the schedule caused the improvement.",
+      breakdown: "The argument needs the students not to have been stronger already.",
+      trap: "Helpful is not enough. Necessary means the argument breaks when the answer is false.",
+      practice: "Negate the answer. If the conclusion loses support, keep it.",
+    },
+    "Strengthen or Weaken": {
+      concept: "Strengthen and weaken answers change the support relationship, not just the topic.",
+      example: "A city predicts bike commuting will increase after adding lanes.",
+      breakdown: "A connected lane network strengthens. Lanes that do not reach jobs weaken.",
+      trap: "Popularity answers feel relevant but may not affect whether the prediction follows.",
+      practice: "Predict what would help or hurt the bridge before looking down.",
+    },
+    Conclusions: {
+      concept: "The conclusion is the claim the author is trying to prove.",
+      example: "The rule is inconsistently applied, so the rule should be rewritten.",
+      breakdown: "Inconsistency is evidence. Rewriting the rule is the defended claim.",
+      trap: "True details from the stimulus are often wrong because they are not the main claim.",
+      practice: "Ask: which sentence makes the others sound like reasons?",
+    },
+    "Conditional Logic": {
+      concept: "Conditional logic is about triggers and guaranteed results.",
+      example: "If a passage is assigned, notes are required.",
+      breakdown: "Assigned triggers notes. No notes proves not assigned. Notes does not prove assigned.",
+      trap: "The most common trap reverses the arrow.",
+      practice: "Write the arrow, then write only the contrapositive.",
+    },
+    "Reading Structure": {
+      concept: "RC structure is the job each paragraph does for the passage.",
+      example: "A theory appears, a critic objects, and the author gives a limited defense.",
+      breakdown: "That is view, challenge, response. The topic matters less than the movement.",
+      trap: "A detail can be true but too small for a structure question.",
+      practice: "After each paragraph, write one word: background, view, challenge, response, implication.",
+    },
+    Pacing: {
+      concept: "Pacing is a scoring skill. It protects the questions you can win.",
+      example: "A dense final-five question has abstract answer choices and no clear task.",
+      breakdown: "If task and structure are not clear quickly, mark it and return.",
+      trap: "Spending more time can feel responsible while quietly stealing easier points.",
+      practice: "Use a 20-second task check before investing full effort.",
+    },
+  };
+  return kits[item.skill] || {
+    concept: "Every LSAT task becomes easier when you name the job before reading answer choices.",
+    example: "A stimulus gives evidence, then asks you to evaluate how strongly it supports a claim.",
+    breakdown: "Find the task, find the conclusion, then prove the credited answer from the text.",
+    trap: "Familiar words are not proof. Match function, not vibes.",
+    practice: "Write a task label, make a prediction, then choose.",
+  };
+}
+
 function renderLessonPlayer() {
   if (!has("#dynamicLesson")) return;
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || state.lastContentId || contentLibrary[0].id;
   const item = contentLibrary.find((lesson) => lesson.id === id) || contentLibrary[0];
   const scenes = getLessonScenes(item);
+  const kit = getLessonKit(item);
   const practice = getLessonPractice(item);
   const mastery = state.lessonMastery[item.id] || { answered: 0, correct: 0, passed: false };
   const masteryScore = mastery.answered ? Math.round((mastery.correct / mastery.answered) * 100) : 0;
@@ -1412,6 +1480,18 @@ function renderLessonPlayer() {
         </div>
         <h2>Transcript</h2>
         <p>${escapeHtml(scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" "))}</p>
+        <section class="lesson-kit" aria-label="Concept example breakdown trap and practice">
+          <h2>Short concept</h2>
+          <p>${escapeHtml(kit.concept)}</p>
+          <h2>Example</h2>
+          <p>${escapeHtml(kit.example)}</p>
+          <h2>Breakdown</h2>
+          <p>${escapeHtml(kit.breakdown)}</p>
+          <h2>Trap answer</h2>
+          <p>${escapeHtml(kit.trap)}</p>
+          <h2>Practice rule</h2>
+          <p>${escapeHtml(kit.practice)}</p>
+        </section>
         <h2>ADHD + dyslexia supports</h2>
         <ul>
           <li>Use the lesson in one sprint: watch, drill, journal, stop.</li>
@@ -1843,6 +1923,21 @@ function renderPlugins() {
           </ul>
         </article>
       `
+    )
+    .join("");
+}
+
+function renderOfficialExplanations() {
+  if (!has("#officialExplanationGrid")) return;
+  $("#officialExplanationGrid").innerHTML = officialPrepTests
+    .map(
+      (test) => `
+        <article class="explanation-link-card">
+          <h3>PrepTest ${test}</h3>
+          <p>Review the official question first, then compare your reasoning to right and wrong answer explanations.</p>
+          <a class="mini-button" href="https://lsathacks.com/explanations/lsat-preptest-${test}/" target="_blank" rel="noopener">Open explanations</a>
+        </article>
+      `,
     )
     .join("");
 }
@@ -2373,6 +2468,7 @@ function init() {
   renderExplanations();
   renderClasses();
   renderPlugins();
+  renderOfficialExplanations();
   renderTimer();
   renderFullTest();
   renderCurrentQuestion();
