@@ -312,6 +312,9 @@ h3 {
 .dark-mode .video-embed-card,
 .dark-mode .video-link-card,
 .dark-mode .lesson-card,
+.dark-mode .roadmap-status div,
+.dark-mode .roadmap-card,
+.dark-mode .format-card,
 .dark-mode .time-breakdown div,
 .dark-mode .review-snapshot div,
 .dark-mode .focus-signal {
@@ -608,6 +611,88 @@ h3 {
 .site-footer {
   display: grid;
   gap: 12px;
+}
+
+.roadmap-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.roadmap-status div,
+.format-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.roadmap-status strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 1.3rem;
+}
+
+.roadmap-phases {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.roadmap-card {
+  display: grid;
+  gap: 10px;
+  min-width: 180px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.roadmap-card.active {
+  border-color: var(--teal);
+  box-shadow: inset 0 4px 0 var(--teal), var(--shadow);
+}
+
+.roadmap-number {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--teal);
+  font-weight: 950;
+}
+
+.roadmap-card ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.exam-format-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.format-card {
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.format-card strong {
+  font-size: 1.25rem;
+}
+
+.format-card.variable {
+  border-color: rgba(217, 107, 123, 0.42);
+  background: #fff6f7;
 }
 
 .time-breakdown div {
@@ -1976,6 +2061,8 @@ tbody tr:last-child td {
   }
 
   .score-strip,
+  .roadmap-status,
+  .exam-format-grid,
   .review-summary,
   .filters,
   .content-filters,
@@ -1997,6 +2084,8 @@ tbody tr:last-child td {
   .quick-grid,
   .study-loop,
   .score-strip,
+  .roadmap-status,
+  .exam-format-grid,
   .review-summary,
   .filters,
   .content-filters,

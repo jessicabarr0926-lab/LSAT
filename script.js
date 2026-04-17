@@ -863,6 +863,54 @@ const classes = [
   },
 ];
 
+const roadmapPhases = [
+  {
+    id: "foundations",
+    title: "Foundations",
+    range: "140 -> 150",
+    focus: "Untimed accuracy before speed.",
+    tasks: ["Conclusion vs. evidence", "Assumption spotting", "Conditional arrows", "RC paragraph jobs"],
+    action: "content.html",
+    button: "Open foundation lessons",
+  },
+  {
+    id: "controlled-timing",
+    title: "Controlled timing",
+    range: "150 -> 160",
+    focus: "Short timed sets with blind review.",
+    tasks: ["6-question LR sets", "17-minute checkpoints", "Confidence marking", "Miss cause tags"],
+    action: "drills.html",
+    button: "Start controlled drill",
+  },
+  {
+    id: "section-consistency",
+    title: "Section consistency",
+    range: "160 -> 168",
+    focus: "Turn skills into repeatable section scores.",
+    tasks: ["35-minute LR sections", "RC passage map timing", "Pacing checkpoints", "Retest missed families"],
+    action: "tests.html",
+    button: "Run timed section",
+  },
+  {
+    id: "full-pt",
+    title: "Full PrepTests",
+    range: "168 -> 172",
+    focus: "Use LawHub-style four-section stamina.",
+    tasks: ["Two LR scored sections", "One RC scored section", "One variable section", "Deep review after test"],
+    action: "tests.html",
+    button: "Start full test",
+  },
+  {
+    id: "variance-control",
+    title: "Variance control",
+    range: "172 -> 175",
+    focus: "Shrink lucky guesses, panic misses, and late-section drops.",
+    tasks: ["Near-miss review", "High-confidence misses", "Sleep and recovery", "Final taper"],
+    action: "analytics.html",
+    button: "Open analytics",
+  },
+];
+
 const automations = [
   {
     id: "daily-review",
@@ -1123,8 +1171,47 @@ function renderDashboard() {
   $("#readinessText").textContent = `Next target: ${weakSkill}. Complete one focused drill, review every miss, then log a timed set.`;
   renderDashboardDrillPreview();
   renderDashboardCharts();
+  renderRoadmap();
   hydrateDashboardSettings();
   renderContinueLearning();
+}
+
+function getCurrentRoadmapPhase(readiness) {
+  if (readiness < 66) return roadmapPhases[0];
+  if (readiness < 74) return roadmapPhases[1];
+  if (readiness < 82) return roadmapPhases[2];
+  if (readiness < 88) return roadmapPhases[3];
+  return roadmapPhases[4];
+}
+
+function renderRoadmap() {
+  if (!has("#roadmapPhases")) return;
+  const answered = state.drillStats.answered;
+  const correct = state.drillStats.correct;
+  const accuracy = answered ? Math.round((correct / answered) * 100) : 0;
+  const completed = state.completedContent.length;
+  const readiness = Math.min(92, 58 + completed * 4 + Math.min(answered, 16) + (answered ? Math.round((correct / answered) * 12) : 0));
+  const current = getCurrentRoadmapPhase(readiness);
+  if (has("#roadmapStatus")) {
+    $("#roadmapStatus").innerHTML = `
+      <div><span class="metric-label">Current phase</span><strong>${escapeHtml(current.title)}</strong></div>
+      <div><span class="metric-label">Local accuracy</span><strong>${accuracy || "Start"}${accuracy ? "%" : ""}</strong></div>
+      <div><span class="metric-label">Next rule</span><strong>${escapeHtml(current.focus)}</strong></div>
+    `;
+  }
+  $("#roadmapPhases").innerHTML = roadmapPhases
+    .map(
+      (phase, index) => `
+        <article class="roadmap-card ${phase.id === current.id ? "active" : ""}">
+          <span class="roadmap-number">${index + 1}</span>
+          <h3>${escapeHtml(phase.title)}</h3>
+          <p><strong>${escapeHtml(phase.range)}:</strong> ${escapeHtml(phase.focus)}</p>
+          <ul>${phase.tasks.map((task) => `<li>${escapeHtml(task)}</li>`).join("")}</ul>
+          <button class="mini-button" type="button" data-roadmap-action="${escapeHtml(phase.action)}">${escapeHtml(phase.button)} -></button>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function renderDashboardDrillPreview() {
@@ -2372,13 +2459,14 @@ function renderTimer() {
 function startFullTest() {
   const logical = questionBank.filter((question) => question.section === "Logical Reasoning");
   const reading = questionBank.filter((question) => question.section === "Reading Comprehension");
+  const variablePool = logical.slice(25, 50).length >= 25 ? logical.slice(25, 50) : reading.concat(logical).slice(0, 25);
   fullTest = {
-    questions: [...logical.slice(0, 25), ...reading.slice(0, 25), ...logical.slice(25, 50)],
+    questions: [...logical.slice(0, 25), ...logical.slice(25, 50), ...reading.slice(0, 25), ...variablePool],
     index: 0,
     answers: {},
     submitted: false,
   };
-  showToast("Full test started. Treat each 25-question block like a section.");
+  showToast("Current-format test started: LR, LR, RC, variable.");
   renderFullTest();
 }
 
@@ -2391,9 +2479,11 @@ function renderFullTest() {
   const question = fullTest.questions[fullTest.index];
   const sectionNumber = Math.floor(fullTest.index / 25) + 1;
   const sectionQuestion = (fullTest.index % 25) + 1;
+  const sectionLabels = ["LR scored", "LR scored", "RC scored", "Variable unscored"];
+  const sectionLabel = sectionLabels[sectionNumber - 1] || `Section ${sectionNumber}`;
   const chosen = fullTest.answers[question.id] || "";
   $("#fullTestCard").innerHTML = `
-    <div class="drill-meta"><span>Section ${sectionNumber}, Question ${sectionQuestion}</span><span>${fullTest.index + 1}/${fullTest.questions.length}</span></div>
+    <div class="drill-meta"><span>Section ${sectionNumber}: ${sectionLabel}</span><span>Question ${sectionQuestion}</span><span>${fullTest.index + 1}/${fullTest.questions.length}</span></div>
     <p class="prompt">${escapeHtml(question.prompt)}</p>
     <div class="choices">
       ${Object.entries(question.choices)
@@ -2718,6 +2808,11 @@ function bindEvents() {
     const pageButton = event.target.closest("[data-page-target]");
     if (pageButton) {
       window.location.href = pageButton.dataset.pageTarget;
+    }
+
+    const roadmapButton = event.target.closest("[data-roadmap-action]");
+    if (roadmapButton) {
+      window.location.href = roadmapButton.dataset.roadmapAction;
     }
 
     const startDrill = event.target.closest("[data-start-drill]");
