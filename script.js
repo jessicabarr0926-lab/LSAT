@@ -1169,11 +1169,109 @@ function renderDashboard() {
   $("#readinessScore").textContent = `${readiness}%`;
   $("#readinessBar").style.width = `${readiness}%`;
   $("#readinessText").textContent = `Next target: ${weakSkill}. Complete one focused drill, review every miss, then log a timed set.`;
+  renderDashboardCommandCenter();
   renderDashboardDrillPreview();
   renderDashboardCharts();
   renderRoadmap();
   hydrateDashboardSettings();
   renderContinueLearning();
+}
+
+function renderDashboardCommandCenter() {
+  renderDashboardRatings();
+  renderDashboardSectionHistory();
+  renderDashboardTodayFlow();
+}
+
+function renderDashboardRatings() {
+  if (!has("#dashboardRatings")) return;
+  const ratings = [
+    {
+      label: "LR",
+      score: Math.round((getSkillScore("Flaws") + getSkillScore("Assumptions") + getSkillScore("Conditional Logic")) / 3),
+      target: "90+",
+      action: "content.html?skill=lr",
+    },
+    {
+      label: "RC",
+      score: getSkillScore("Reading Structure"),
+      target: "88+",
+      action: "content.html?skill=rc",
+    },
+  ];
+  const streak = Math.min(8, Math.max(0, state.activity.length));
+  $("#dashboardRatings").innerHTML = `
+    ${ratings
+      .map(
+        (rating) => `
+          <button class="rating-gauge" type="button" data-page-target="${escapeHtml(rating.action)}" style="--rating: ${rating.score}%">
+            <span>${escapeHtml(rating.label)}</span>
+            <strong>${rating.score}</strong>
+            <small>Goal ${escapeHtml(rating.target)}</small>
+          </button>
+        `
+      )
+      .join("")}
+    <button class="streak-pill" type="button" data-page-target="plan.html">
+      <strong>${streak}</strong>
+      <span>recent study actions</span>
+    </button>
+  `;
+}
+
+function renderDashboardSectionHistory() {
+  if (!has("#dashboardSectionHistory")) return;
+  const rows = [
+    { date: "Today", test: "PT130", type: "LR", score: sectionData.section1.score, accuracy: "56%", action: "review.html" },
+    { date: "Next", test: "Targeted", type: getWeakSkills()[0], score: "6 Q", accuracy: "90% gate", action: "drills.html" },
+    { date: "Due", test: "RC map", type: "RC", score: "1 passage", accuracy: "structure", action: "content.html" },
+  ];
+  $("#dashboardSectionHistory").innerHTML = `
+    <table class="mini-history-table">
+      <thead><tr><th>Date</th><th>Test</th><th>Type</th><th>Score</th><th>Action</th></tr></thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) => `
+              <tr>
+                <td>${escapeHtml(row.date)}</td>
+                <td>${escapeHtml(row.test)}</td>
+                <td>${escapeHtml(row.type)}</td>
+                <td><strong>${escapeHtml(row.score)}</strong><span>${escapeHtml(row.accuracy)}</span></td>
+                <td><button class="mini-button" type="button" data-page-target="${escapeHtml(row.action)}">Open</button></td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderDashboardTodayFlow() {
+  if (!has("#dashboardTodayFlow")) return;
+  const weakSkill = getWeakSkills()[0];
+  const items = [
+    { time: "Warm-up", title: `Watch ${weakSkill} micro-lesson`, meta: "8-12 min. Read aloud on.", action: "content.html" },
+    { time: "Main set", title: `Do a ${weakSkill} drill`, meta: "6 questions. Confidence before answer check.", action: "drills.html" },
+    { time: "Review", title: "Blind review every miss", meta: "Write the trap in plain English.", action: "journal.html" },
+  ];
+  $("#dashboardTodayFlow").innerHTML = `
+    <ol class="today-checklist">
+      ${items
+        .map(
+          (item, index) => `
+            <li>
+              <button class="today-step" type="button" data-page-target="${escapeHtml(item.action)}">
+                <span>${index + 1}</span>
+                <div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.time)} · ${escapeHtml(item.meta)}</small></div>
+              </button>
+            </li>
+          `
+        )
+        .join("")}
+    </ol>
+  `;
 }
 
 function getCurrentRoadmapPhase(readiness) {

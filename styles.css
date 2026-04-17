@@ -312,6 +312,9 @@ h3 {
 .dark-mode .video-embed-card,
 .dark-mode .video-link-card,
 .dark-mode .lesson-card,
+.dark-mode .command-card,
+.dark-mode .streak-pill,
+.dark-mode .today-step,
 .dark-mode .roadmap-status div,
 .dark-mode .roadmap-card,
 .dark-mode .format-card,
@@ -319,6 +322,12 @@ h3 {
 .dark-mode .review-snapshot div,
 .dark-mode .focus-signal {
   background: rgba(36, 32, 41, 0.96);
+}
+
+.dark-mode .rating-gauge {
+  background:
+    radial-gradient(circle at center, rgba(36, 32, 41, 0.98) 0 55%, transparent 56%),
+    conic-gradient(var(--teal) var(--rating), rgba(255, 255, 255, 0.16) 0);
 }
 
 .panel,
@@ -462,6 +471,201 @@ h3 {
 
 .dashboard-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.command-center-panel {
+  overflow: hidden;
+}
+
+.command-center-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.command-center-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.25fr 1fr;
+  gap: 16px;
+}
+
+.command-card {
+  display: grid;
+  gap: 14px;
+  min-height: 255px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fff8fb 100%);
+}
+
+.card-heading,
+.rating-gauges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-heading span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.rating-gauges {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.rating-gauge {
+  display: grid;
+  width: min(128px, 42vw);
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 16px;
+  border: 1px solid rgba(143, 95, 116, 0.3);
+  border-radius: 50%;
+  color: var(--ink);
+  cursor: pointer;
+  background:
+    radial-gradient(circle at center, #ffffff 0 55%, transparent 56%),
+    conic-gradient(var(--teal) var(--rating), #f1e4ec 0);
+  box-shadow: 0 12px 24px rgba(31, 36, 48, 0.08);
+}
+
+.rating-gauge span,
+.rating-gauge small,
+.rating-gauge strong {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.rating-gauge span {
+  align-self: start;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.rating-gauge strong {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.rating-gauge small {
+  align-self: end;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.streak-pill {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  background: #ffffff;
+}
+
+.streak-pill strong {
+  font-size: 1.6rem;
+}
+
+.mini-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.mini-history-table th,
+.mini-history-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.mini-history-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.mini-history-table td span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.today-checklist {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-step {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  background: #ffffff;
+  text-align: left;
+}
+
+.today-step span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--teal);
+  font-weight: 950;
+}
+
+.today-step strong,
+.today-step small {
+  display: block;
+}
+
+.today-step small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.command-card,
+.rating-gauge,
+.streak-pill,
+.today-step {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.command-card:hover,
+.rating-gauge:hover,
+.streak-pill:hover,
+.today-step:hover {
+  transform: translateY(-2px);
+  border-color: rgba(143, 95, 116, 0.45);
+  box-shadow: 0 14px 28px rgba(31, 36, 48, 0.1);
 }
 
 .continue-grid,
@@ -1981,6 +2185,7 @@ tbody tr:last-child td {
   .resource-grid,
   .analytics-grid,
   .dashboard-grid,
+  .command-center-grid,
   .video-library-grid,
   .video-embed-card,
   .planning-grid,
