@@ -2179,11 +2179,13 @@ tbody tr:last-child td {
   background: linear-gradient(90deg, var(--red), var(--yellow), var(--green));
 }
 
-.automation-item.enabled {
+.automation-item.enabled,
+.plugin-item.enabled {
   border-color: var(--teal);
 }
 
-.automation-item .toggle {
+.automation-item .toggle,
+.plugin-controls .mini-button {
   min-width: 84px;
 }
 

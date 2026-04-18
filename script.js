@@ -1035,34 +1035,46 @@ const automations = [
 
 const plugins = [
   {
+    id: "computer-use",
     title: "Computer Use",
     use: "Walk through the app in a real browser, check screenshots, and validate the study flow visually.",
     bestFor: ["Browser testing", "UI walkthroughs", "Screenshot review"],
+    action: "Run visual check",
   },
   {
+    id: "google-calendar",
     title: "Google Calendar",
     use: "Put live classes, timed sections, and review blocks onto a real weekly calendar.",
     bestFor: ["Class reminders", "Study blocks", "Weekly planning"],
+    action: "Export calendar",
   },
   {
+    id: "google-drive",
     title: "Google Drive / Docs",
     use: "Keep a wrong-answer journal, lesson notes, and instructor questions in organized study files.",
     bestFor: ["Wrong-answer journal", "Study notes", "Exportable plans"],
+    action: "Open journal",
   },
   {
+    id: "google-sheets",
     title: "Google Sheets",
     use: "Track raw scores, section timing, question types, and rolling accuracy over time.",
     bestFor: ["Score tracker", "Charts", "Weak-area tables"],
+    action: "Open analytics",
   },
   {
+    id: "gmail",
     title: "Gmail",
     use: "Draft questions to tutors, class follow-ups, or accountability check-ins.",
     bestFor: ["Tutor emails", "Support messages", "Weekly recaps"],
+    action: "Open support",
   },
   {
+    id: "canva",
     title: "Canva",
     use: "Make printable study trackers, flashcards, and visual cheat sheets.",
     bestFor: ["Flashcards", "Study posters", "Printable plans"],
+    action: "Make worksheet",
   },
 ];
 
@@ -1107,6 +1119,7 @@ const defaultState = {
     "timed-section": false,
     "ask-followup": false,
   },
+  pluginConnections: {},
   drillStats: {
     answered: 0,
     correct: 0,
@@ -2838,20 +2851,70 @@ function renderPlugins() {
   if (!has("#pluginGrid")) return;
   $("#pluginGrid").innerHTML = plugins
     .map(
-      (plugin) => `
-        <article class="plugin-item">
+      (plugin) => {
+        const connected = Boolean(state.pluginConnections?.[plugin.id]);
+        return `
+        <article class="plugin-item ${connected ? "enabled" : ""}">
           <header>
             <h3>${escapeHtml(plugin.title)}</h3>
-            <span class="tag">Recommended</span>
+            <span class="tag">${connected ? "Connected" : "Recommended"}</span>
           </header>
           <p>${escapeHtml(plugin.use)}</p>
           <ul>
             ${plugin.bestFor.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
+          <div class="plugin-controls">
+            <button class="mini-button" type="button" data-plugin-connect="${escapeHtml(plugin.id)}">${connected ? "Disconnect" : "Connect"}</button>
+            <button class="mini-button" type="button" data-plugin-action="${escapeHtml(plugin.id)}">${escapeHtml(plugin.action)}</button>
+          </div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
+}
+
+function runPluginAction(id) {
+  const plugin = plugins.find((item) => item.id === id);
+  if (!plugin) return;
+  addActivity(`Plugin action: ${plugin.title}.`);
+  if (id === "google-calendar") {
+    downloadCalendar();
+    return;
+  }
+  const routes = {
+    "computer-use": "index.html",
+    "google-drive": "journal.html",
+    "google-sheets": "analytics.html",
+    gmail: "support.html",
+    canva: "content.html",
+  };
+  window.location.href = routes[id] || "plugins.html";
+}
+
+function runAutomation(id) {
+  const automation = automations.find((item) => item.id === id);
+  if (!automation) return;
+  addActivity(`Automation ran: ${automation.title}.`);
+  if (id === "daily-review") {
+    buildRecommendedDrill();
+    return;
+  }
+  if (id === "missed-sweep") {
+    ensureReviewItems();
+    renderReviewQueue();
+    window.location.href = "journal.html";
+    return;
+  }
+  if (id === "timed-section") {
+    window.location.href = "tests.html";
+    return;
+  }
+  if (id === "ask-followup") {
+    window.location.href = "support.html";
+    return;
+  }
+  showToast("Automation ran and updated activity.");
 }
 
 function renderOfficialExplanations() {
@@ -3271,9 +3334,22 @@ function bindEvents() {
 
     const automationRun = event.target.closest("[data-run-automation]");
     if (automationRun) {
-      const automation = automations.find((item) => item.id === automationRun.dataset.runAutomation);
-      addActivity(`Automation ran: ${automation.title}.`);
-      showToast("Automation ran and updated activity.");
+      runAutomation(automationRun.dataset.runAutomation);
+    }
+
+    const pluginConnect = event.target.closest("[data-plugin-connect]");
+    if (pluginConnect) {
+      const id = pluginConnect.dataset.pluginConnect;
+      state.pluginConnections = state.pluginConnections || {};
+      state.pluginConnections[id] = !state.pluginConnections[id];
+      saveState();
+      renderPlugins();
+      showToast(`Plugin ${state.pluginConnections[id] ? "connected" : "disconnected"}.`);
+    }
+
+    const pluginAction = event.target.closest("[data-plugin-action]");
+    if (pluginAction) {
+      runPluginAction(pluginAction.dataset.pluginAction);
     }
 
     const studyBlock = event.target.closest("[data-log-study-block]");
