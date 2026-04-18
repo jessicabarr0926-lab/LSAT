@@ -1902,6 +1902,7 @@ function renderContentHub() {
   const featured = getRecommendedContent();
   $("#featuredContentTitle").textContent = featured.title;
   $("#featuredContentBody").textContent = featured.description;
+  renderStartPath();
   const filtered = getFilteredContent();
   const completed = state.completedContent.length;
   const saved = state.savedContent.length;
@@ -1910,10 +1911,19 @@ function renderContentHub() {
     .filter((item) => state.completedContent.includes(item.id))
     .reduce((sum, item) => sum + item.minutes, 0);
   $("#contentSummary").innerHTML = `
-    <div><span class="metric-label">Completed</span><strong>${completed}/${contentLibrary.length}</strong></div>
-    <div><span class="metric-label">Saved</span><strong>${saved}</strong></div>
-    <div><span class="metric-label">Watched</span><strong>${watched}</strong></div>
-    <div><span class="metric-label">Minutes</span><strong>${minutes}</strong></div>
+    <button class="summary-card" type="button" data-content-status-shortcut="completed">
+      <span class="metric-label">Completed</span><strong>${completed ? `${completed}/${contentLibrary.length}` : "Start first"}</strong>
+      <div class="lesson-progress" aria-hidden="true"><span style="width: ${(completed / contentLibrary.length) * 100}%"></span></div>
+    </button>
+    <button class="summary-card" type="button" data-content-status-shortcut="saved">
+      <span class="metric-label">Saved</span><strong>${saved}</strong><small>Open saved lessons</small>
+    </button>
+    <button class="summary-card" type="button" data-content-status-shortcut="unwatched">
+      <span class="metric-label">Watched</span><strong>${watched}</strong><small>Keep the streak warm</small>
+    </button>
+    <button class="summary-card" type="button" data-content-category="Start here">
+      <span class="metric-label">Minutes</span><strong>${minutes || "12 min"}</strong><small>${minutes ? "completed" : "first block"}</small>
+    </button>
   `;
   $("#contentGrid").innerHTML = filtered.length
     ? filtered.map(renderContentCard).join("")
@@ -1923,14 +1933,37 @@ function renderContentHub() {
   });
 }
 
+function renderStartPath() {
+  if (!has("#startPathGrid")) return;
+  const pathIds = ["argument-basics", "conclusion-evidence", "flaws-fast"];
+  $("#startPathGrid").innerHTML = pathIds
+    .map((id, index) => {
+      const item = contentLibrary.find((lesson) => lesson.id === id);
+      if (!item) return "";
+      const completed = state.completedContent.includes(item.id);
+      return `
+        <button class="start-path-step ${completed ? "done" : ""}" type="button" data-open-content="${escapeHtml(item.id)}">
+          <span>${completed ? "Done" : `Step ${index + 1}`}</span>
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.minutes)} min | ${escapeHtml(item.skill)}</small>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function renderContentCard(item) {
   const completed = state.completedContent.includes(item.id);
   const saved = state.savedContent.includes(item.id);
   const watched = state.watchedContent.includes(item.id);
   const progress = completed ? 100 : watched ? 45 : 0;
+  const icon = getLessonIcon(item);
   return `
     <article class="lesson-card">
-      <div class="lesson-thumb">${escapeHtml(item.type)}</div>
+      <div class="lesson-thumb ${escapeHtml(item.topic)}-thumb">
+        <span>${escapeHtml(icon)}</span>
+        <strong>${escapeHtml(item.skill)}</strong>
+      </div>
       <div class="lesson-card-body">
         <div class="lesson-meta">
           <span class="tag">${escapeHtml(item.topicLabel)}</span>
@@ -1943,11 +1976,25 @@ function renderContentCard(item) {
         <div class="lesson-actions">
           <button class="mini-button" type="button" data-open-content="${item.id}">Watch lesson</button>
           <button class="mini-button" type="button" data-save-content="${item.id}">${saved ? "Saved" : "Save"}</button>
-          <button class="mini-button" type="button" data-open-content="${item.id}">${completed ? "Review again" : "Mastery gate"}</button>
+          <button class="mini-button" type="button" data-open-content="${item.id}" title="Unlock by scoring 90% or higher on 10 lesson practice attempts.">${completed ? "Review again" : "Mastery gate"}</button>
         </div>
       </div>
     </article>
   `;
+}
+
+function getLessonIcon(item) {
+  const icons = {
+    Flaws: "Gap",
+    Assumptions: "Bridge",
+    "Strengthen or Weaken": "Move",
+    Conclusions: "Claim",
+    "Conditional Logic": "If",
+    "Reading Structure": "Map",
+    Pacing: "Timer",
+    "Techniques, Roles, and Principles": "Method",
+  };
+  return icons[item.skill] || item.type.replace(" lesson", "");
 }
 
 const lessonDeepDives = {
@@ -2702,12 +2749,15 @@ function renderAccessibilityDock() {
   document.body.insertAdjacentHTML(
     "beforeend",
     `<div class="accessibility-dock" id="accessibilityDock" aria-label="Personal study settings">
-      <strong>Jessica mode</strong>
-      <button class="mini-button" type="button" data-toggle-accessibility="dyslexia">Dyslexia font</button>
-      <button class="mini-button" type="button" data-toggle-accessibility="focus">Focus spacing</button>
-      <button class="mini-button" type="button" data-toggle-accessibility="darkMode">Dark mode</button>
-      <button class="mini-button" type="button" data-toggle-accessibility="highContrast">High contrast</button>
-      <button class="mini-button" type="button" data-toggle-accessibility="reducedMotion">Reduce motion</button>
+      <button class="accessibility-toggle" type="button" data-toggle-accessibility-panel aria-expanded="false">Jessica mode</button>
+      <div class="accessibility-options">
+        <strong>Reading tools</strong>
+        <button class="mini-button" type="button" data-toggle-accessibility="dyslexia">Dyslexia font</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="focus">Focus spacing</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="darkMode">Dark mode</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="highContrast">High contrast</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="reducedMotion">Reduce motion</button>
+      </div>
     </div>`,
   );
 }
@@ -2959,6 +3009,7 @@ function resetTimer() {
 
 function renderAll() {
   ensureReviewItems();
+  enhanceNavigation();
   applyAccessibility();
   renderAccessibilityDock();
   renderDashboard();
@@ -2974,6 +3025,55 @@ function renderAll() {
   renderAnalytics();
   renderAutomations();
   renderLessonPlayer();
+}
+
+function enhanceNavigation() {
+  const nav = $(".nav-list");
+  if (!nav || nav.dataset.enhanced === "true") return;
+  const groups = [
+    [
+      "Learn",
+      [
+        ["content.html", "Content"],
+        ["lessons.html", "Lessons"],
+        ["explanations.html", "Explanations"],
+      ],
+    ],
+    [
+      "Practice",
+      [
+        ["question-bank.html", "Question bank"],
+        ["drills.html", "Adaptive drills"],
+        ["tests.html", "Timed tests"],
+      ],
+    ],
+    [
+      "Review",
+      [
+        ["review.html", "Test review"],
+        ["journal.html", "Wrong-answer journal"],
+        ["analytics.html", "Analytics"],
+      ],
+    ],
+    [
+      "Plan",
+      [
+        ["index.html", "Dashboard"],
+        ["plan.html", "Study plan"],
+        ["classes.html", "Classes"],
+        ["support.html", "Ask support"],
+        ["automations.html", "Automations"],
+        ["plugins.html", "Plugins"],
+      ],
+    ],
+  ];
+  nav.innerHTML = groups
+    .map(([label, items]) => {
+      const links = items.map(([href, text]) => `<a href="${href}">${text}</a>`).join("");
+      return `<section class="nav-group"><span>${label}</span>${links}</section>`;
+    })
+    .join("");
+  nav.dataset.enhanced = "true";
 }
 
 function setActiveNavigation() {
@@ -3132,6 +3232,13 @@ function bindEvents() {
       renderContentHub();
     }
 
+    const statusShortcut = event.target.closest("[data-content-status-shortcut]");
+    if (statusShortcut && has("#contentStatusFilter")) {
+      $("#contentStatusFilter").value = statusShortcut.dataset.contentStatusShortcut;
+      renderContentHub();
+      showToast(`Content filter: ${statusShortcut.textContent.trim()}.`);
+    }
+
     const focusButton = event.target.closest("[data-focus]");
     if (focusButton) {
       currentFocus = focusButton.dataset.focus;
@@ -3205,6 +3312,13 @@ function bindEvents() {
     if (askToggle && has("#quickAskPanel")) {
       $("#quickAskPanel").hidden = !$("#quickAskPanel").hidden;
       if (!$("#quickAskPanel").hidden) $("#quickAskInput")?.focus();
+    }
+
+    const accessibilityPanel = event.target.closest("[data-toggle-accessibility-panel]");
+    if (accessibilityPanel) {
+      const dock = $("#accessibilityDock");
+      dock?.classList.toggle("open");
+      accessibilityPanel.setAttribute("aria-expanded", String(dock?.classList.contains("open")));
     }
 
     const mobileMenu = event.target.closest("[data-toggle-mobile-menu]");
@@ -3442,6 +3556,7 @@ function bindEvents() {
 }
 
 function init() {
+  enhanceNavigation();
   setActiveNavigation();
   renderReviewRows("section1");
   renderExplanations();
