@@ -121,6 +121,10 @@ a {
   grid-template-columns: 280px minmax(0, 1fr);
 }
 
+.sidebar-collapsed .app-shell {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -130,6 +134,21 @@ a {
   background:
     linear-gradient(180deg, rgba(43, 34, 48, 0.98) 0%, rgba(111, 78, 96, 0.96) 58%, rgba(37, 42, 48, 0.98) 100%);
   box-shadow: 10px 0 30px rgba(31, 36, 48, 0.08);
+}
+
+.sidebar-collapse {
+  display: inline-flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 900;
 }
 
 .brand {
@@ -160,6 +179,7 @@ a {
 }
 
 .nav-list a {
+  display: block;
   min-height: 40px;
   padding: 9px 12px;
   border-radius: 8px;
@@ -184,11 +204,44 @@ a {
   gap: 7px;
 }
 
-.nav-group > span {
+.nav-group > summary {
+  cursor: pointer;
+  list-style: none;
   color: rgba(255, 255, 255, 0.68);
   font-size: 0.68rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.nav-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group > summary::after {
+  content: " +";
+}
+
+.nav-group[open] > summary::after {
+  content: " -";
+}
+
+.sidebar-collapsed .brand span:last-child,
+.sidebar-collapsed .nav-list,
+.sidebar-collapsed .sidebar-collapse {
+  font-size: 0;
+}
+
+.sidebar-collapsed .brand {
+  justify-content: center;
+}
+
+.sidebar-collapsed .sidebar {
+  padding: 18px 12px;
+}
+
+.sidebar-collapsed .sidebar-collapse::after {
+  content: ">";
+  font-size: 1rem;
 }
 
 .workspace {
@@ -749,12 +802,33 @@ h3 {
 }
 
 .continue-grid,
-.content-hero,
-.lesson-layout {
+.content-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
   gap: 20px;
   align-items: stretch;
+}
+
+.lesson-flow {
+  display: grid;
+  gap: 18px;
+}
+
+.watch-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.watch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lesson-notes {
+  display: grid;
+  max-width: 920px;
+  gap: 16px;
 }
 
 .lesson-stepper {
@@ -1087,7 +1161,7 @@ h3 {
 .animated-video {
   position: relative;
   overflow: hidden;
-  min-height: 420px;
+  min-height: 460px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
@@ -1095,9 +1169,25 @@ h3 {
     #ffffff;
 }
 
+.video-chrome {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  left: 14px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(31, 36, 48, 0.82);
+  font-weight: 900;
+}
+
 .video-scene {
   position: absolute;
-  inset: 24px;
+  inset: 64px 24px 84px;
   display: grid;
   gap: 14px;
   align-content: center;
@@ -1107,6 +1197,30 @@ h3 {
   box-shadow: 0 12px 28px rgba(32, 36, 42, 0.09);
   opacity: 0;
   transform: translateY(18px);
+  animation: lessonScene 12s infinite;
+  animation-delay: calc(var(--scene-index) * 4s);
+}
+
+.caption-track {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  min-height: 54px;
+  overflow: hidden;
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(31, 36, 48, 0.88);
+}
+
+.caption-track span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px 14px;
+  opacity: 0;
+  text-align: center;
   animation: lessonScene 12s infinite;
   animation-delay: calc(var(--scene-index) * 4s);
 }
@@ -1846,6 +1960,8 @@ tbody tr:last-child td {
 .lesson-practice,
 .lesson-kit,
 .lesson-drill-brief,
+.lesson-transcript,
+.lesson-locked,
 .practice-question,
 .full-test-card,
 .explanation-directory,
@@ -1855,6 +1971,32 @@ tbody tr:last-child td {
 }
 
 .lesson-kit {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.lesson-transcript,
+.lesson-locked {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.lesson-transcript summary {
+  cursor: pointer;
+  color: var(--teal-dark);
+  font-weight: 900;
+}
+
+.lesson-locked {
+  border-style: dashed;
+  background: #fff8fb;
+}
+
+.practice-question {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2692,7 +2834,6 @@ tbody tr:last-child td {
   .content-hero,
   .start-path,
   .manual-system,
-  .lesson-layout,
   .lesson-stepper,
   .technique-lab,
   .class-spotlight,

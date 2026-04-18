@@ -2644,12 +2644,14 @@ function renderLessonPlayer() {
   const mastery = state.lessonMastery[item.id] || { answered: 0, correct: 0, passed: false };
   const masteryScore = mastery.answered ? Math.round((mastery.correct / mastery.answered) * 100) : 0;
   const completed = state.completedContent.includes(item.id);
+  const watchComplete = state.watchedContent.includes(item.id);
   const stepItems = [
     ["Watch/Read", true],
-    ["Translate", mastery.answered > 0],
-    ["Practice", mastery.answered >= Math.min(2, practice.length)],
+    ["Translate", watchComplete],
+    ["Practice", watchComplete && mastery.answered >= Math.min(2, practice.length)],
     ["Mastery Check", mastery.passed || completed],
   ];
+  const transcriptText = scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" ");
   $("#dynamicLesson").innerHTML = `
     <div class="section-heading">
       <p class="eyebrow">${escapeHtml(item.category)}</p>
@@ -2668,38 +2670,51 @@ function renderLessonPlayer() {
         )
         .join("")}
     </div>
-    <div class="lesson-layout">
-      <div class="lesson-video animated-video" aria-label="Animated lesson for ${escapeHtml(item.title)}">
-        ${scenes
-          .map(
-            (scene, index) => `
-              <div class="video-scene" style="--scene-index: ${index}">
-                <span>${escapeHtml(item.topicLabel)}</span>
-                <strong>${escapeHtml(scene.title)}</strong>
-                <p>${escapeHtml(scene.body)}</p>
-              </div>
-            `,
-          )
-          .join("")}
-      </div>
+    <div class="lesson-flow">
+      <section class="watch-panel">
+        <div class="lesson-video animated-video" aria-label="Animated transcript video for ${escapeHtml(item.title)}">
+          <div class="video-chrome"><span>JessiPreps lesson</span><strong>${escapeHtml(item.title)}</strong></div>
+          ${scenes
+            .map(
+              (scene, index) => `
+                <div class="video-scene" style="--scene-index: ${index}">
+                  <span>${escapeHtml(item.topicLabel)}</span>
+                  <strong>${escapeHtml(scene.title)}</strong>
+                  <p>${escapeHtml(scene.body)}</p>
+                </div>
+              `,
+            )
+            .join("")}
+          <div class="caption-track">
+            ${scenes.map((scene, index) => `<span style="--scene-index: ${index}">${escapeHtml(scene.title)} - ${escapeHtml(scene.body)}</span>`).join("")}
+          </div>
+        </div>
+        <div class="watch-actions">
+          <button class="button primary" type="button" data-finish-watch="${item.id}">${watchComplete ? "Watch/read complete" : "I finished watch + read"}</button>
+          <button class="button secondary dark" type="button" data-read-lesson>Listen and read</button>
+        </div>
+      </section>
       <div class="lesson-notes">
         <div class="lesson-meta">
           <span class="tag">${escapeHtml(item.minutes)} min</span>
           <span class="tag">${escapeHtml(item.difficulty)}</span>
           <span class="tag">${escapeHtml(item.skill)}</span>
         </div>
-        <h2>Transcript</h2>
-        <div id="lessonText">
-          <p>${escapeHtml(scenes.map((scene) => `${scene.title}: ${scene.body}`).join(" "))}</p>
-        </div>
-        <button class="button secondary dark" type="button" data-read-lesson>Listen and read</button>
-        <section class="plain-english-box" aria-label="Plain English simplifier">
-          <h2>Plain English Summary</h2>
-          <p id="simpleLogic">Paste a confusing LSAT sentence below, then simplify it into core logic.</p>
-          <textarea id="simplifierInput" rows="3" placeholder="Paste a confusing sentence here."></textarea>
-          <button class="button secondary dark" type="button" data-simplify-text>Simplify now</button>
-        </section>
-        ${item.id === "describe-technique" ? renderTechniqueSupport() : ""}
+        <details class="lesson-transcript" ${watchComplete ? "open" : ""}>
+          <summary>Read transcript</summary>
+          <div id="lessonText">
+            <p>${escapeHtml(transcriptText)}</p>
+          </div>
+        </details>
+        ${watchComplete ? `
+          <section class="plain-english-box" aria-label="Plain English simplifier">
+            <h2>Plain English Summary</h2>
+            <p id="simpleLogic">Paste a confusing LSAT sentence below, then simplify it into core logic.</p>
+            <textarea id="simplifierInput" rows="3" placeholder="Paste a confusing sentence here."></textarea>
+            <button class="button secondary dark" type="button" data-simplify-text>Simplify now</button>
+          </section>
+          ${item.id === "describe-technique" ? renderTechniqueSupport() : ""}
+        ` : renderLessonLockedPanel("Finish watch + read to unlock translation tools.")}
         <section class="lesson-kit" aria-label="Concept example breakdown trap and practice">
           <h2>Short concept</h2>
           <p>${escapeHtml(kit.concept)}</p>
@@ -2729,12 +2744,14 @@ function renderLessonPlayer() {
         </ul>
         <h2>Next action</h2>
         <p>Do not just watch. Run a short ${escapeHtml(item.skill)} drill while the pattern is warm.</p>
-        <section class="lesson-practice" aria-label="Lesson mastery practice">
-          <h2>Mastery practice</h2>
-          <p>You need 90% or higher on 10 attempts before this lesson counts as complete. Current lesson mastery: ${masteryScore}% after ${mastery.answered} attempts.</p>
-          ${practice.map(renderLessonPracticeQuestion).join("")}
-          <div class="mastery-meter">Lesson gate: ${mastery.passed ? "Unlocked" : "Locked until 90%."}</div>
-        </section>
+        ${watchComplete ? `
+          <section class="lesson-practice" aria-label="Lesson mastery practice">
+            <h2>Mastery practice</h2>
+            <p>You need 90% or higher on 10 attempts before this lesson counts as complete. Current lesson mastery: ${masteryScore}% after ${mastery.answered} attempts.</p>
+            ${practice.map(renderLessonPracticeQuestion).join("")}
+            <div class="mastery-meter">Lesson gate: ${mastery.passed ? "Unlocked" : "Locked until 90%."}</div>
+          </section>
+        ` : renderLessonLockedPanel("Practice unlocks after you finish watch + read.")}
         <div class="hero-actions">
           <button class="button primary" type="button" data-complete-content="${item.id}" ${mastery.passed ? "" : "disabled"}>${completed ? "Completed" : "Mark complete"}</button>
           <button class="button secondary dark" type="button" data-start-content-drill="${escapeHtml(item.skill)}">Start related drill</button>
@@ -2743,6 +2760,10 @@ function renderLessonPlayer() {
       </div>
     </div>
   `;
+}
+
+function renderLessonLockedPanel(message) {
+  return `<section class="lesson-locked"><strong>Locked for focus.</strong><p>${escapeHtml(message)}</p></section>`;
 }
 
 function getLessonPractice(item) {
@@ -3648,6 +3669,7 @@ function renderAll() {
 function enhanceNavigation() {
   const nav = $(".nav-list");
   if (!nav || nav.dataset.enhanced === "true") return;
+  const page = window.location.pathname.split("/").pop() || "index.html";
   const groups = [
     [
       "Learn",
@@ -3688,10 +3710,15 @@ function enhanceNavigation() {
   nav.innerHTML = groups
     .map(([label, items]) => {
       const links = items.map(([href, text]) => `<a href="${href}">${text}</a>`).join("");
-      return `<section class="nav-group"><span>${label}</span>${links}</section>`;
+      const open = items.some(([href]) => href === page || (page.startsWith("lesson-") && href === "content.html"));
+      return `<details class="nav-group" ${open ? "open" : ""}><summary>${label}</summary>${links}</details>`;
     })
     .join("");
   nav.dataset.enhanced = "true";
+  const sidebar = $(".sidebar");
+  if (sidebar && !sidebar.querySelector("[data-collapse-sidebar]")) {
+    sidebar.insertAdjacentHTML("afterbegin", `<button class="sidebar-collapse" type="button" data-collapse-sidebar aria-label="Collapse navigation">Hide menu</button>`);
+  }
 }
 
 function setActiveNavigation() {
@@ -3981,6 +4008,12 @@ function bindEvents() {
       document.body.classList.toggle("nav-open");
     }
 
+    const sidebarCollapse = event.target.closest("[data-collapse-sidebar]");
+    if (sidebarCollapse) {
+      document.body.classList.toggle("sidebar-collapsed");
+      sidebarCollapse.textContent = document.body.classList.contains("sidebar-collapsed") ? "Show menu" : "Hide menu";
+    }
+
     const podcastToggle = event.target.closest("[data-toggle-podcast]");
     if (podcastToggle) {
       $("#podcastWidget")?.classList.toggle("open");
@@ -4051,6 +4084,17 @@ function bindEvents() {
 
     if (event.target.closest("[data-read-lesson]")) {
       readLesson();
+    }
+
+    const finishWatch = event.target.closest("[data-finish-watch]");
+    if (finishWatch) {
+      if (!state.watchedContent.includes(finishWatch.dataset.finishWatch)) {
+        state.watchedContent.push(finishWatch.dataset.finishWatch);
+      }
+      state.lastContentId = finishWatch.dataset.finishWatch;
+      saveState();
+      renderLessonPlayer();
+      showToast("Translation and practice unlocked.");
     }
   });
 
