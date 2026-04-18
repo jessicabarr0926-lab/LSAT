@@ -2634,11 +2634,19 @@ function getLessonKit(item) {
 }
 
 function renderLessonPlayer() {
+  const legacyLesson = $("#lessonDetail");
+  if (!has("#dynamicLesson") && legacyLesson) {
+    const legacyId = legacyLesson.dataset.lessonId || state.lastContentId || contentLibrary[0].id;
+    legacyLesson.id = "dynamicLesson";
+    legacyLesson.dataset.lessonId = legacyId;
+  }
   if (!has("#dynamicLesson")) return;
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || $("#dynamicLesson")?.dataset.lessonId || state.lastContentId || contentLibrary[0].id;
   const item = contentLibrary.find((lesson) => lesson.id === id) || contentLibrary[0];
   const scenes = getLessonScenes(item);
+  const sceneSeconds = 5;
+  const sceneDuration = `${Math.max(scenes.length * sceneSeconds, 15)}s`;
   const kit = getLessonKit(item);
   const practice = getLessonPractice(item);
   const mastery = state.lessonMastery[item.id] || { answered: 0, correct: 0, passed: false };
@@ -2670,10 +2678,11 @@ function renderLessonPlayer() {
         )
         .join("")}
     </div>
-    <div class="lesson-flow">
+    <div class="lesson-flow ${watchComplete ? "unlocked" : "locked"}">
       <section class="watch-panel">
-        <div class="lesson-video animated-video" aria-label="Animated transcript video for ${escapeHtml(item.title)}">
-          <div class="video-chrome"><span>JessiPreps lesson</span><strong>${escapeHtml(item.title)}</strong></div>
+        <div class="lesson-video animated-video" style="--scene-duration: ${sceneDuration}; --scene-seconds: ${sceneSeconds}s;" aria-label="Animated lesson video for ${escapeHtml(item.title)}">
+          <div class="video-chrome"><span>Animated lesson</span><strong>${escapeHtml(item.title)}</strong></div>
+          <div class="video-progress" aria-hidden="true"><span></span></div>
           ${scenes
             .map(
               (scene, index) => `
@@ -2689,6 +2698,10 @@ function renderLessonPlayer() {
             ${scenes.map((scene, index) => `<span style="--scene-index: ${index}">${escapeHtml(scene.title)} - ${escapeHtml(scene.body)}</span>`).join("")}
           </div>
         </div>
+        <div class="watch-read-card">
+          <strong>Do this first</strong>
+          <p>Watch the animated lesson and read the transcript once. Translation tools and practice stay hidden until you click the finish button.</p>
+        </div>
         <div class="watch-actions">
           <button class="button primary" type="button" data-finish-watch="${item.id}">${watchComplete ? "Watch/read complete" : "I finished watch + read"}</button>
           <button class="button secondary dark" type="button" data-read-lesson>Listen and read</button>
@@ -2700,8 +2713,8 @@ function renderLessonPlayer() {
           <span class="tag">${escapeHtml(item.difficulty)}</span>
           <span class="tag">${escapeHtml(item.skill)}</span>
         </div>
-        <details class="lesson-transcript" ${watchComplete ? "open" : ""}>
-          <summary>Read transcript</summary>
+        <details class="lesson-transcript" open>
+          <summary>Read after watching</summary>
           <div id="lessonText">
             <p>${escapeHtml(transcriptText)}</p>
           </div>
@@ -2716,16 +2729,18 @@ function renderLessonPlayer() {
           ${item.id === "describe-technique" ? renderTechniqueSupport() : ""}
         ` : renderLessonLockedPanel("Finish watch + read to unlock translation tools.")}
         <section class="lesson-kit" aria-label="Concept example breakdown trap and practice">
-          <h2>Short concept</h2>
-          <p>${escapeHtml(kit.concept)}</p>
-          <h2>Example</h2>
-          <p>${escapeHtml(kit.example)}</p>
-          <h2>Breakdown</h2>
-          <p>${escapeHtml(kit.breakdown)}</p>
-          <h2>Trap answer</h2>
-          <p>${escapeHtml(kit.trap)}</p>
-          <h2>Practice rule</h2>
-          <p>${escapeHtml(kit.practice)}</p>
+          ${[
+            ["Short concept", kit.concept],
+            ["Example", kit.example],
+            ["Breakdown", kit.breakdown],
+            ["Trap answer", kit.trap],
+            ["Practice rule", kit.practice],
+          ].map(([label, text]) => `
+            <article>
+              <h2>${escapeHtml(label)}</h2>
+              <p>${escapeHtml(text)}</p>
+            </article>
+          `).join("")}
         </section>
         <section class="lesson-drill-brief" aria-label="How to use this lesson on a real question">
           <h2>One-question routine</h2>
@@ -2763,7 +2778,13 @@ function renderLessonPlayer() {
 }
 
 function renderLessonLockedPanel(message) {
-  return `<section class="lesson-locked"><strong>Locked for focus.</strong><p>${escapeHtml(message)}</p></section>`;
+  return `
+    <section class="lesson-locked">
+      <strong>Locked for focus.</strong>
+      <p>${escapeHtml(message)}</p>
+      <span>Step 1 keeps your brain from juggling video, translation, and questions all at once.</span>
+    </section>
+  `;
 }
 
 function getLessonPractice(item) {

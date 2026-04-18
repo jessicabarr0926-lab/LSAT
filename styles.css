@@ -226,9 +226,12 @@ a {
 }
 
 .sidebar-collapsed .brand span:last-child,
-.sidebar-collapsed .nav-list,
-.sidebar-collapsed .sidebar-collapse {
+.sidebar-collapsed .nav-list {
   font-size: 0;
+}
+
+.sidebar-collapsed .nav-list {
+  display: none;
 }
 
 .sidebar-collapsed .brand {
@@ -240,8 +243,8 @@ a {
 }
 
 .sidebar-collapsed .sidebar-collapse::after {
-  content: ">";
-  font-size: 1rem;
+  content: "Menu";
+  font-size: 0.82rem;
 }
 
 .workspace {
@@ -811,12 +814,28 @@ h3 {
 
 .lesson-flow {
   display: grid;
-  gap: 18px;
+  grid-template-columns: minmax(320px, 0.98fr) minmax(0, 1.02fr);
+  gap: 22px;
+  align-items: start;
 }
 
 .watch-panel {
+  position: sticky;
+  top: 18px;
   display: grid;
   gap: 12px;
+}
+
+.watch-read-card {
+  padding: 14px;
+  border: 1px solid rgba(143, 95, 116, 0.25);
+  border-radius: 8px;
+  background: #fff8fb;
+}
+
+.watch-read-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
 }
 
 .watch-actions {
@@ -828,7 +847,11 @@ h3 {
 .lesson-notes {
   display: grid;
   max-width: 920px;
-  gap: 16px;
+  gap: 14px;
+}
+
+.lesson-flow.locked .lesson-notes {
+  align-self: start;
 }
 
 .lesson-stepper {
@@ -1161,11 +1184,12 @@ h3 {
 .animated-video {
   position: relative;
   overflow: hidden;
-  min-height: 460px;
+  min-height: clamp(360px, 54vw, 520px);
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(18, 115, 109, 0.14), rgba(242, 201, 76, 0.24)),
+    radial-gradient(circle at 16% 18%, rgba(217, 107, 123, 0.2), transparent 30%),
+    linear-gradient(135deg, rgba(143, 95, 116, 0.14), rgba(243, 210, 122, 0.2)),
     #ffffff;
 }
 
@@ -1185,6 +1209,28 @@ h3 {
   font-weight: 900;
 }
 
+.video-progress {
+  position: absolute;
+  right: 18px;
+  bottom: 84px;
+  left: 18px;
+  z-index: 4;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(31, 36, 48, 0.16);
+}
+
+.video-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--red), var(--teal));
+  transform-origin: left;
+  animation: lessonProgress var(--scene-duration, 15s) linear infinite;
+}
+
 .video-scene {
   position: absolute;
   inset: 64px 24px 84px;
@@ -1197,8 +1243,8 @@ h3 {
   box-shadow: 0 12px 28px rgba(32, 36, 42, 0.09);
   opacity: 0;
   transform: translateY(18px);
-  animation: lessonScene 12s infinite;
-  animation-delay: calc(var(--scene-index) * 4s);
+  animation: lessonScene var(--scene-duration, 15s) infinite;
+  animation-delay: calc(var(--scene-index) * var(--scene-seconds, 5s));
 }
 
 .caption-track {
@@ -1221,8 +1267,8 @@ h3 {
   padding: 10px 14px;
   opacity: 0;
   text-align: center;
-  animation: lessonScene 12s infinite;
-  animation-delay: calc(var(--scene-index) * 4s);
+  animation: lessonScene var(--scene-duration, 15s) infinite;
+  animation-delay: calc(var(--scene-index) * var(--scene-seconds, 5s));
 }
 
 .video-scene span {
@@ -1247,17 +1293,27 @@ h3 {
 }
 
 @keyframes lessonScene {
-  0%, 8% {
+  0%, 5% {
     opacity: 0;
     transform: translateY(18px);
   }
-  12%, 30% {
+  9%, 26% {
     opacity: 1;
     transform: translateY(0);
   }
-  34%, 100% {
+  31%, 100% {
     opacity: 0;
     transform: translateY(-18px);
+  }
+}
+
+@keyframes lessonProgress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
   }
 }
 
@@ -1971,10 +2027,34 @@ tbody tr:last-child td {
 }
 
 .lesson-kit {
-  padding: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+}
+
+.lesson-kit article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.lesson-kit article:first-child {
+  grid-column: 1 / -1;
+}
+
+.lesson-kit h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.lesson-kit p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .lesson-transcript,
@@ -1996,16 +2076,17 @@ tbody tr:last-child td {
   background: #fff8fb;
 }
 
+.lesson-locked span {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
 .practice-question {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
-}
-
-.lesson-kit h2 {
-  font-size: 1.15rem;
-  line-height: 1.15;
 }
 
 .lesson-drill-brief {
@@ -2834,13 +2915,19 @@ tbody tr:last-child td {
   .content-hero,
   .start-path,
   .manual-system,
+  .lesson-flow,
   .lesson-stepper,
+  .lesson-kit,
   .technique-lab,
   .class-spotlight,
   .class-flow-grid,
   .advanced-analytics,
   .writing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .watch-panel {
+    position: static;
   }
 
   .quick-grid,
