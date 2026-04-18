@@ -676,6 +676,43 @@ contentLibrary.forEach((lesson) => {
   lesson.page = "lesson-player.html";
 });
 
+const requiredLessonPath = ["rc-map", "rc-viewpoints", "rc-inference", "argument-basics", "loophole-gap-hunting"];
+
+function hasWatchedOrCompletedLesson(id) {
+  return state.watchedContent.includes(id) || state.completedContent.includes(id);
+}
+
+function getLessonGate(item) {
+  const pathIndex = requiredLessonPath.indexOf(item.id);
+  if (pathIndex > 0) {
+    const requiredId = requiredLessonPath[pathIndex - 1];
+    if (!hasWatchedOrCompletedLesson(requiredId)) return contentLibrary.find((lesson) => lesson.id === requiredId);
+  }
+  if (item.topic === "lr" && !requiredLessonPath.includes(item.id) && !hasWatchedOrCompletedLesson("rc-inference")) {
+    return contentLibrary.find((lesson) => lesson.id === "rc-inference");
+  }
+  return null;
+}
+
+function getContentSortWeight(item) {
+  const pathIndex = requiredLessonPath.indexOf(item.id);
+  if (pathIndex >= 0) return pathIndex;
+  const topicWeight = { rc: 10, lr: 30, timing: 50, strategy: 60 };
+  const categoryWeight = {
+    "Start here": 0,
+    "Core concepts": 1,
+    "Question types": 2,
+    Strategy: 3,
+    "Timed test training": 4,
+    "Mindset and test day": 5,
+  };
+  return (topicWeight[item.topic] || 70) + (categoryWeight[item.category] || 0);
+}
+
+function orderContent(items) {
+  return [...items].sort((a, b) => getContentSortWeight(a) - getContentSortWeight(b) || a.title.localeCompare(b.title));
+}
+
 const officialPrepTests = [
   158, 157, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131,
   130, 129, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104,
@@ -1193,6 +1230,7 @@ const defaultState = {
   completedContent: [],
   watchedContent: [],
   contentCategory: "all",
+  lessonTopic: "all",
   classMood: "all",
   lessonMastery: {},
   writingDrafts: [],
@@ -1807,8 +1845,12 @@ function hydrateDashboardSettings() {
 }
 
 function getRecommendedContent() {
+  const nextRequired = requiredLessonPath
+    .map((id) => contentLibrary.find((item) => item.id === id))
+    .find((item) => item && !hasWatchedOrCompletedLesson(item.id) && !getLessonGate(item));
+  if (nextRequired) return nextRequired;
   const weakSkill = getWeakSkills()[0];
-  return contentLibrary.find((item) => item.skill === weakSkill) || contentLibrary[0];
+  return orderContent(contentLibrary).find((item) => item.skill === weakSkill && !getLessonGate(item)) || orderContent(contentLibrary)[0];
 }
 
 function renderContinueLearning() {
@@ -1912,8 +1954,23 @@ function renderCurrentQuestion() {
   currentQuestionAttempts = [];
 
   if (!count) {
-    $("#drillPrompt").textContent = "Start a drill to load your first question.";
+    const weakSkill = getWeakSkills()[0];
+    const preview = questionBank
+      .filter((question) => question.skill === weakSkill || getQuestionStatus(question) === "missed")
+      .slice(0, 6);
+    $("#drillPrompt").innerHTML = `
+      <div class="drill-empty-state">
+        <span class="tag">Recommended next</span>
+        <h3>${escapeHtml(weakSkill)} mini-drill</h3>
+        <p>Six questions will load with Prediction Mode, answer hiding, question notes, confidence tracking, and video-style explanations.</p>
+        <div class="drill-preview-list">
+          ${preview.map((question) => `<span>${escapeHtml(question.source)} · ${escapeHtml(question.skill)} · L${question.difficulty}</span>`).join("")}
+        </div>
+        <button class="button primary" type="button" data-start-drill>Load this drill</button>
+      </div>
+    `;
     $("#answerChoices").innerHTML = "";
+    if (has("#questionStudyTools")) $("#questionStudyTools").innerHTML = "";
     $("#submitAnswer").disabled = true;
     $("#nextQuestion").disabled = true;
     if (has("#drillMastery")) $("#drillMastery").textContent = "Mastery gate: score 90% or higher to clear this set.";
@@ -2163,26 +2220,38 @@ function renderExplanations() {
     {
       title: "Flaws",
       steps: ["Find the conclusion.", "Find the evidence.", "Say what the argument assumes.", "Match the gap to the answer."],
+      map: ["Evidence", "Missing bridge", "Conclusion"],
+      trap: "Topic match that never names the broken link.",
     },
     {
       title: "Assumptions",
       steps: ["Ask what must be true.", "Negate contenders.", "Choose the answer that breaks the argument."],
+      map: ["Evidence", "Required bridge", "Conclusion survives"],
+      trap: "Helpful but not required.",
     },
     {
       title: "Strengthen or Weaken",
       steps: ["Identify the causal or logical bridge.", "Predict what would help or hurt it.", "Avoid choices that only discuss the topic."],
+      map: ["Claim", "Support link", "Move the needle"],
+      trap: "Related fact that does not affect the support.",
     },
     {
       title: "Conditional Logic",
       steps: ["Translate trigger words.", "Chain arrows.", "Use contrapositives.", "Do not reverse or negate incorrectly."],
+      map: ["If trigger", "Guarantees", "Required result"],
+      trap: "Mistaken reversal or mistaken negation.",
     },
     {
       title: "Reading Structure",
       steps: ["Label each paragraph's job.", "Track viewpoint shifts.", "Separate author's view from others."],
+      map: ["Paragraph job", "Viewpoint", "Author purpose"],
+      trap: "True detail that misses the passage role.",
     },
     {
       title: "Pacing",
       steps: ["Know the task within 20 seconds.", "Skip if structure is unclear.", "Return with a cleaner eye."],
+      map: ["Task check", "Time decision", "Return clean"],
+      trap: "Spending time to feel safe while losing easier points.",
     },
   ];
 
@@ -2191,9 +2260,18 @@ function renderExplanations() {
       (framework) => `
         <article class="framework">
           <h3>${escapeHtml(framework.title)}</h3>
+          <div class="framework-map" aria-label="${escapeHtml(framework.title)} visual map">
+            <span>${escapeHtml(framework.map[0])}</span>
+            <strong>-></strong>
+            <span>${escapeHtml(framework.map[1])}</span>
+            <strong>-></strong>
+            <span>${escapeHtml(framework.map[2])}</span>
+          </div>
           <ol>
             ${framework.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
           </ol>
+          <p class="trap-note"><strong>Trap:</strong> ${escapeHtml(framework.trap)}</p>
+          <button class="mini-button" type="button" data-start-content-drill="${escapeHtml(framework.title === "Conditional Logic" ? "Conditional Logic" : framework.title === "Reading Structure" ? "Reading Structure" : framework.title)}">Practice this framework</button>
         </article>
       `
     )
@@ -2202,19 +2280,46 @@ function renderExplanations() {
 
 function renderLessons() {
   if (!has("#lessonList")) return;
-  $("#lessonList").innerHTML = lessons
+  const panel = $("#lessons");
+  if (panel && !has("#lessonTopicFilters")) {
+    panel.insertAdjacentHTML(
+      "afterbegin",
+      `<div class="content-rails lesson-topic-filters" id="lessonTopicFilters" aria-label="Lesson topic filters">
+        <button class="tab active" type="button" data-lesson-topic="all">All</button>
+        <button class="tab" type="button" data-lesson-topic="rc">RC first</button>
+        <button class="tab" type="button" data-lesson-topic="lr">LR</button>
+        <button class="tab" type="button" data-lesson-topic="timing">Timing</button>
+        <button class="tab" type="button" data-lesson-topic="strategy">Strategy</button>
+      </div>`,
+    );
+  }
+  const topic = state.lessonTopic || "all";
+  $$("[data-lesson-topic]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.lessonTopic === topic);
+  });
+  const visible = orderContent(contentLibrary).filter((lesson) => topic === "all" || lesson.topic === topic);
+  $("#lessonList").innerHTML = visible
     .map((lesson) => {
-      const done = state.completedLessons.includes(lesson.id);
+      const done = state.completedContent.includes(lesson.id);
+      const watched = state.watchedContent.includes(lesson.id);
+      const gate = getLessonGate(lesson);
       return `
-        <article class="lesson-item">
+        <article class="lesson-item ${gate ? "locked" : ""}">
           <header>
             <h3>${escapeHtml(lesson.title)}</h3>
-            <span class="tag">${escapeHtml(lesson.time)}</span>
+            <span class="tag">${escapeHtml(lesson.minutes)} min</span>
           </header>
-          <p>${escapeHtml(lesson.body)}</p>
-          <button class="mini-button" type="button" data-complete-lesson="${lesson.id}">
-            ${done ? "Completed" : "Mark complete"}
-          </button>
+          <p>${escapeHtml(lesson.description)}</p>
+          <div class="lesson-meta">
+            <span class="tag">${escapeHtml(lesson.topicLabel)}</span>
+            <span class="tag">${escapeHtml(lesson.skill)}</span>
+            <span class="tag">${done ? "Completed" : watched ? "Watched" : "Unwatched"}</span>
+          </div>
+          ${gate ? `<p class="lesson-gate-note">Watch ${escapeHtml(gate.title)} first.</p>` : ""}
+          <div class="lesson-actions">
+            <button class="mini-button" type="button" data-open-content="${lesson.id}" ${gate ? "disabled" : ""}>${gate ? "Locked" : "Open animated lesson"}</button>
+            <button class="mini-button" type="button" data-start-content-drill="${escapeHtml(lesson.skill)}">Practice this skill</button>
+          </div>
         </article>
       `;
     })
@@ -2227,7 +2332,7 @@ function getFilteredContent() {
   const difficulty = $("#contentDifficultyFilter")?.value || "all";
   const status = $("#contentStatusFilter")?.value || "all";
   const category = state.contentCategory || "all";
-  return contentLibrary.filter((item) => {
+  return orderContent(contentLibrary.filter((item) => {
     const haystack = `${item.title} ${item.description} ${item.skill} ${item.topicLabel} ${item.category}`.toLowerCase();
     const matchesSearch = !search || haystack.includes(search);
     const matchesTopic = topic === "all" || item.topic === topic;
@@ -2240,7 +2345,7 @@ function getFilteredContent() {
       (status === "unwatched" && !state.watchedContent.includes(item.id)) ||
       (status === "short" && item.minutes <= 10);
     return matchesSearch && matchesTopic && matchesDifficulty && matchesCategory && matchesStatus;
-  });
+  }));
 }
 
 function renderContentHub() {
@@ -2281,17 +2386,19 @@ function renderContentHub() {
 
 function renderStartPath() {
   if (!has("#startPathGrid")) return;
-  const pathIds = ["master-manual-140-175", "argument-basics", "loophole-gap-hunting"];
+  const pathIds = requiredLessonPath;
   $("#startPathGrid").innerHTML = pathIds
     .map((id, index) => {
       const item = contentLibrary.find((lesson) => lesson.id === id);
       if (!item) return "";
       const completed = state.completedContent.includes(item.id);
+      const watched = state.watchedContent.includes(item.id);
+      const gate = getLessonGate(item);
       return `
-        <button class="start-path-step ${completed ? "done" : ""}" type="button" data-open-content="${escapeHtml(item.id)}">
-          <span>${completed ? "Done" : `Step ${index + 1}`}</span>
+        <button class="start-path-step ${completed ? "done" : ""} ${gate ? "locked" : ""}" type="button" data-open-content="${escapeHtml(item.id)}" ${gate ? "disabled" : ""}>
+          <span>${completed ? "Done" : watched ? "Watched" : `Step ${index + 1}`}</span>
           <strong>${escapeHtml(item.title)}</strong>
-          <small>${escapeHtml(item.minutes)} min | ${escapeHtml(item.skill)}</small>
+          <small>${gate ? `Watch ${gate.title} first` : `${item.minutes} min | ${item.skill}`}</small>
         </button>
       `;
     })
@@ -2302,10 +2409,11 @@ function renderContentCard(item) {
   const completed = state.completedContent.includes(item.id);
   const saved = state.savedContent.includes(item.id);
   const watched = state.watchedContent.includes(item.id);
+  const gate = getLessonGate(item);
   const progress = completed ? 100 : watched ? 45 : 0;
   const icon = getLessonIcon(item);
   return `
-    <article class="lesson-card">
+    <article class="lesson-card ${gate ? "locked" : ""}">
       <div class="lesson-thumb ${escapeHtml(item.topic)}-thumb">
         <span>${escapeHtml(icon)}</span>
         <strong>${escapeHtml(item.skill)}</strong>
@@ -2318,11 +2426,12 @@ function renderContentCard(item) {
         </div>
         <h3>${escapeHtml(item.title)} ${completed ? "✓" : ""}</h3>
         <p>${escapeHtml(item.description)}</p>
+        ${gate ? `<p class="lesson-gate-note"><strong>Locked:</strong> watch ${escapeHtml(gate.title)} first.</p>` : ""}
         <div class="lesson-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
         <div class="lesson-actions">
-          <button class="mini-button" type="button" data-open-content="${item.id}">Watch lesson</button>
+          <button class="mini-button" type="button" data-open-content="${item.id}" ${gate ? "disabled" : ""}>${gate ? "Locked" : "Watch lesson"}</button>
           <button class="mini-button" type="button" data-save-content="${item.id}">${saved ? "Saved" : "Save"}</button>
-          <button class="mini-button" type="button" data-open-content="${item.id}" title="Unlock by scoring 90% or higher on 10 lesson practice attempts.">${completed ? "Review again" : "Mastery gate"}</button>
+          <button class="mini-button" type="button" data-open-content="${item.id}" ${gate ? "disabled" : ""} title="Unlock by scoring 90% or higher on 10 lesson practice attempts.">${gate ? "Wait" : completed ? "Review again" : "Mastery gate"}</button>
         </div>
       </div>
     </article>
@@ -2644,6 +2753,24 @@ function renderLessonPlayer() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || $("#dynamicLesson")?.dataset.lessonId || state.lastContentId || contentLibrary[0].id;
   const item = contentLibrary.find((lesson) => lesson.id === id) || contentLibrary[0];
+  const gate = getLessonGate(item);
+  if (gate) {
+    const immediateGate = getLessonGate(gate) || gate;
+    $("#dynamicLesson").innerHTML = `
+      <div class="section-heading">
+        <p class="eyebrow">Lesson locked</p>
+        <h1>Watch ${escapeHtml(immediateGate.title)} first.</h1>
+        <p>This keeps the sequence light on working memory: RC structure first, then the next layer.</p>
+      </div>
+      <section class="lesson-locked">
+        <strong>Next required lesson</strong>
+        <p>${escapeHtml(immediateGate.description)}</p>
+        <button class="button primary" type="button" data-open-content="${escapeHtml(immediateGate.id)}">Open ${escapeHtml(immediateGate.title)}</button>
+        <button class="button secondary dark" type="button" data-page-target="content.html">Back to Content</button>
+      </section>
+    `;
+    return;
+  }
   const scenes = getLessonScenes(item);
   const sceneSeconds = 5;
   const sceneDuration = `${Math.max(scenes.length * sceneSeconds, 15)}s`;
@@ -2701,6 +2828,10 @@ function renderLessonPlayer() {
         <div class="watch-read-card">
           <strong>Do this first</strong>
           <p>Watch the animated lesson and read the transcript once. Translation tools and practice stay hidden until you click the finish button.</p>
+        </div>
+        <div class="scene-controls" aria-label="Animated lesson frame controls">
+          <button class="mini-button" type="button" data-video-autoplay>Autoplay</button>
+          ${scenes.map((scene, index) => `<button class="mini-button" type="button" data-video-scene="${index}">${index + 1}. ${escapeHtml(scene.title)}</button>`).join("")}
         </div>
         <div class="watch-actions">
           <button class="button primary" type="button" data-finish-watch="${item.id}">${watchComplete ? "Watch/read complete" : "I finished watch + read"}</button>
@@ -2891,7 +3022,11 @@ function answerLessonPractice(questionId, choice) {
 function openContent(id) {
   const item = contentLibrary.find((lesson) => lesson.id === id);
   if (!item) return;
-  if (!state.watchedContent.includes(id)) state.watchedContent.push(id);
+  const gate = getLessonGate(item);
+  if (gate) {
+    showToast(`Watch ${gate.title} first.`);
+    return;
+  }
   state.lastContentId = id;
   saveState();
   window.location.href = item.page === "lesson-player.html" ? `lesson-player.html?id=${encodeURIComponent(id)}` : item.page;
@@ -3911,6 +4046,14 @@ function bindEvents() {
       renderContentHub();
     }
 
+    const lessonTopicButton = event.target.closest("[data-lesson-topic]");
+    if (lessonTopicButton) {
+      state.lessonTopic = lessonTopicButton.dataset.lessonTopic;
+      saveState();
+      renderLessons();
+      showToast(`Lessons filter: ${lessonTopicButton.textContent.trim()}.`);
+    }
+
     const statusShortcut = event.target.closest("[data-content-status-shortcut]");
     if (statusShortcut && has("#contentStatusFilter")) {
       $("#contentStatusFilter").value = statusShortcut.dataset.contentStatusShortcut;
@@ -4116,6 +4259,39 @@ function bindEvents() {
       saveState();
       renderLessonPlayer();
       showToast("Translation and practice unlocked.");
+    }
+
+    const videoSceneButton = event.target.closest("[data-video-scene]");
+    if (videoSceneButton) {
+      const video = videoSceneButton.closest(".watch-panel")?.querySelector(".animated-video");
+      if (video) {
+        const index = Number(videoSceneButton.dataset.videoScene);
+        video.classList.add("manual-scene");
+        video.querySelectorAll(".video-scene").forEach((scene, sceneIndex) => {
+          scene.style.animation = "none";
+          scene.style.opacity = sceneIndex === index ? "1" : "0";
+          scene.style.transform = sceneIndex === index ? "translateY(0)" : "translateY(18px)";
+        });
+        video.querySelectorAll(".caption-track span").forEach((caption, captionIndex) => {
+          caption.style.animation = "none";
+          caption.style.opacity = captionIndex === index ? "1" : "0";
+          caption.style.transform = "none";
+        });
+        showToast(`Paused on lesson frame ${index + 1}.`);
+      }
+    }
+
+    if (event.target.closest("[data-video-autoplay]")) {
+      const video = event.target.closest(".watch-panel")?.querySelector(".animated-video");
+      if (video) {
+        video.classList.remove("manual-scene");
+        video.querySelectorAll(".video-scene, .caption-track span").forEach((scene) => {
+          scene.style.animation = "";
+          scene.style.opacity = "";
+          scene.style.transform = "";
+        });
+        showToast("Animated lesson autoplay resumed.");
+      }
     }
   });
 

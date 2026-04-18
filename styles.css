@@ -844,6 +844,20 @@ h3 {
   gap: 10px;
 }
 
+.scene-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scene-controls .mini-button {
+  flex: 1 1 130px;
+}
+
+.animated-video.manual-scene .video-progress span {
+  animation-play-state: paused;
+}
+
 .lesson-notes {
   display: grid;
   max-width: 920px;
@@ -1372,7 +1386,7 @@ h3 {
 
 .start-path-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
@@ -1405,6 +1419,27 @@ h3 {
 .start-path-step.done {
   border-color: rgba(127, 169, 139, 0.55);
   background: #f1f8f4;
+}
+
+.lesson-card.locked,
+.lesson-item.locked,
+.start-path-step.locked {
+  opacity: 0.72;
+}
+
+.lesson-card.locked .lesson-thumb,
+.lesson-item.locked,
+.start-path-step.locked {
+  filter: grayscale(0.28);
+}
+
+.lesson-gate-note {
+  padding: 10px 12px;
+  border: 1px dashed rgba(143, 95, 116, 0.42);
+  border-radius: 8px;
+  color: var(--teal-dark);
+  background: #fff8fb;
+  font-weight: 760;
 }
 
 .content-rails {
@@ -2266,6 +2301,57 @@ tbody tr:last-child td {
 .plugin-item ul {
   margin: 12px 0 0;
   padding-left: 20px;
+}
+
+.framework-map {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(143, 95, 116, 0.28);
+  border-radius: 8px;
+  background: #fff8fb;
+}
+
+.framework-map span {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: center;
+  font-weight: 850;
+}
+
+.framework-map strong {
+  color: var(--teal-dark);
+}
+
+.trap-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--soft);
+}
+
+.drill-empty-state,
+.drill-preview-list {
+  display: grid;
+  gap: 10px;
+}
+
+.drill-preview-list {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.drill-preview-list span {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 760;
 }
 
 .timer-display {
