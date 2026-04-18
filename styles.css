@@ -52,6 +52,31 @@ body.high-contrast {
   background: #000000;
 }
 
+body.ugly-mode {
+  --ink: #111111;
+  --muted: #333333;
+  --paper: #f4f4f4;
+  --surface: #ffffff;
+  --soft: #eeeeee;
+  --line: #777777;
+  --teal: #000000;
+  --teal-dark: #000000;
+  color: #111111;
+  background: #f4f4f4;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.ugly-mode .sidebar,
+.ugly-mode .panel,
+.ugly-mode .drill-card,
+.ugly-mode .button,
+.ugly-mode .choice-button,
+.ugly-mode .topbar {
+  border-radius: 0;
+  box-shadow: none;
+  background-image: none;
+}
+
 .high-contrast .sidebar,
 .high-contrast .accessibility-dock {
   opacity: 0.32;
@@ -1597,9 +1622,106 @@ tbody tr:last-child td {
   background: #edf7ef;
 }
 
+.choice-button.first-wrong-choice {
+  border-color: var(--red);
+  background: #fff1ef;
+  box-shadow: inset 4px 0 0 var(--red);
+}
+
 .choice-button.wrong-choice {
   border-color: var(--red);
   background: #fff1ef;
+}
+
+.choice-button.second-wrong-choice {
+  border-color: #d6a719;
+  background: #fff8df;
+  box-shadow: inset 4px 0 0 var(--yellow);
+}
+
+.prediction-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(143, 95, 116, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.prediction-panel h3,
+.prediction-panel p {
+  margin: 0;
+}
+
+.question-stem {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.prediction-actions,
+.drill-history,
+.explanation-vote,
+.podcast-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.drill-history span,
+.attempt-pill {
+  padding: 5px 8px;
+  border-radius: 8px;
+  color: var(--teal-dark);
+  background: #f2e6ed;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.prediction-lock,
+.question-note {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed rgba(143, 95, 116, 0.35);
+  border-radius: 8px;
+  background: #fff8fb;
+}
+
+.question-note {
+  margin-bottom: 14px;
+  font-weight: 800;
+}
+
+.question-note textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.attempt-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.attempt-1 {
+  color: #8b2632;
+  background: #ffe3e0;
+}
+
+.attempt-2 {
+  color: #6d5600;
+  background: #fff2bd;
+}
+
+.explanation-vote {
+  margin-top: 10px;
+}
+
+.explanation-vote .selected {
+  border-color: var(--teal-dark);
+  background: #f2e6ed;
 }
 
 .feedback {
@@ -1861,6 +1983,31 @@ tbody tr:last-child td {
   font-size: clamp(3rem, 10vw, 6rem);
   font-weight: 950;
   line-height: 1;
+}
+
+.score-converter {
+  display: grid;
+  gap: 14px;
+}
+
+.converter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.converted-score {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(127, 169, 139, 0.35);
+  border-radius: 8px;
+  background: #f1faf4;
+}
+
+.converted-score strong {
+  font-size: 2.4rem;
 }
 
 .log-form,
@@ -2298,6 +2445,60 @@ tbody tr:last-child td {
   background: rgba(36, 32, 41, 0.98);
 }
 
+.podcast-widget {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 19;
+  display: grid;
+  gap: 8px;
+  width: min(310px, calc(100vw - 36px));
+}
+
+.podcast-toggle {
+  justify-self: start;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  background: var(--teal-dark);
+  box-shadow: var(--shadow);
+  font-weight: 900;
+}
+
+.podcast-body {
+  display: none;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--shadow);
+}
+
+.podcast-widget.open .podcast-body {
+  display: grid;
+}
+
+.podcast-body p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.podcast-body iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 8px;
+}
+
+.podcast-links a {
+  color: var(--teal-dark);
+  font-weight: 850;
+}
+
 .plain-english-box {
   display: grid;
   gap: 10px;
@@ -2433,7 +2634,8 @@ tbody tr:last-child td {
   .plugin-grid,
   .content-grid,
   .content-summary,
-  .start-path-grid {
+  .start-path-grid,
+  .converter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2525,7 +2727,8 @@ tbody tr:last-child td {
   .content-summary,
   .explanation-grid,
   .automation-grid,
-  .plugin-grid {
+  .plugin-grid,
+  .converter-grid {
     grid-template-columns: 1fr;
   }
 

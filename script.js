@@ -1205,6 +1205,8 @@ const defaultState = {
     reducedMotion: false,
     darkMode: false,
     highContrast: false,
+    uglyMode: false,
+    predictionMode: true,
   },
   activity: ["PrepTest 130 review plan loaded."],
   automations: {
@@ -1219,6 +1221,14 @@ const defaultState = {
     correct: 0,
     bySkill: {},
   },
+  questionHistory: {},
+  questionNotes: {},
+  explanationVotes: {},
+  scoreConverter: {
+    lr1: 18,
+    lr2: 18,
+    rc: 14,
+  },
 };
 
 let state = loadState();
@@ -1226,6 +1236,8 @@ let currentFocus = "Flaws";
 let currentDrill = [];
 let currentQuestionIndex = 0;
 let selectedChoice = "";
+let currentRevealStage = 0;
+let currentQuestionAttempts = [];
 let currentTimerSeconds = 35 * 60;
 let timerDurationSeconds = 35 * 60;
 let timerId = null;
@@ -1255,6 +1267,12 @@ function loadState() {
     const saved = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
     if (!saved) return freshDefaultState();
     const parsed = { ...freshDefaultState(), ...JSON.parse(saved) };
+    parsed.accessibility = { ...freshDefaultState().accessibility, ...(parsed.accessibility || {}) };
+    parsed.drillStats = { ...freshDefaultState().drillStats, ...(parsed.drillStats || {}) };
+    parsed.questionHistory = parsed.questionHistory || {};
+    parsed.questionNotes = parsed.questionNotes || {};
+    parsed.explanationVotes = parsed.explanationVotes || {};
+    parsed.scoreConverter = { ...freshDefaultState().scoreConverter, ...(parsed.scoreConverter || {}) };
     localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
     return parsed;
   } catch {
@@ -1327,6 +1345,32 @@ function addActivity(message) {
   state.activity = state.activity.slice(0, 8);
   saveState();
   if (has("#activityList")) renderActivity();
+}
+
+function getQuestionParts(question) {
+  const text = question?.prompt || "";
+  const questionStemMatch = text.match(/([^.?]*\?)\s*$/);
+  const stem = questionStemMatch ? questionStemMatch[1].trim() : "Predict the task before opening the answer choices.";
+  const stimulus = questionStemMatch ? text.slice(0, questionStemMatch.index).trim() : text;
+  return {
+    stimulus: stimulus || text,
+    stem,
+  };
+}
+
+function getQuestionHistory(questionId) {
+  state.questionHistory = state.questionHistory || {};
+  return state.questionHistory[questionId] || { attempts: 0, correct: 0, lastResult: "New", choices: [] };
+}
+
+function recordQuestionHistory(question, isCorrect, attempts) {
+  const history = getQuestionHistory(question.id);
+  history.attempts += 1;
+  if (isCorrect) history.correct += 1;
+  history.lastResult = isCorrect ? "Correct" : "Missed";
+  history.lastSeen = todayStamp();
+  history.choices = [...(history.choices || []), attempts.join(" -> ")].slice(-5);
+  state.questionHistory[question.id] = history;
 }
 
 function getQuestionStatus(question) {
@@ -1780,6 +1824,8 @@ function renderCurrentQuestion() {
   $("#drillFocus").textContent = `Focus: ${currentFocus}`;
   $("#drillFeedback").textContent = "";
   submittedCurrentQuestion = false;
+  selectedChoice = "";
+  currentQuestionAttempts = [];
 
   if (!count) {
     $("#drillPrompt").textContent = "Start a drill to load your first question.";
@@ -1791,8 +1837,23 @@ function renderCurrentQuestion() {
   }
 
   const question = currentDrill[currentQuestionIndex];
-  $("#drillPrompt").textContent = `${question.source}: ${question.prompt}`;
-  $("#answerChoices").innerHTML = Object.entries(question.choices)
+  currentRevealStage = state.accessibility?.predictionMode ? 0 : 2;
+  renderQuestionStage(question);
+  $("#submitAnswer").disabled = state.accessibility?.predictionMode;
+  $("#nextQuestion").disabled = true;
+  if (has("#drillMastery")) {
+    const correct = drillResults.filter(Boolean).length;
+    $("#drillMastery").textContent = `Mastery gate: ${correct}/${drillResults.length} correct so far. You need 90% or higher to clear this set.`;
+  }
+}
+
+function renderQuestionStage(question) {
+  const parts = getQuestionParts(question);
+  const history = getQuestionHistory(question.id);
+  const note = state.questionNotes?.[question.id] || "";
+  const stemMarkup = currentRevealStage >= 1 ? `<p class="question-stem">${escapeHtml(parts.stem)}</p>` : "";
+  const choicesMarkup = currentRevealStage >= 2
+    ? Object.entries(question.choices)
     .map(
       ([letter, text]) => `
         <button class="choice-button" type="button" data-choice="${letter}">
@@ -1800,13 +1861,32 @@ function renderCurrentQuestion() {
         </button>
       `
     )
-    .join("");
-  $("#submitAnswer").disabled = false;
-  $("#nextQuestion").disabled = true;
-  if (has("#drillMastery")) {
-    const correct = drillResults.filter(Boolean).length;
-    $("#drillMastery").textContent = `Mastery gate: ${correct}/${drillResults.length} correct so far. You need 90% or higher to clear this set.`;
-  }
+    .join("")
+    : `<div class="prediction-lock"><strong>Answer choices hidden.</strong><p>Predict the task and likely gap first. Then reveal the choices.</p></div>`;
+  $("#drillPrompt").innerHTML = `
+    <div class="prediction-panel">
+      <div>
+        <span class="tag">${escapeHtml(question.source)}</span>
+        <span class="tag">${escapeHtml(question.skill)}</span>
+      </div>
+      <h3>Prediction Mode</h3>
+      <p>${escapeHtml(parts.stimulus)}</p>
+      ${stemMarkup}
+      <div class="prediction-actions">
+        <button class="mini-button" type="button" data-reveal-question ${currentRevealStage >= 1 ? "disabled" : ""}>Reveal question</button>
+        <button class="mini-button" type="button" data-reveal-choices ${currentRevealStage >= 2 ? "disabled" : ""}>Reveal answers</button>
+      </div>
+      <div class="drill-history">
+        <span>Seen ${history.attempts} time${history.attempts === 1 ? "" : "s"}</span>
+        <span>${history.correct}/${history.attempts || 0} correct</span>
+        <span>Last: ${escapeHtml(history.lastResult)}</span>
+      </div>
+    </div>
+  `;
+  $("#answerChoices").innerHTML = choicesMarkup;
+  $("#submitAnswer").disabled = currentRevealStage < 2;
+  const notes = $("#questionNote");
+  if (notes) notes.value = note;
 }
 
 function submitCurrentAnswer() {
@@ -1817,14 +1897,42 @@ function submitCurrentAnswer() {
   }
 
   const isCorrect = selectedChoice === question.answer;
+  currentQuestionAttempts.push(selectedChoice);
+  const attemptNumber = currentQuestionAttempts.length;
+  const finalAttempt = isCorrect || attemptNumber >= 2;
+
+  $$(".choice-button").forEach((button) => {
+    const choice = button.dataset.choice;
+    button.classList.toggle("first-wrong-choice", choice === currentQuestionAttempts[0] && !isCorrect);
+    button.classList.toggle("second-wrong-choice", choice === selectedChoice && !isCorrect && attemptNumber >= 2);
+    button.classList.toggle("correct-choice", choice === question.answer && finalAttempt);
+    if (choice === selectedChoice && !isCorrect && attemptNumber === 1) button.disabled = true;
+  });
+
+  if (!finalAttempt) {
+    $("#drillFeedback").innerHTML = `
+      <strong>Try again before the explanation.</strong>
+      <p>Your first pick is marked red. Pause, name the task, and choose one more time.</p>
+    `;
+    selectedChoice = "";
+    $$(".choice-button").forEach((button) => button.classList.remove("selected"));
+    showToast("Try again before seeing the explanation.");
+    return;
+  }
+
   submittedCurrentQuestion = true;
-  drillResults[currentQuestionIndex] = isCorrect;
+  const firstAttemptCorrect = currentQuestionAttempts[0] === question.answer;
+  drillResults[currentQuestionIndex] = firstAttemptCorrect;
+  recordQuestionHistory(question, firstAttemptCorrect, currentQuestionAttempts);
+  if ($("#questionNote")?.value.trim()) {
+    state.questionNotes[question.id] = $("#questionNote").value.trim();
+  }
   state.drillStats.answered += 1;
-  if (isCorrect) state.drillStats.correct += 1;
+  if (firstAttemptCorrect) state.drillStats.correct += 1;
 
   const skillStats = state.drillStats.bySkill[question.skill] || { answered: 0, correct: 0 };
   skillStats.answered += 1;
-  if (isCorrect) skillStats.correct += 1;
+  if (firstAttemptCorrect) skillStats.correct += 1;
   state.drillStats.bySkill[question.skill] = skillStats;
 
   if (!state.reviewedQuestions.includes(question.id)) {
@@ -1832,7 +1940,7 @@ function submitCurrentAnswer() {
   }
 
   saveState();
-  addActivity(`${question.source}: ${isCorrect ? "correct" : "missed"} ${question.skill} drill.`);
+  addActivity(`${question.source}: ${firstAttemptCorrect ? "correct" : "reviewed after retry"} ${question.skill} drill.`);
 
   $$(".choice-button").forEach((button) => {
     const choice = button.dataset.choice;
@@ -1845,9 +1953,11 @@ function submitCurrentAnswer() {
   const currentScore = Math.round((drillResults.filter(Boolean).length / drillResults.length) * 100);
   const isLast = currentQuestionIndex >= currentDrill.length - 1;
   $("#drillFeedback").innerHTML = `
-    <strong>${isCorrect ? "Correct." : `Not quite. Credited answer: ${question.answer}.`}</strong>
+    <strong>${firstAttemptCorrect ? "Correct." : isCorrect ? "Correct on retry. First try still goes to review." : `Not quite. Credited answer: ${question.answer}.`}</strong>
+    <p class="attempt-summary">Attempts: ${currentQuestionAttempts.map((choice, index) => `<span class="attempt-pill attempt-${index + 1}">${escapeHtml(choice)}</span>`).join("")}</p>
     <p>${escapeHtml(question.explanation)}</p>
     ${renderQuestionVideoExplanation(question)}
+    ${renderExplanationVote(question)}
     ${isLast ? renderMasteryGate(currentScore) : ""}
   `;
   $("#nextQuestion").disabled = isLast;
@@ -1879,6 +1989,17 @@ function renderQuestionVideoExplanation(question) {
         <strong>Proof</strong>
         <p>${escapeHtml(question.explanation)}</p>
       </div>
+    </div>
+  `;
+}
+
+function renderExplanationVote(question) {
+  const vote = state.explanationVotes?.[question.id] || "";
+  return `
+    <div class="explanation-vote">
+      <span>Was this explanation clear?</span>
+      <button class="mini-button ${vote === "up" ? "selected" : ""}" type="button" data-explanation-vote="${question.id}" data-vote="up">Thumbs up</button>
+      <button class="mini-button ${vote === "down" ? "selected" : ""}" type="button" data-explanation-vote="${question.id}" data-vote="down">Thumbs down</button>
     </div>
   `;
 }
@@ -2893,6 +3014,78 @@ function renderAnalytics() {
   }
 }
 
+function estimateScaledScore(rawTotal) {
+  const anchors = [
+    [0, 120],
+    [20, 132],
+    [30, 140],
+    [40, 148],
+    [50, 156],
+    [60, 165],
+    [68, 172],
+    [73, 175],
+    [75, 180],
+  ];
+  for (let index = 1; index < anchors.length; index += 1) {
+    const [raw, scaled] = anchors[index];
+    const [prevRaw, prevScaled] = anchors[index - 1];
+    if (rawTotal <= raw) {
+      const ratio = (rawTotal - prevRaw) / (raw - prevRaw || 1);
+      return Math.round(prevScaled + ratio * (scaled - prevScaled));
+    }
+  }
+  return 180;
+}
+
+function renderScoreConverter() {
+  if (!has("#fullTest") || $("#scoreConverter")) return;
+  $("#fullTest").insertAdjacentHTML(
+    "afterend",
+    `<section class="panel score-converter" id="scoreConverter">
+      <div class="section-heading compact"><p class="eyebrow">Score converter</p><h2>Estimate your scaled score from three scored sections.</h2></div>
+      <p>This is a planning estimate, not an official LSAC conversion. Use official PrepTest scales for final review.</p>
+      <div class="converter-grid">
+        <label>LR 1 raw<input id="converterLr1" type="number" min="0" max="27" value="${Number(state.scoreConverter?.lr1 || 0)}"></label>
+        <label>LR 2 raw<input id="converterLr2" type="number" min="0" max="27" value="${Number(state.scoreConverter?.lr2 || 0)}"></label>
+        <label>RC raw<input id="converterRc" type="number" min="0" max="27" value="${Number(state.scoreConverter?.rc || 0)}"></label>
+      </div>
+      <div class="converted-score" id="convertedScore"></div>
+    </section>`,
+  );
+  updateScoreConverter();
+}
+
+function updateScoreConverter() {
+  if (!has("#convertedScore")) return;
+  const lr1 = Math.max(0, Math.min(27, Number($("#converterLr1")?.value || 0)));
+  const lr2 = Math.max(0, Math.min(27, Number($("#converterLr2")?.value || 0)));
+  const rc = Math.max(0, Math.min(27, Number($("#converterRc")?.value || 0)));
+  const raw = lr1 + lr2 + rc;
+  const scaled = estimateScaledScore(raw);
+  state.scoreConverter = { lr1, lr2, rc };
+  saveState();
+  $("#convertedScore").innerHTML = `<strong>${scaled}</strong><span>${raw} raw points across scored LR/LR/RC</span>`;
+}
+
+function renderPodcastWidget() {
+  if ($("#podcastWidget")) return;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<aside class="podcast-widget" id="podcastWidget" aria-label="Audio review widget">
+      <button class="podcast-toggle" type="button" data-toggle-podcast>Audio review</button>
+      <div class="podcast-body">
+        <strong>On-the-go LSAT reset</strong>
+        <p>Use this when reading feels heavy: listen, then do one tiny drill.</p>
+        <iframe title="LSAT audio review playlist" src="https://www.youtube.com/embed/videoseries?list=PLOWegXbVioX2Laq_sVVoFImn2LBLjcK9X" loading="lazy" allowfullscreen></iframe>
+        <div class="podcast-links">
+          <a href="https://www.youtube.com/@LSATLab/playlists" target="_blank" rel="noopener">LSAT Lab playlists</a>
+          <a href="https://www.youtube.com/@MyGuruEdge" target="_blank" rel="noopener">MyGuruEdge</a>
+        </div>
+      </div>
+    </aside>`,
+  );
+}
+
 function getRecommendationText(skill, score) {
   const copy = {
     Flaws: "Name the conclusion, evidence, and missing bridge before reading answers. Your next drill should be mostly flaw and causal-gap questions.",
@@ -2933,6 +3126,7 @@ function applyAccessibility() {
   document.body.classList.toggle("reduced-motion-mode", Boolean(state.accessibility?.reducedMotion));
   document.body.classList.toggle("dark-mode", Boolean(state.accessibility?.darkMode));
   document.body.classList.toggle("high-contrast", Boolean(state.accessibility?.highContrast));
+  document.body.classList.toggle("ugly-mode", Boolean(state.accessibility?.uglyMode));
 }
 
 function renderAccessibilityDock() {
@@ -2947,6 +3141,8 @@ function renderAccessibilityDock() {
         <button class="mini-button" type="button" data-toggle-accessibility="focus">Focus spacing</button>
         <button class="mini-button" type="button" data-toggle-accessibility="darkMode">Dark mode</button>
         <button class="mini-button" type="button" data-toggle-accessibility="highContrast">High contrast</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="uglyMode">Ugly Mode</button>
+        <button class="mini-button" type="button" data-toggle-accessibility="predictionMode">Prediction Mode</button>
         <button class="mini-button" type="button" data-toggle-accessibility="reducedMotion">Reduce motion</button>
       </div>
     </div>`,
@@ -3266,6 +3462,8 @@ function renderAll() {
   renderAnalytics();
   renderAutomations();
   renderLessonPlayer();
+  renderScoreConverter();
+  renderPodcastWidget();
 }
 
 function enhanceNavigation() {
@@ -3366,6 +3564,19 @@ function bindEvents() {
       if (!question) return;
       buildDrill([question], `Single question: ${question.skill}`);
       $("#drills")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    const revealQuestion = event.target.closest("[data-reveal-question]");
+    if (revealQuestion && currentDrill[currentQuestionIndex]) {
+      currentRevealStage = Math.max(currentRevealStage, 1);
+      renderQuestionStage(currentDrill[currentQuestionIndex]);
+    }
+
+    const revealChoices = event.target.closest("[data-reveal-choices]");
+    if (revealChoices && currentDrill[currentQuestionIndex]) {
+      currentRevealStage = 2;
+      renderQuestionStage(currentDrill[currentQuestionIndex]);
+      showToast("Choices revealed. Predict before picking.");
     }
 
     const lessonButton = event.target.closest("[data-complete-lesson]");
@@ -3530,6 +3741,17 @@ function bindEvents() {
       runPluginAction(pluginAction.dataset.pluginAction);
     }
 
+    const explanationVote = event.target.closest("[data-explanation-vote]");
+    if (explanationVote) {
+      state.explanationVotes = state.explanationVotes || {};
+      state.explanationVotes[explanationVote.dataset.explanationVote] = explanationVote.dataset.vote;
+      saveState();
+      $$(".explanation-vote .mini-button").forEach((button) => {
+        button.classList.toggle("selected", button === explanationVote);
+      });
+      showToast(explanationVote.dataset.vote === "up" ? "Explanation marked clear." : "Explanation flagged for rewrite.");
+    }
+
     const studyBlock = event.target.closest("[data-log-study-block]");
     if (studyBlock) {
       addActivity(`Completed study block: ${studyBlock.dataset.logStudyBlock}.`);
@@ -3578,6 +3800,11 @@ function bindEvents() {
     const mobileMenu = event.target.closest("[data-toggle-mobile-menu]");
     if (mobileMenu) {
       document.body.classList.toggle("nav-open");
+    }
+
+    const podcastToggle = event.target.closest("[data-toggle-podcast]");
+    if (podcastToggle) {
+      $("#podcastWidget")?.classList.toggle("open");
     }
 
     const testChoice = event.target.closest("[data-test-choice]");
@@ -3632,6 +3859,16 @@ function bindEvents() {
   on("#contentDifficultyFilter", "change", renderContentHub);
   on("#contentStatusFilter", "change", renderContentHub);
   on("#quickFindInput", "input", renderQuickFind);
+  on("#converterLr1", "input", updateScoreConverter);
+  on("#converterLr2", "input", updateScoreConverter);
+  on("#converterRc", "input", updateScoreConverter);
+  on("#questionNote", "input", () => {
+    const question = currentDrill[currentQuestionIndex];
+    if (!question) return;
+    state.questionNotes = state.questionNotes || {};
+    state.questionNotes[question.id] = $("#questionNote").value.trim();
+    saveState();
+  });
   on("#dashboardWeeklyHours", "change", () => {
     state.weeklyHours = Number($("#dashboardWeeklyHours")?.value || 8);
     saveState();
