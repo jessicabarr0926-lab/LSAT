@@ -578,6 +578,100 @@ contentLibrary.push(
   })),
 );
 
+contentLibrary.push(
+  {
+    id: "master-manual-140-175",
+    title: "140 to 175 Master Manual",
+    topic: "strategy",
+    topicLabel: "Strategy",
+    category: "Start here",
+    difficulty: "Beginner",
+    minutes: 18,
+    type: "Master plan",
+    skill: "Pacing",
+    page: "lesson-player.html",
+    description: "Turn the score jump into phases: foundation repair, controlled timing, section consistency, full-test integration, and taper.",
+  },
+  {
+    id: "loophole-gap-hunting",
+    title: "Loophole Gap Hunting",
+    topic: "lr",
+    topicLabel: "Logical Reasoning",
+    category: "Core concepts",
+    difficulty: "Intermediate",
+    minutes: 15,
+    type: "Reasoning system",
+    skill: "Flaws",
+    page: "lesson-player.html",
+    description: "Read every argument by asking where the evidence stops proving the conclusion before answer choices take over.",
+  },
+  {
+    id: "question-families-playbook",
+    title: "Question Families Playbook",
+    topic: "lr",
+    topicLabel: "Logical Reasoning",
+    category: "Question types",
+    difficulty: "Intermediate",
+    minutes: 16,
+    type: "Playbook",
+    skill: "Techniques, Roles, and Principles",
+    page: "lesson-player.html",
+    description: "Group LR into prove, help/hurt, assumption, flaw/method, resolve, and structure families so skills compound.",
+  },
+  {
+    id: "causal-attack-checklist",
+    title: "Causal Attack Checklist",
+    topic: "lr",
+    topicLabel: "Logical Reasoning",
+    category: "Core concepts",
+    difficulty: "Intermediate",
+    minutes: 13,
+    type: "Checklist",
+    skill: "Flaws",
+    page: "lesson-player.html",
+    description: "Test causal claims for reverse causation, third factors, timing, measurement, samples, and coincidence.",
+  },
+  {
+    id: "rc-classification-instinct",
+    title: "RC Classification Instinct",
+    topic: "rc",
+    topicLabel: "Reading Comprehension",
+    category: "Core concepts",
+    difficulty: "Intermediate",
+    minutes: 14,
+    type: "Map drill",
+    skill: "Reading Structure",
+    page: "lesson-player.html",
+    description: "Classify passages as old/new view, theory/critique, phenomenon/explanation, debate, or descriptive-to-evaluative shifts.",
+  },
+  {
+    id: "error-log-system",
+    title: "Error Log That Actually Raises Your Score",
+    topic: "strategy",
+    topicLabel: "Strategy",
+    category: "Strategy",
+    difficulty: "Beginner",
+    minutes: 11,
+    type: "Review system",
+    skill: "Pacing",
+    page: "lesson-player.html",
+    description: "Convert every miss into a cause code, loophole, fix drill, retest date, and reusable rule.",
+  },
+  {
+    id: "accuracy-before-speed",
+    title: "Accuracy Before Speed",
+    topic: "timing",
+    topicLabel: "Timing",
+    category: "Timed test training",
+    difficulty: "Beginner",
+    minutes: 10,
+    type: "Timing rule",
+    skill: "Pacing",
+    page: "lesson-player.html",
+    description: "Stop treating timing as the disease. Build untimed control first, then add pressure in measured layers.",
+  },
+);
+
 contentLibrary.forEach((lesson) => {
   lesson.page = "lesson-player.html";
 });
@@ -1948,7 +2042,7 @@ function renderContentHub() {
 
 function renderStartPath() {
   if (!has("#startPathGrid")) return;
-  const pathIds = ["argument-basics", "conclusion-evidence", "flaws-fast"];
+  const pathIds = ["master-manual-140-175", "argument-basics", "loophole-gap-hunting"];
   $("#startPathGrid").innerHTML = pathIds
     .map((id, index) => {
       const item = contentLibrary.find((lesson) => lesson.id === id);
@@ -2011,6 +2105,18 @@ function getLessonIcon(item) {
 }
 
 const lessonDeepDives = {
+  "master-manual-140-175": {
+    scenes: [
+      ["Current LSAT priority", "The current test is two scored LR sections, one scored RC section, and one unscored LR or RC variable section. LR is the biggest score engine."],
+      ["Transformation goal", "A 140 to 175 jump is not a few lucky questions. It is a new reading, review, timing, and pressure-management system."],
+      ["Four-phase climb", "Repair foundations, add controlled timing, stabilize full sections, then integrate full tests and taper."],
+    ],
+    concept: "Your goal is not to do more LSAT work. Your goal is to make every study block produce a reusable skill.",
+    example: "A weak block is 30 random questions. A strong block is one flaw lesson, six flaw questions, blind review, and one error-log rule.",
+    breakdown: "At 140, fundamentals are unstable. At 175, the same fundamentals survive pressure. That is why accuracy comes before speed.",
+    trap: "The trap is full-test panic: taking test after test before your untimed reasoning is strong enough to learn from the scores.",
+    practice: "For every block, write: skill, task, miss pattern, next drill, retest date.",
+  },
   "argument-basics": {
     scenes: [
       ["Argument skeleton", "Every LR argument has a claim the author wants you to accept and a reason offered for that claim."],
@@ -2047,6 +2153,18 @@ const lessonDeepDives = {
     trap: "A trap answer says the argument ignores a benefit or drawback, but the real problem is cause versus correlation.",
     practice: "Say the flaw in five words before answer choices: correlation is not causation.",
   },
+  "loophole-gap-hunting": {
+    scenes: [
+      ["Find the break", "Every LR argument has a place where the evidence stops proving the conclusion. That place is the loophole."],
+      ["Ask before answers", "Why does this not fully prove the conclusion? What else could explain the facts? What is the author assuming?"],
+      ["Plain English wins", "Do not only say causal flaw. Say: the author assumes the policy caused the improvement even though another change may have caused it."],
+    ],
+    concept: "Loophole thinking means you attack the support relationship before answer choices try to control your attention.",
+    example: "Students using a new schedule improved, so the schedule caused the improvement.",
+    breakdown: "The loophole is that stronger or more motivated students may have chosen the schedule before the results appeared.",
+    trap: "A trap answer may sound sophisticated but name a different flaw, like attacking a source or confusing necessary and sufficient.",
+    practice: "Before answer choices, force one sentence: this does not prove the conclusion because...",
+  },
   "assumption-bridge": {
     scenes: [
       ["Necessary protects", "A necessary assumption is something the argument needs to survive."],
@@ -2071,6 +2189,30 @@ const lessonDeepDives = {
     trap: "Mistaken reversal: link -> recorded.",
     practice: "Write one arrow and one contrapositive. Do not write the reversal.",
   },
+  "question-families-playbook": {
+    scenes: [
+      ["Group the tasks", "LR becomes easier when question types live in families: prove, help/hurt, assumptions, flaw/method, resolve, and structure."],
+      ["Know the job", "Inference stays inside evidence. Strengthen and weaken move support. Assumptions bridge the gap. Resolve lets both facts be true."],
+      ["Compound skills", "Main point, flaw, strengthen, weaken, and assumptions overlap because they all depend on argument structure."],
+    ],
+    concept: "Question families reduce cognitive load. You stop memorizing stems and start recognizing what the answer must do.",
+    example: "A causal stimulus can become a weaken, strengthen, necessary assumption, flaw, or evaluate question.",
+    breakdown: "The stimulus skill is causal reasoning. The stem changes the action: expose, support, protect, diagnose, or test the cause.",
+    trap: "The trap is treating each question type like a separate universe and missing the shared reasoning underneath.",
+    practice: "After each stimulus, label the family before reading choices: prove, help/hurt, assumption, method/flaw, resolve, or structure.",
+  },
+  "causal-attack-checklist": {
+    scenes: [
+      ["Causal claim pattern", "A happened, B happened, therefore A caused B. That pattern is high-yield and high-risk."],
+      ["Attack list", "Check reverse causation, third factors, bad timing, weak measurement, biased samples, coincidence, and ignored alternatives."],
+      ["Strengthen or weaken", "Strengthen by ruling out alternatives or showing mechanism. Weaken by adding another explanation or attacking the data."],
+    ],
+    concept: "Causal reasoning is one of the fastest ways to gain LR points because the same checklist repeats constantly.",
+    example: "Injuries dropped after bike lanes were added, so bike lanes caused the drop.",
+    breakdown: "A weaken answer might say enforcement increased at the same time. A strengthen answer might say enforcement stayed unchanged.",
+    trap: "Do not pick an answer just because it mentions bike lanes or injuries. It must affect the causal explanation.",
+    practice: "Run the seven-question causal checklist before looking at answers.",
+  },
   "rc-map": {
     scenes: [
       ["Read for jobs", "Each paragraph has a job: background, old view, problem, response, implication, or author position."],
@@ -2082,6 +2224,18 @@ const lessonDeepDives = {
     breakdown: "The passage movement is theory, challenge, qualified defense.",
     trap: "A detail can be true but too narrow for main point or structure questions.",
     practice: "After each paragraph, write one tiny job label in plain English.",
+  },
+  "rc-classification-instinct": {
+    scenes: [
+      ["Classify early", "Passages repeat structures: old view vs new view, theory plus critique, phenomenon plus explanation, debate, or descriptive then evaluative shift."],
+      ["Track voices", "Separate traditional view, critics, researchers, scholars, and the author. Many traps assign a belief to the wrong voice."],
+      ["Map jobs", "Use short paragraph tags: old theory, new critique, evidence, author response, implication."],
+    ],
+    concept: "RC is a structure contest. Classification makes a dense passage feel less random.",
+    example: "Paragraph 1 gives an old theory. Paragraph 2 introduces critics. Paragraph 3 gives evidence for a qualified author position.",
+    breakdown: "The classification is old view, critique, qualified response. That predicts main point, function, and attitude questions.",
+    trap: "Over-highlighting turns every sentence into noise. If everything is important, nothing guides you.",
+    practice: "After each paragraph, write a two-word job tag and one author attitude word.",
   },
   "lr-strengthen": {
     scenes: [
@@ -2118,6 +2272,30 @@ const lessonDeepDives = {
     breakdown: "Mark it, write 'match flaw skeleton,' and secure the next easier question first.",
     trap: "Staying longer can feel disciplined while actually lowering your section score.",
     practice: "Practice leaving on purpose: flag, label, breathe, next.",
+  },
+  "error-log-system": {
+    scenes: [
+      ["Review creates growth", "Doing questions creates exposure. Reviewing questions creates improvement."],
+      ["Write the real miss", "Bad lesson: be careful. Good lesson: I treated a relative claim as absolute and picked a too-strong answer."],
+      ["Retest the pattern", "Every miss needs a cause code, loophole, fix drill, retest date, and resolution status."],
+    ],
+    concept: "Your error log is a diagnostic tool, not a shame diary.",
+    example: "PT130 S1 Q19, Flaw, chose C, correct A, miss reason: topic match before naming the gap.",
+    breakdown: "The useful lesson is not that you missed it. The useful lesson is the repeatable move that caused the miss.",
+    trap: "The trap is writing vague notes like rushed, careless, or confusing. Those do not tell future Jessica what to drill.",
+    practice: "Use this sentence: I missed this because I ___. Next time I will ___. Retest on ___.",
+  },
+  "accuracy-before-speed": {
+    scenes: [
+      ["Timing is a symptom", "If you are slow, the disease is usually unstable structure, weak prediction, rereading, or trap-answer overthinking."],
+      ["Untimed first", "If you cannot do a skill slowly, timing will only expose the weakness more loudly."],
+      ["Add pressure carefully", "Move from untimed accuracy to short timed sets, then sections, then full tests."],
+    ],
+    concept: "Speed is built from repeatable accuracy. Timing is not where the score is born.",
+    example: "Instead of forcing a full section, do six untimed assumption questions until you can name the bridge before answers.",
+    breakdown: "Once bridge naming is reliable, add a 12-minute set. Then review uncertainty before checking answers.",
+    trap: "Intensity can feel like discipline, but constant timed tests without deep review trains panic and repetition.",
+    practice: "Before speed work, require 90% accuracy on the same skill in short untimed sets.",
   },
   "argumentative-writing": {
     scenes: [

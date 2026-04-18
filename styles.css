@@ -329,6 +329,7 @@ h3 {
 .dark-mode .summary-card,
 .dark-mode .start-path,
 .dark-mode .start-path-step,
+.dark-mode .manual-system,
 .dark-mode .streak-pill,
 .dark-mode .today-step,
 .dark-mode .roadmap-status div,
@@ -1145,6 +1146,33 @@ h3 {
   border: 1px solid rgba(143, 95, 116, 0.25);
   border-radius: 8px;
   background: #fff8fb;
+}
+
+.manual-system {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+  gap: 16px;
+  align-items: center;
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid rgba(127, 169, 139, 0.35);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 247, 243, 0.92)),
+    #ffffff;
+}
+
+.manual-system p {
+  max-width: 72ch;
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.manual-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .start-path-grid {
@@ -2388,6 +2416,7 @@ tbody tr:last-child td {
   .continue-grid,
   .content-hero,
   .start-path,
+  .manual-system,
   .lesson-layout,
   .lesson-stepper,
   .technique-lab,
