@@ -1224,6 +1224,9 @@ const defaultState = {
   questionHistory: {},
   questionNotes: {},
   explanationVotes: {},
+  confidenceRatings: {},
+  trapTags: {},
+  supportDraftsByQuestion: {},
   scoreConverter: {
     lr1: 18,
     lr2: 18,
@@ -1248,6 +1251,7 @@ let fullTest = {
   index: 0,
   answers: {},
   submitted: false,
+  awaitingBreak: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -1272,6 +1276,9 @@ function loadState() {
     parsed.questionHistory = parsed.questionHistory || {};
     parsed.questionNotes = parsed.questionNotes || {};
     parsed.explanationVotes = parsed.explanationVotes || {};
+    parsed.confidenceRatings = parsed.confidenceRatings || {};
+    parsed.trapTags = parsed.trapTags || {};
+    parsed.supportDraftsByQuestion = parsed.supportDraftsByQuestion || {};
     parsed.scoreConverter = { ...freshDefaultState().scoreConverter, ...(parsed.scoreConverter || {}) };
     localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
     return parsed;
@@ -1373,6 +1380,48 @@ function recordQuestionHistory(question, isCorrect, attempts) {
   state.questionHistory[question.id] = history;
 }
 
+function getTrapOptions() {
+  return [
+    "Causal leap",
+    "Too strong",
+    "Topic match",
+    "Conditional reversal",
+    "Wrong viewpoint",
+    "Out of scope",
+    "Comparison gap",
+    "Timing pressure",
+  ];
+}
+
+function inferTrap(question) {
+  const text = `${question.skill} ${question.prompt} ${question.explanation}`.toLowerCase();
+  if (text.includes("caus")) return "Causal leap";
+  if (text.includes("conditional") || text.includes("arrow") || text.includes("reverse")) return "Conditional reversal";
+  if (text.includes("viewpoint") || text.includes("author")) return "Wrong viewpoint";
+  if (text.includes("time") || text.includes("skip") || text.includes("pacing")) return "Timing pressure";
+  if (text.includes("compar")) return "Comparison gap";
+  if (text.includes("strong")) return "Too strong";
+  return "Topic match";
+}
+
+function getConfidenceSummary() {
+  const entries = Object.entries(state.confidenceRatings || {});
+  if (!entries.length) return { average: 0, highMisses: 0, lowCorrect: 0, total: 0 };
+  const total = entries.length;
+  const average = Math.round(entries.reduce((sum, [, value]) => sum + Number(value.rating || 0), 0) / total);
+  const highMisses = entries.filter(([, value]) => Number(value.rating) >= 4 && !value.correct).length;
+  const lowCorrect = entries.filter(([, value]) => Number(value.rating) <= 2 && value.correct).length;
+  return { average, highMisses, lowCorrect, total };
+}
+
+function getTrapSummary() {
+  const counts = {};
+  Object.values(state.trapTags || {}).forEach((trap) => {
+    counts[trap] = (counts[trap] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
 function getQuestionStatus(question) {
   if (state.reviewedQuestions.includes(question.id)) return "reviewed";
   return question.status;
@@ -1418,6 +1467,7 @@ function renderDashboard() {
   renderDashboardCommandCenter();
   renderStudyCheckIn();
   renderDashboardDrillPreview();
+  renderProductHealthChecklist();
   renderDashboardCharts();
   renderRoadmap();
   hydrateDashboardSettings();
@@ -1621,6 +1671,37 @@ function renderDashboardDrillPreview() {
   `;
 }
 
+function renderProductHealthChecklist() {
+  if (!has("#dashboard") || $("#productHealthChecklist")) return;
+  const items = [
+    ["Prediction drill", "drills.html", "Read first, reveal later."],
+    ["Confidence matrix", "analytics.html", "Spot blind spots."],
+    ["Trap tags", "drills.html", "Name the recurring trick."],
+    ["Question notes", "journal.html", "Keep the lesson attached."],
+    ["Score converter", "tests.html", "Estimate LR/LR/RC score."],
+    ["Writing practice", "tests.html#writing", "Use 15 + 35 timing."],
+    ["Classes flow", "classes.html", "Pick stuck, drill, or tired."],
+    ["Plugin setup", "plugins.html", "Connect your study workflow."],
+    ["Content path", "content.html", "Use the 140 to 175 system."],
+    ["Ugly Mode", "drills.html", "Practice without polish."],
+  ];
+  $("#dashboard").insertAdjacentHTML(
+    "afterend",
+    `<section class="panel product-health" id="productHealthChecklist">
+      <div class="section-heading compact"><p class="eyebrow">10-point product check</p><h2>Everything should lead to the next study action.</h2></div>
+      <div class="product-health-grid">
+        ${items.map(([title, action, body], index) => `
+          <button class="product-health-item" type="button" data-page-target="${escapeHtml(action)}">
+            <span>${index + 1}</span>
+            <strong>${escapeHtml(title)}</strong>
+            <small>${escapeHtml(body)}</small>
+          </button>
+        `).join("")}
+      </div>
+    </section>`
+  );
+}
+
 function renderDashboardCharts() {
   if (has("#scoreTrendChart")) {
     const scores = [148, 151, 149, 154, Math.max(154, Math.min(180, Number(state.targetScore || 170) - 8))];
@@ -1675,10 +1756,13 @@ function renderFocusSignals() {
   const answered = state.drillStats.answered || 0;
   const accuracy = answered ? Math.round((state.drillStats.correct / answered) * 100) : 64;
   const fatigueRisk = answered > 18 && accuracy < 75 ? "High" : answered > 8 ? "Moderate" : "Low";
+  const confidence = getConfidenceSummary();
+  const topTrap = getTrapSummary()[0]?.[0] || "Start tagging";
   $("#focusSignals").innerHTML = `
     <div class="focus-signal"><strong>${accuracy}%</strong><span>current drill accuracy</span></div>
     <div class="focus-signal"><strong>${fatigueRisk}</strong><span>fatigue risk after long sessions</span></div>
-    <div class="focus-signal"><strong>Track</strong><span>confidence before checking answers: high-confidence misses become priority lessons.</span></div>
+    <div class="focus-signal"><strong>${confidence.highMisses}</strong><span>high-confidence misses need slow review.</span></div>
+    <div class="focus-signal"><strong>${escapeHtml(topTrap)}</strong><span>top trap pattern from your drill notes.</span></div>
   `;
 }
 
@@ -1851,6 +1935,8 @@ function renderQuestionStage(question) {
   const parts = getQuestionParts(question);
   const history = getQuestionHistory(question.id);
   const note = state.questionNotes?.[question.id] || "";
+  const confidence = state.confidenceRatings?.[question.id]?.rating || "";
+  const trap = state.trapTags?.[question.id] || inferTrap(question);
   const stemMarkup = currentRevealStage >= 1 ? `<p class="question-stem">${escapeHtml(parts.stem)}</p>` : "";
   const choicesMarkup = currentRevealStage >= 2
     ? Object.entries(question.choices)
@@ -1887,6 +1973,21 @@ function renderQuestionStage(question) {
   $("#submitAnswer").disabled = currentRevealStage < 2;
   const notes = $("#questionNote");
   if (notes) notes.value = note;
+  if (has("#questionStudyTools")) {
+    $("#questionStudyTools").innerHTML = `
+      <label>Confidence before checking
+        <select id="questionConfidence">
+          <option value="">Choose</option>
+          ${[1, 2, 3, 4, 5].map((value) => `<option value="${value}" ${Number(confidence) === value ? "selected" : ""}>${value} - ${value <= 2 ? "not sure" : value === 3 ? "medium" : "confident"}</option>`).join("")}
+        </select>
+      </label>
+      <label>Trap pattern
+        <select id="questionTrap">
+          ${getTrapOptions().map((item) => `<option value="${escapeHtml(item)}" ${trap === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
 }
 
 function submitCurrentAnswer() {
@@ -1924,6 +2025,10 @@ function submitCurrentAnswer() {
   const firstAttemptCorrect = currentQuestionAttempts[0] === question.answer;
   drillResults[currentQuestionIndex] = firstAttemptCorrect;
   recordQuestionHistory(question, firstAttemptCorrect, currentQuestionAttempts);
+  const confidence = Number($("#questionConfidence")?.value || 0);
+  const trap = $("#questionTrap")?.value || inferTrap(question);
+  if (confidence) state.confidenceRatings[question.id] = { rating: confidence, correct: firstAttemptCorrect, skill: question.skill, date: todayStamp() };
+  state.trapTags[question.id] = trap;
   if ($("#questionNote")?.value.trim()) {
     state.questionNotes[question.id] = $("#questionNote").value.trim();
   }
@@ -1956,8 +2061,10 @@ function submitCurrentAnswer() {
     <strong>${firstAttemptCorrect ? "Correct." : isCorrect ? "Correct on retry. First try still goes to review." : `Not quite. Credited answer: ${question.answer}.`}</strong>
     <p class="attempt-summary">Attempts: ${currentQuestionAttempts.map((choice, index) => `<span class="attempt-pill attempt-${index + 1}">${escapeHtml(choice)}</span>`).join("")}</p>
     <p>${escapeHtml(question.explanation)}</p>
+    ${confidence >= 4 && !firstAttemptCorrect ? `<div class="mastery-lock"><strong>High-confidence miss.</strong><p>This is a priority pattern. Slow down, write the trap, and redo this question tomorrow.</p></div>` : ""}
     ${renderQuestionVideoExplanation(question)}
     ${renderExplanationVote(question)}
+    <button class="mini-button" type="button" data-question-support="${question.id}">Ask about this question</button>
     ${isLast ? renderMasteryGate(currentScore) : ""}
   `;
   $("#nextQuestion").disabled = isLast;
@@ -2000,6 +2107,17 @@ function renderExplanationVote(question) {
       <span>Was this explanation clear?</span>
       <button class="mini-button ${vote === "up" ? "selected" : ""}" type="button" data-explanation-vote="${question.id}" data-vote="up">Thumbs up</button>
       <button class="mini-button ${vote === "down" ? "selected" : ""}" type="button" data-explanation-vote="${question.id}" data-vote="down">Thumbs down</button>
+    </div>
+    ${vote === "down" ? renderPlainEnglishRewrite(question) : ""}
+  `;
+}
+
+function renderPlainEnglishRewrite(question) {
+  return `
+    <div class="plain-explanation">
+      <strong>Simpler explanation</strong>
+      <p>The credited answer wins because it does the exact job for ${escapeHtml(question.skill)}. Your job is to name the conclusion, name the evidence, and ask what the answer changes about that link.</p>
+      <p>Plain-English trap: ${escapeHtml(state.trapTags?.[question.id] || inferTrap(question))}.</p>
     </div>
   `;
 }
@@ -3012,6 +3130,35 @@ function renderAnalytics() {
       `<p><strong>Content progress:</strong> ${state.completedContent.length} lessons completed. Keep pairing lessons with drills.</p>`
     );
   }
+  renderAdvancedAnalytics();
+}
+
+function renderAdvancedAnalytics() {
+  if (!has("#analytics") || $("#advancedAnalytics")) return;
+  const confidence = getConfidenceSummary();
+  const traps = getTrapSummary();
+  const topTrap = traps[0]?.[0] || "No trap tagged yet";
+  const topTrapCount = traps[0]?.[1] || 0;
+  $("#analytics").insertAdjacentHTML(
+    "beforeend",
+    `<div class="advanced-analytics" id="advancedAnalytics">
+      <article>
+        <span class="metric-label">Confidence matrix</span>
+        <strong>${confidence.average || "Start"}</strong>
+        <p>${confidence.total ? `${confidence.highMisses} high-confidence misses and ${confidence.lowCorrect} low-confidence correct answers.` : "Rate confidence in drills to reveal blind spots."}</p>
+      </article>
+      <article>
+        <span class="metric-label">Trap sensitivity</span>
+        <strong>${escapeHtml(topTrap)}</strong>
+        <p>${topTrapCount ? `${topTrapCount} tagged question${topTrapCount === 1 ? "" : "s"}. Pair a lesson with a short retry set.` : "Trap tags will appear after your next drill."}</p>
+      </article>
+      <article>
+        <span class="metric-label">Fastest +5 path</span>
+        <strong>${escapeHtml(getWeakSkills()[0])}</strong>
+        <p>Watch one lesson, run six prediction-mode questions, then redo only high-confidence misses.</p>
+      </article>
+    </div>`
+  );
 }
 
 function estimateScaledScore(rawTotal) {
@@ -3246,6 +3393,25 @@ function renderPlugins() {
       }
     )
     .join("");
+  renderPluginSetupGuide();
+}
+
+function renderPluginSetupGuide() {
+  if (!has("#plugins") || $("#pluginSetupGuide")) return;
+  const steps = [
+    ["Calendar", "Export the weekly plan, then import the .ics file into Google Calendar."],
+    ["Drive / Docs", "Use Journal as the source of truth, then move polished notes into your study folder."],
+    ["Sheets", "Open Analytics after every timed set and copy raw score, section type, and trap pattern."],
+    ["Gmail", "Use Ask Support for tutor questions before sending the polished version."],
+    ["Canva", "Turn one repeated trap into a one-page visual cheat sheet."],
+  ];
+  $("#plugins").insertAdjacentHTML(
+    "beforeend",
+    `<section class="plugin-setup" id="pluginSetupGuide">
+      <div class="section-heading compact"><p class="eyebrow">Setup guide</p><h2>Use plugins as workflows, not distractions.</h2></div>
+      ${steps.map(([title, body]) => `<article><strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p></article>`).join("")}
+    </section>`
+  );
 }
 
 function runPluginAction(id) {
@@ -3326,6 +3492,7 @@ function startFullTest() {
     index: 0,
     answers: {},
     submitted: false,
+    awaitingBreak: false,
   };
   showToast("Current-format test started: LR, LR, RC, variable.");
   renderFullTest();
@@ -3335,6 +3502,18 @@ function renderFullTest() {
   if (!has("#fullTestCard")) return;
   if (!fullTest.questions.length) {
     $("#fullTestCard").innerHTML = `<p>Start a full test to load Section 1, Question 1.</p>`;
+    return;
+  }
+  if (fullTest.awaitingBreak) {
+    const nextSection = Math.floor(fullTest.index / 25) + 1;
+    $("#fullTestCard").innerHTML = `
+      <div class="break-screen">
+        <span class="metric-label">Section break</span>
+        <h3>Reset before Section ${nextSection}.</h3>
+        <p>Stand up, breathe, clear the last section, then come back to the next task. This trains test-day transitions instead of rushing through them.</p>
+        <button class="button primary" type="button" data-resume-test>Resume test</button>
+      </div>
+    `;
     return;
   }
   const question = fullTest.questions[fullTest.index];
@@ -3384,7 +3563,7 @@ function finishFullTest() {
 }
 
 function resetFullTest() {
-  fullTest = { questions: [], index: 0, answers: {}, submitted: false };
+  fullTest = { questions: [], index: 0, answers: {}, submitted: false, awaitingBreak: false };
   renderFullTest();
   showToast("Full test reset.");
 }
@@ -3807,6 +3986,24 @@ function bindEvents() {
       $("#podcastWidget")?.classList.toggle("open");
     }
 
+    const questionSupport = event.target.closest("[data-question-support]");
+    if (questionSupport) {
+      const question = questionBank.find((item) => item.id === questionSupport.dataset.questionSupport);
+      if (question) {
+        const note = state.questionNotes?.[question.id] || "";
+        const trap = state.trapTags?.[question.id] || inferTrap(question);
+        state.supportQueue.unshift({
+          id: Date.now(),
+          text: `${question.source}: I need help with ${question.skill}. Trap: ${trap}. Note: ${note || "No note yet."}`,
+          date: new Date().toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+        });
+        state.supportQueue = state.supportQueue.slice(0, 8);
+        state.supportDraftsByQuestion[question.id] = true;
+        saveState();
+        showToast("Question added to Ask Support.");
+      }
+    }
+
     const testChoice = event.target.closest("[data-test-choice]");
     if (testChoice && fullTest.questions.length && !fullTest.submitted) {
       const question = fullTest.questions[fullTest.index];
@@ -3829,8 +4026,14 @@ function bindEvents() {
         finishFullTest();
       } else {
         fullTest.index += 1;
+        if (fullTest.index % 25 === 0) fullTest.awaitingBreak = true;
         renderFullTest();
       }
+    }
+
+    if (event.target.closest("[data-resume-test]")) {
+      fullTest.awaitingBreak = false;
+      renderFullTest();
     }
 
     const accessibilityButton = event.target.closest("[data-toggle-accessibility]");
@@ -3848,6 +4051,24 @@ function bindEvents() {
 
     if (event.target.closest("[data-read-lesson]")) {
       readLesson();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+    const key = event.key.toLowerCase();
+    if (has("#drillCard") && currentDrill.length && !submittedCurrentQuestion) {
+      if (["a", "b", "c", "d", "e"].includes(key)) {
+        const button = $(`[data-choice="${key.toUpperCase()}"]`);
+        if (button && !button.disabled) button.click();
+      }
+      if (key === "r") {
+        currentRevealStage = Math.min(2, currentRevealStage + 1);
+        renderQuestionStage(currentDrill[currentQuestionIndex]);
+      }
+      if (event.key === "Enter" && !$("#submitAnswer")?.disabled) submitCurrentAnswer();
+    } else if (has("#drillCard") && submittedCurrentQuestion && key === "n" && !$("#nextQuestion")?.disabled) {
+      $("#nextQuestion").click();
     }
   });
 
@@ -4033,7 +4254,13 @@ function bindEvents() {
       try {
         const backup = JSON.parse(reader.result);
         if (!backup.state) throw new Error("Missing state");
-        state = { ...freshDefaultState(), ...backup.state };
+        state = {
+          ...freshDefaultState(),
+          ...backup.state,
+          accessibility: { ...freshDefaultState().accessibility, ...(backup.state.accessibility || {}) },
+          drillStats: { ...freshDefaultState().drillStats, ...(backup.state.drillStats || {}) },
+          scoreConverter: { ...freshDefaultState().scoreConverter, ...(backup.state.scoreConverter || {}) },
+        };
         saveState();
         renderAll();
         renderCurrentQuestion();

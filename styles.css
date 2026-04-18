@@ -1693,6 +1693,13 @@ tbody tr:last-child td {
   font-weight: 800;
 }
 
+.question-study-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .question-note textarea {
   width: 100%;
   resize: vertical;
@@ -1722,6 +1729,73 @@ tbody tr:last-child td {
 .explanation-vote .selected {
   border-color: var(--teal-dark);
   background: #f2e6ed;
+}
+
+.plain-explanation,
+.break-screen,
+.plugin-setup,
+.advanced-analytics,
+.product-health {
+  margin-top: 14px;
+}
+
+.plain-explanation,
+.break-screen {
+  padding: 14px;
+  border: 1px solid rgba(127, 169, 139, 0.35);
+  border-radius: 8px;
+  background: #f1faf4;
+}
+
+.advanced-analytics,
+.product-health-grid,
+.plugin-setup {
+  display: grid;
+  gap: 12px;
+}
+
+.advanced-analytics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.advanced-analytics article,
+.plugin-setup article,
+.product-health-item {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.product-health-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.product-health-item {
+  cursor: pointer;
+  text-align: left;
+}
+
+.product-health-item span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--teal-dark);
+  font-weight: 900;
+}
+
+.product-health-item strong,
+.product-health-item small {
+  display: block;
+}
+
+.product-health-item small {
+  margin-top: 4px;
+  color: var(--muted);
 }
 
 .feedback {
@@ -2623,6 +2697,7 @@ tbody tr:last-child td {
   .technique-lab,
   .class-spotlight,
   .class-flow-grid,
+  .advanced-analytics,
   .writing-grid {
     grid-template-columns: 1fr;
   }
@@ -2728,6 +2803,7 @@ tbody tr:last-child td {
   .explanation-grid,
   .automation-grid,
   .plugin-grid,
+  .question-study-tools,
   .converter-grid {
     grid-template-columns: 1fr;
   }
