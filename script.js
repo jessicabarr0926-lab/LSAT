@@ -3047,18 +3047,65 @@ function getLessonScenes(item) {
   const skill = item.skill || "LSAT";
   return [
     {
-      title: "Spot the job",
-      body: `Start by naming the job: conclusion, evidence, viewpoint, exception, or timing decision. This lowers working-memory load before answer choices.`,
+      title: `What ${item.title} trains`,
+      body: `This lesson trains ${skill.toLowerCase()} by giving you one repeatable move to use before answer choices start pulling your attention around.`,
     },
     {
-      title: "Make a prediction",
-      body: `Say the answer in plain words before looking down. For ${skill}, the right answer must match the task and the actual support relationship.`,
+      title: "See the pattern",
+      body: `Pause on the stimulus or passage and ask what job the text is doing. For ${skill}, the right answer has to match that job, not just the topic.`,
     },
     {
-      title: "Choose with proof",
-      body: `Pick the answer because it does the required job, not because it sounds familiar. Then save one sentence in the journal if you miss it.`,
+      title: "Use plain English",
+      body: `Translate the hard language into a short sentence: evidence, conclusion, passage role, viewpoint, or timing decision. Shorter language creates a stronger anchor.`,
+    },
+    {
+      title: "Reject the trap",
+      body: `Trap answers borrow familiar words but change the task. Eliminate choices that sound related while failing to do the exact job.`,
+    },
+    {
+      title: "Prove and practice",
+      body: `Choose with proof, then do the linked practice. If you miss, write the rule in the journal and retest the same skill.`,
     },
   ];
+}
+
+function getSceneVisual(item, scene, index) {
+  const skill = item.skill || "LSAT";
+  const topic = item.topic === "rc" ? "Passage" : item.topic === "timing" ? "Clock" : item.topic === "strategy" ? "Plan" : "Argument";
+  const conceptLabels = {
+    Flaws: ["Evidence", "Gap", "Conclusion"],
+    Assumptions: ["Evidence", "Bridge", "Conclusion"],
+    "Strengthen or Weaken": ["Evidence", "Support move", "Conclusion"],
+    Conclusions: ["Reason", "Therefore", "Claim"],
+    "Conditional Logic": ["Trigger", "Arrow", "Result"],
+    "Reading Structure": ["Paragraph", "Role", "Author"],
+    Pacing: ["Task", "Time", "Decision"],
+  };
+  const labels = conceptLabels[skill] || [topic, "Task", "Proof"];
+  const actionBySkill = {
+    Flaws: "Name the missing bridge before answers.",
+    Assumptions: "Ask what the argument must have.",
+    "Strengthen or Weaken": "Decide whether the answer helps or hurts the bridge.",
+    Conclusions: "Find the sentence supported by the rest.",
+    "Conditional Logic": "Write the arrow and contrapositive only.",
+    "Reading Structure": "Label the paragraph job, not every detail.",
+    Pacing: "Flag, label, and protect easier points.",
+  };
+  return {
+    label: labels[index % labels.length],
+    pieces: labels,
+    cue: actionBySkill[skill] || "Name the task, predict, prove, then practice.",
+    trap: scene.body.split(".")[0] || "Do not let familiar wording replace proof.",
+  };
+}
+
+function getConnectedLessonNeighbors(id) {
+  const ordered = orderContent(contentLibrary);
+  const index = ordered.findIndex((lesson) => lesson.id === id);
+  return {
+    previous: index > 0 ? ordered[index - 1] : null,
+    next: index >= 0 && index < ordered.length - 1 ? ordered[index + 1] : null,
+  };
 }
 
 function getLessonKit(item) {
@@ -3161,6 +3208,7 @@ function renderLessonPlayer() {
   const masteryScore = mastery.answered ? Math.round((mastery.correct / mastery.answered) * 100) : 0;
   const completed = state.completedContent.includes(item.id);
   const watchComplete = state.watchedContent.includes(item.id);
+  const neighbors = getConnectedLessonNeighbors(item.id);
   const stepItems = [
     ["Watch/Read", true],
     ["Translate", watchComplete],
@@ -3174,6 +3222,18 @@ function renderLessonPlayer() {
       <h1>${escapeHtml(item.title)}</h1>
       <p>${escapeHtml(item.description)}</p>
     </div>
+    <section class="lesson-connection-strip" aria-label="Connected content path">
+      <div>
+        <span class="metric-label">From Content Hub</span>
+        <strong>${escapeHtml(item.topicLabel)} | ${escapeHtml(item.skill)}</strong>
+        <p>Watch the animation, read the short transcript, unlock tools, then practice until the 90% gate is met.</p>
+      </div>
+      <div class="connection-actions">
+        ${neighbors.previous ? `<button class="mini-button" type="button" data-open-content="${escapeHtml(neighbors.previous.id)}">Previous: ${escapeHtml(neighbors.previous.title)}</button>` : ""}
+        ${neighbors.next ? `<button class="mini-button" type="button" data-open-content="${escapeHtml(neighbors.next.id)}">Next: ${escapeHtml(neighbors.next.title)}</button>` : ""}
+        <button class="mini-button" type="button" data-page-target="lessons.html">All lessons</button>
+      </div>
+    </section>
     <div class="lesson-stepper" aria-label="Lesson progress">
       ${stepItems
         .map(
@@ -3193,13 +3253,30 @@ function renderLessonPlayer() {
           <div class="video-progress" aria-hidden="true"><span></span></div>
           ${scenes
             .map(
-              (scene, index) => `
+              (scene, index) => {
+                const visual = getSceneVisual(item, scene, index);
+                return `
                 <div class="video-scene" style="--scene-index: ${index}">
                   <span>${escapeHtml(item.topicLabel)}</span>
                   <strong>${escapeHtml(scene.title)}</strong>
                   <p>${escapeHtml(scene.body)}</p>
+                  <div class="scene-storyboard" aria-label="Animated visual breakdown">
+                    ${visual.pieces
+                      .map((piece, pieceIndex) => `
+                        <div class="${pieceIndex === index % visual.pieces.length ? "active" : ""}">
+                          <small>${pieceIndex === 0 ? "Start" : pieceIndex === 1 ? "Move" : "Check"}</small>
+                          <b>${escapeHtml(piece)}</b>
+                        </div>
+                      `)
+                      .join("")}
+                  </div>
+                  <div class="scene-callout">
+                    <small>${escapeHtml(visual.label)} cue</small>
+                    <b>${escapeHtml(visual.cue)}</b>
+                  </div>
                 </div>
-              `,
+              `;
+              },
             )
             .join("")}
           <div class="caption-track">
@@ -3229,6 +3306,21 @@ function renderLessonPlayer() {
           <summary>Read after watching</summary>
           <div id="lessonText">
             <p>${escapeHtml(transcriptText)}</p>
+            <div class="transcript-storyboard">
+              ${scenes
+                .map((scene, index) => {
+                  const visual = getSceneVisual(item, scene, index);
+                  return `
+                    <article>
+                      <span>Frame ${index + 1}</span>
+                      <strong>${escapeHtml(scene.title)}</strong>
+                      <p>${escapeHtml(scene.body)}</p>
+                      <small>Action: ${escapeHtml(visual.cue)}</small>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>
           </div>
         </details>
         ${watchComplete ? `
