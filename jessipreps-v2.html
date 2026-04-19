@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JessiPreps — LSAT Study System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0F1117;
+  --surface: #181C27;
+  --surface2: #1E2333;
+  --border: rgba(255,255,255,0.07);
+  --accent: #E8A838;
+  --accent2: #4A9C6D;
+  --rc: #5B8DEF;
+  --lr: #E8A838;
+  --danger: #E05C5C;
+  --text: #F0EDE8;
+  --muted: #8A8FA0;
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position:fixed;top:0;left:0;height:100vh;
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:width 0.25s ease;
+  z-index:100;
+  overflow:hidden;
+}
+#sidebar.collapsed { width:var(--sidebar-w-collapsed); }
+
+.sb-logo {
+  display:flex;align-items:center;gap:10px;
+  padding:18px 16px;border-bottom:1px solid var(--border);
+  text-decoration:none;white-space:nowrap;
+}
+.sb-logo-mark {
+  width:28px;height:28px;border-radius:8px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;color:#0F1117;flex-shrink:0;
+}
+.sb-logo-text { font-family:'Playfair Display',serif;font-size:15px;color:var(--text);font-weight:600;opacity:1;transition:opacity 0.2s; }
+#sidebar.collapsed .sb-logo-text { opacity:0;pointer-events:none; }
+
+.sb-toggle {
+  position:absolute;top:19px;right:-12px;
+  width:24px;height:24px;border-radius:50%;
+  background:var(--surface2);border:1px solid var(--border);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--muted);z-index:101;transition:color 0.2s;
+}
+.sb-toggle:hover{color:var(--text);}
+
+.sb-nav { flex:1;overflow-y:auto;padding:10px 0; }
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:var(--border)}
+
+.sb-group { margin-bottom:4px; }
+.sb-group-btn {
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:8px 16px;
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  justify-content:space-between;white-space:nowrap;
+  transition:color 0.2s;font-family:'DM Sans',sans-serif;
+}
+.sb-group-btn:hover{color:var(--text);}
+.sb-group-label { display:flex;align-items:center;gap:10px; }
+.sb-group-icon { width:20px;text-align:center;font-size:13px;flex-shrink:0; }
+.sb-group-text { transition:opacity 0.2s; }
+#sidebar.collapsed .sb-group-text, #sidebar.collapsed .sb-group-chevron { opacity:0; }
+.sb-group-chevron { font-size:9px;transition:transform 0.2s,opacity 0.2s; }
+.sb-group-btn.open .sb-group-chevron { transform:rotate(180deg); }
+
+.sb-items { overflow:hidden;max-height:0;transition:max-height 0.25s ease; }
+.sb-items.open { max-height:300px; }
+.sb-item {
+  display:flex;align-items:center;gap:10px;
+  padding:7px 16px 7px 30px;
+  color:var(--muted);font-size:13px;font-weight:500;
+  cursor:pointer;white-space:nowrap;
+  border-radius:0;transition:color 0.15s,background 0.15s;
+  border-left:2px solid transparent;
+}
+.sb-item:hover { color:var(--text);background:rgba(255,255,255,0.03); }
+.sb-item.active { color:var(--accent);border-left-color:var(--accent);background:rgba(232,168,56,0.06); }
+#sidebar.collapsed .sb-items { max-height:0!important; }
+
+/* ── MAIN ── */
+#main {
+  margin-left:var(--sidebar-w);
+  transition:margin-left 0.25s ease;
+  min-height:100vh;
+  padding:32px 36px 60px;
+}
+#sidebar.collapsed ~ #main { margin-left:var(--sidebar-w-collapsed); }
+
+/* ── PAGES ── */
+.page { display:none;animation:fadeIn 0.3s ease; }
+.page.active { display:block; }
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TYPOGRAPHY ── */
+.page-title {
+  font-family:'Playfair Display',serif;
+  font-size:28px;font-weight:700;
+  color:var(--text);margin-bottom:6px;
+}
+.page-sub { color:var(--muted);font-size:14px;margin-bottom:28px; }
+h3 { font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:var(--text);margin-bottom:12px; }
+
+/* ── CARDS ── */
+.card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:22px;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.card:hover { border-color:rgba(255,255,255,0.14); }
+.card-grid { display:grid;gap:16px; }
+.card-grid-2 { grid-template-columns:1fr 1fr; }
+.card-grid-3 { grid-template-columns:repeat(3,1fr); }
+
+/* ── TAGS ── */
+.tag {
+  display:inline-flex;align-items:center;gap:5px;
+  border-radius:20px;padding:3px 10px;
+  font-size:11px;font-weight:600;letter-spacing:0.03em;
+}
+.tag-rc { background:rgba(91,141,239,0.15);color:var(--rc); }
+.tag-lr { background:rgba(232,168,56,0.15);color:var(--lr); }
+.tag-green { background:rgba(74,156,109,0.15);color:var(--accent2); }
+.tag-red { background:rgba(224,92,92,0.15);color:var(--danger); }
+.tag-muted { background:rgba(255,255,255,0.06);color:var(--muted); }
+
+/* ── BUTTONS ── */
+.btn {
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;
+  border:none;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.18s;text-decoration:none;white-space:nowrap;
+}
+.btn-primary { background:var(--accent);color:#0F1117; }
+.btn-primary:hover { background:#F5BC50;transform:translateY(-1px);box-shadow:0 4px 18px rgba(232,168,56,0.3); }
+.btn-secondary { background:rgba(255,255,255,0.07);color:var(--text);border:1px solid var(--border); }
+.btn-secondary:hover { background:rgba(255,255,255,0.11); }
+.btn-rc { background:rgba(91,141,239,0.15);color:var(--rc);border:1px solid rgba(91,141,239,0.25); }
+.btn-rc:hover { background:rgba(91,141,239,0.25); }
+.btn-sm { padding:7px 14px;font-size:12px; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap { background:rgba(255,255,255,0.07);border-radius:50px;height:6px;overflow:hidden; }
+.prog-fill { height:100%;border-radius:50px;transition:width 0.8s ease; }
+
+/* ── VIDEO LESSON ── */
+.lesson-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;cursor:pointer;
+  transition:all 0.2s;
+}
+.lesson-card:hover { border-color:rgba(255,255,255,0.16);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+.lesson-thumb {
+  height:130px;display:flex;align-items:center;justify-content:center;
+  font-size:36px;position:relative;
+}
+.lesson-body { padding:16px; }
+.lesson-title { font-weight:600;font-size:14px;margin-bottom:6px;line-height:1.4; }
+.lesson-meta { color:var(--muted);font-size:12px;display:flex;gap:10px;align-items:center; }
+.lesson-locked { opacity:0.45;pointer-events:none; }
+.lesson-lock-badge {
+  position:absolute;top:8px;right:8px;
+  background:rgba(0,0,0,0.7);border-radius:20px;
+  padding:3px 10px;font-size:10px;color:var(--muted);
+}
+
+/* ── VIDEO PLAYER ── */
+#video-overlay {
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);
+  z-index:200;align-items:center;justify-content:center;
+  flex-direction:column;
+}
+#video-overlay.open { display:flex; }
+.vp-wrap { width:min(780px,94vw);background:var(--surface);border-radius:20px;overflow:hidden;border:1px solid var(--border); }
+.vp-header { padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border); }
+.vp-title { font-family:'Playfair Display',serif;font-size:16px;font-weight:600; }
+.vp-close { background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1; }
+.vp-close:hover{color:var(--text);}
+.vp-screen {
+  background:#0a0c14;min-height:300px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.vp-frame { width:100%;padding:32px 28px;text-align:center;animation:vfade 0.5s ease; }
+@keyframes vfade{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
+.vp-icon { font-size:52px;margin-bottom:18px;display:block; }
+.vp-frame-title { font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:14px;line-height:1.3; }
+.vp-frame-body { color:rgba(240,237,232,0.75);font-size:14px;line-height:1.8;max-width:520px;margin:0 auto; }
+.vp-controls { padding:16px 22px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--border); }
+.vp-progress { flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:50px;cursor:pointer;overflow:hidden; }
+.vp-prog-fill { height:100%;background:var(--accent);border-radius:50px;transition:width 0.4s; }
+.vp-btn { background:rgba(255,255,255,0.08);border:none;color:var(--text);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:background 0.2s; }
+.vp-btn:hover{background:rgba(255,255,255,0.15);}
+.vp-counter { color:var(--muted);font-size:12px;white-space:nowrap; }
+.vp-footer { padding:18px 22px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.2); }
+
+/* ── PRACTICE QUESTION ── */
+.q-stimulus { background:var(--surface2);border-radius:12px;padding:20px 22px;margin-bottom:18px;line-height:1.8;font-size:14px;border-left:3px solid var(--accent);color:var(--text); }
+.q-text { font-weight:600;font-size:15px;margin-bottom:16px;line-height:1.5;color:var(--text); }
+.q-choice {
+  display:flex;align-items:flex-start;gap:12px;
+  background:rgba(255,255,255,0.04);border:1.5px solid var(--border);
+  border-radius:12px;padding:14px 16px;cursor:pointer;margin-bottom:10px;
+  transition:all 0.18s;
+}
+.q-choice:hover:not(.answered) { border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.07); }
+.q-choice.correct { background:rgba(74,156,109,0.12);border-color:var(--accent2);color:var(--accent2); }
+.q-choice.wrong { background:rgba(224,92,92,0.1);border-color:var(--danger);color:var(--danger); }
+.q-letter { font-weight:700;font-size:13px;width:18px;flex-shrink:0;margin-top:1px; }
+.q-text-body { font-size:13.5px;line-height:1.65;flex:1; }
+.q-explanation { background:rgba(232,168,56,0.07);border:1px solid rgba(232,168,56,0.2);border-radius:12px;padding:18px 20px;margin-top:14px;font-size:13.5px;line-height:1.75;color:rgba(240,237,232,0.85); }
+.q-explanation strong { color:var(--accent);display:block;margin-bottom:6px; }
+
+/* ── ANALYTICS ── */
+.skill-row { display:flex;align-items:center;gap:12px;margin-bottom:14px; }
+.skill-name { width:160px;font-size:13px;color:var(--text);flex-shrink:0; }
+.skill-pct { width:38px;text-align:right;font-size:12px;font-weight:700; }
+
+/* ── JOURNAL ── */
+.journal-entry { background:var(--surface2);border-radius:12px;padding:16px 18px;margin-bottom:10px;border-left:3px solid var(--border); }
+.journal-entry.lr-entry { border-left-color:var(--lr); }
+.journal-entry.rc-entry { border-left-color:var(--rc); }
+
+/* ── PLAN ── */
+.plan-day { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:10px; }
+.plan-day-header { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+.plan-day-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+.plan-task { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;color:rgba(240,237,232,0.8); }
+.plan-check { width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all 0.15s; }
+.plan-check.checked { background:var(--accent2);border-color:var(--accent2);color:white; }
+
+/* ── DASHBOARD WIDGETS ── */
+.score-ring { position:relative;display:inline-flex;align-items:center;justify-content:center; }
+.score-num { position:absolute;font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--text); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  #sidebar{width:var(--sidebar-w-collapsed);}
+  #main{margin-left:var(--sidebar-w-collapsed);padding:20px 16px 60px;}
+  .card-grid-2,.card-grid-3{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sb-toggle" id="sbToggle">‹</div>
+  <a class="sb-logo" href="#">
+    <div class="sb-logo-mark">J</div>
+    <span class="sb-logo-text">JessiPreps</span>
+  </a>
+  <nav class="sb-nav">
+
+    <!-- LEARN -->
+    <div class="sb-group">
+      <button class="sb-group-btn open" data-group="learn">
+        <span class="sb-group-label"><span class="sb-group-icon">📚</span><span class="sb-group-text">LEARN</span></span>
+        <span class="sb-group-chevron">▼</span>
+      </button>
+      <div class="sb-items open" id="group-learn">
+        <div class="sb-item active" data-page="content">Content Hub</div>
+        <div class="sb-item" data-page="lessons">Lessons</div>
+        <div class="sb-item" data-page="explanations">Frameworks</div>
+      </div>
+    </div>
+
+    <!-- PRACTICE -->
+    <div class="sb-group">
+      <button class="sb-group-btn open" data-group="practice">
+        <span class="sb-group-label"><span class="sb-group-icon">🎯</span><span class="sb-group-text">PRACTICE</span></span>
+        <span class="sb-group-chevron">▼</span>
+      </button>
+      <div class="sb-items open" id="group-practice">
+        <div class="sb-item" data-page="drills">Adaptive Drills</div>
+        <div class="sb-item" data-page="qbank">Question Bank</div>
+        <div class="sb-item" data-page="timed">Timed Tests</div>
+      </div>
+    </div>
+
+    <!-- REVIEW -->
+    <div class="sb-group">
+      <button class="sb-group-btn" data-group="review">
+        <span class="sb-group-label"><span class="sb-group-icon">🔍</span><span class="sb-group-text">REVIEW</span></span>
+        <span class="sb-group-chevron">▼</span>
+      </button>
+      <div class="sb-items" id="group-review">
+        <div class="sb-item" data-page="analytics">Analytics</div>
+        <div class="sb-item" data-page="journal">Wrong-Answer Log</div>
+        <div class="sb-item" data-page="testrev">Test Review</div>
+      </div>
+    </div>
+
+    <!-- PLAN -->
+    <div class="sb-group">
+      <button class="sb-group-btn" data-group="plan">
+        <span class="sb-group-label"><span class="sb-group-icon">📅</span><span class="sb-group-text">PLAN</span></span>
+        <span class="sb-group-chevron">▼</span>
+      </button>
+      <div class="sb-items" id="group-plan">
+        <div class="sb-item" data-page="dashboard">Dashboard</div>
+        <div class="sb-item" data-page="studyplan">Study Plan</div>
+      </div>
+    </div>
+
+  </nav>
+</aside>
+
+<!-- ── MAIN ── -->
+<main id="main">
+
+  <!-- CONTENT HUB -->
+  <div class="page active" id="page-content">
+    <div class="page-title">Content Hub</div>
+    <div class="page-sub">RC first, then LR. Watch → Complete → Practice.</div>
+
+    <div style="background:linear-gradient(135deg,rgba(91,141,239,0.12),rgba(91,141,239,0.04));border:1px solid rgba(91,141,239,0.2);border-radius:16px;padding:24px;margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--rc);text-transform:uppercase;margin-bottom:8px;">Jessica's 140→175 System</div>
+      <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;margin-bottom:8px;">Accuracy first. RC first. Review always.</div>
+      <div style="color:var(--muted);font-size:13px;line-height:1.7;">The current LSAT is two scored LR sections + one scored RC. This path puts RC before LR — master passage structure first, then bring that reading clarity into arguments.</div>
+    </div>
+
+    <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="margin:0">Start Here — Recommended Order</h3>
+      <span class="tag tag-rc">RC First</span>
+    </div>
+    <div class="card-grid card-grid-3" style="margin-bottom:32px;">
+      <div class="lesson-card" onclick="openVideo('rc_map')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a2a4a,#0d1e3a);">📖<div class="lesson-lock-badge" id="lock-rc_map" style="display:none">🔒 Locked</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">RC Passage Mapping</div>
+          <div class="lesson-meta"><span class="tag tag-rc">RC</span> 16 min · Foundation</div>
+        </div>
+      </div>
+      <div class="lesson-card" id="lcard-rc_author" onclick="openVideo('rc_author')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a3040,#0d2030);">🎭<div class="lesson-lock-badge" id="lock-rc_author">🔒 Watch RC Map first</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">Author's Attitude & Tone</div>
+          <div class="lesson-meta"><span class="tag tag-rc">RC</span> 12 min · Question Type</div>
+        </div>
+      </div>
+      <div class="lesson-card" id="lcard-rc_infer" onclick="openVideo('rc_infer')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a2a50,#0d1840);">🔍<div class="lesson-lock-badge" id="lock-rc_infer">🔒 Watch Attitude first</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">Inference Questions</div>
+          <div class="lesson-meta"><span class="tag tag-rc">RC</span> 14 min · Question Type</div>
+        </div>
+      </div>
+      <div class="lesson-card" id="lcard-lr_arg" onclick="openVideo('lr_arg')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#3a2a10,#261a08);">⚖️<div class="lesson-lock-badge" id="lock-lr_arg">🔒 Finish RC lessons first</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">What Is an Argument?</div>
+          <div class="lesson-meta"><span class="tag tag-lr">LR</span> 8 min · Foundation</div>
+        </div>
+      </div>
+      <div class="lesson-card" id="lcard-lr_flaw" onclick="openVideo('lr_flaw')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#3a1a10,#260d08);">🐛<div class="lesson-lock-badge" id="lock-lr_flaw">🔒 Watch Arguments first</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">Flaw Questions: Name the Gap</div>
+          <div class="lesson-meta"><span class="tag tag-lr">LR</span> 14 min · Question Type</div>
+        </div>
+      </div>
+      <div class="lesson-card" id="lcard-lr_assume" onclick="openVideo('lr_assume')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#2a1a38,#1a0d28);">🧩<div class="lesson-lock-badge" id="lock-lr_assume">🔒 Watch Flaws first</div></div>
+        <div class="lesson-body">
+          <div class="lesson-title">Necessary vs. Sufficient Assumptions</div>
+          <div class="lesson-meta"><span class="tag tag-lr">LR</span> 18 min · Core Skill</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>All Lessons</h3>
+    <div class="card-grid card-grid-3">
+      <div class="lesson-card" onclick="openVideo('lr_cond')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a1a3a,#0d0d28);">🔗</div>
+        <div class="lesson-body"><div class="lesson-title">Conditional Logic & Contrapositives</div><div class="lesson-meta"><span class="tag tag-lr">LR</span> 12 min</div></div>
+      </div>
+      <div class="lesson-card" onclick="openVideo('lr_sw')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a3a1a,#0d280d);">⚡</div>
+        <div class="lesson-body"><div class="lesson-title">Strengthen & Weaken</div><div class="lesson-meta"><span class="tag tag-lr">LR</span> 15 min</div></div>
+      </div>
+      <div class="lesson-card" onclick="openVideo('lr_para')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#2a2a1a,#1a1a0d);">🔄</div>
+        <div class="lesson-body"><div class="lesson-title">Parallel Reasoning</div><div class="lesson-meta"><span class="tag tag-lr">LR</span> 11 min</div></div>
+      </div>
+      <div class="lesson-card" onclick="openVideo('rc_main')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#1a3040,#0d2030);">🎯</div>
+        <div class="lesson-body"><div class="lesson-title">RC Main Point Questions</div><div class="lesson-meta"><span class="tag tag-rc">RC</span> 10 min</div></div>
+      </div>
+      <div class="lesson-card" onclick="openVideo('pacing')">
+        <div class="lesson-thumb" style="background:linear-gradient(135deg,#2a1a1a,#1a0d0d);">⏱️</div>
+        <div class="lesson-body"><div class="lesson-title">Pacing & the Skip Decision</div><div class="lesson-meta"><span class="tag tag-muted">Both</span> 9 min</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LESSONS -->
+  <div class="page" id="page-lessons">
+    <div class="page-title">Lessons Library</div>
+    <div class="page-sub">Short, focused lessons. Watch first — practice unlocks after.</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm lesson-filter active" data-filter="all">All</button>
+      <button class="btn btn-sm lesson-filter" data-filter="rc" style="background:rgba(91,141,239,0.1);color:var(--rc);border:1px solid rgba(91,141,239,0.2)">📖 RC</button>
+      <button class="btn btn-sm lesson-filter" data-filter="lr" style="background:rgba(232,168,56,0.1);color:var(--lr);border:1px solid rgba(232,168,56,0.2)">⚖️ LR</button>
+    </div>
+
+    <div id="lessons-list"></div>
+  </div>
+
+  <!-- FRAMEWORKS -->
+  <div class="page" id="page-explanations">
+    <div class="page-title">Frameworks</div>
+    <div class="page-sub">Turn every miss into a rule you own.</div>
+    <div class="card-grid card-grid-2">
+      <div class="card"><h3 style="color:var(--rc);margin-bottom:14px;">📖 Reading Comprehension</h3>
+        <div style="font-size:13px;line-height:1.85;color:rgba(240,237,232,0.8);">
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Passage Map</strong><br>Label each paragraph's purpose. Track viewpoint shifts. Separate the author's view from others' views. Mark contrast words: but, however, yet, while, although.</p>
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Main Point</strong><br>Umbrella test: does the answer cover the whole passage? Avoid answers that are too narrow (just one paragraph) or too broad (claims more than is there).</p>
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Inference</strong><br>The 100% Rule: the answer must be true whenever the passage is true. No outside knowledge. Eliminate extreme language (always, never, all, only).</p>
+          <p><strong style="color:var(--text)">Author's Attitude</strong><br>Find the evidence word. Can you point to a sentence? Mild descriptors beat extreme ones (critical &gt; dismissive, supportive &gt; enthusiastic).</p>
+        </div>
+      </div>
+      <div class="card"><h3 style="color:var(--lr);margin-bottom:14px;">⚖️ Logical Reasoning</h3>
+        <div style="font-size:13px;line-height:1.85;color:rgba(240,237,232,0.8);">
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Flaws</strong><br>Find conclusion → find evidence → say what the argument assumes → match the gap to the answer. Common flaws: correlation≠causation, treating tendency as certainty, necessary vs sufficient confusion.</p>
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Assumptions (Negation Technique)</strong><br>Negate each answer choice. If the conclusion collapses → that answer IS the assumption. The unstated bridge must be required, not just helpful.</p>
+          <p style="margin-bottom:10px;"><strong style="color:var(--text)">Strengthen / Weaken</strong><br>Identify the causal or logical bridge. Predict what would help or hurt it. Avoid choices that only discuss the topic without affecting the argument's logic.</p>
+          <p><strong style="color:var(--text)">Conditional Logic</strong><br>Translate trigger words into arrows (→). Write the contrapositive immediately (NOT B → NOT A). Never reverse (A→B does not mean B→A). Chain linked rules.</p>
+        </div>
+      </div>
+      <div class="card"><h3 style="margin-bottom:14px;">⏱️ Pacing</h3>
+        <div style="font-size:13px;line-height:1.85;color:rgba(240,237,232,0.8);">
+          <p style="margin-bottom:10px;">Know the task within 20 seconds. If the structure is unclear — skip it. Return with a cleaner eye. Every question is worth the same point.</p>
+          <p>LR: ~1 min 25 sec per question. RC: read 3–4 min per passage, ~1 min per question. Flag hard questions and keep moving — running out of time costs more than getting one question wrong.</p>
+        </div>
+      </div>
+      <div class="card"><h3 style="margin-bottom:14px;">🧠 The 5-Step Drill Loop</h3>
+        <div style="font-size:13px;line-height:1.85;color:rgba(240,237,232,0.8);">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0F1117;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div><span>Watch the lesson for this question type</span></div>
+            <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0F1117;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div><span>Pre-phrase an answer BEFORE reading choices</span></div>
+            <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0F1117;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div><span>Eliminate by process — don't pick, reject</span></div>
+            <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0F1117;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div><span>Review every miss — write the rule in your journal</span></div>
+            <div style="display:flex;gap:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0F1117;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div><span>Redo similar questions until the miss pattern is gone</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADAPTIVE DRILLS -->
+  <div class="page" id="page-drills">
+    <div class="page-title">Adaptive Drills</div>
+    <div class="page-sub">Targeting your weakest skill next.</div>
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card" style="border-color:rgba(232,168,56,0.25);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">Current Focus</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:8px;" id="drill-focus">RC — Inference</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">Mastery target: 90% correct to advance</div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-primary" onclick="startDrill()">Start Drill</button>
+          <button class="btn btn-secondary" onclick="changeFocus()">Change Focus</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;">Skill Mastery</div>
+        <div id="drill-skills"></div>
+      </div>
+    </div>
+    <div id="drill-question-area" style="display:none;">
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:12px;color:var(--muted);">Question <span id="drill-qnum">1</span> of <span id="drill-qtotal">6</span></div>
+          <span class="tag tag-rc" id="drill-qtag">RC · Inference</span>
+        </div>
+        <div class="q-stimulus" id="drill-stimulus"></div>
+        <div class="q-text" id="drill-qtext"></div>
+        <div id="drill-choices"></div>
+        <div id="drill-explanation" style="display:none;"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" id="drill-next-btn" style="display:none;" onclick="nextDrillQ()">Next Question →</button>
+        <button class="btn btn-secondary" onclick="endDrill()">End Drill</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUESTION BANK -->
+  <div class="page" id="page-qbank">
+    <div class="page-title">Question Bank</div>
+    <div class="page-sub">Filter and build targeted practice sets.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+      <select id="qb-section" class="btn btn-secondary btn-sm" style="cursor:pointer;">
+        <option>All Sections</option><option>Logical Reasoning</option><option>Reading Comprehension</option>
+      </select>
+      <select id="qb-skill" class="btn btn-secondary btn-sm" style="cursor:pointer;">
+        <option>All Skills</option><option>Flaws</option><option>Assumptions</option><option>Strengthen/Weaken</option><option>Conditional Logic</option><option>Inference</option><option>Main Point</option><option>Author's Attitude</option>
+      </select>
+      <select id="qb-status" class="btn btn-secondary btn-sm" style="cursor:pointer;">
+        <option>All Status</option><option>Missed</option><option>Unseen</option><option>Correct</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="buildDrillFromBank()">Build Drill</button>
+    </div>
+    <div id="qbank-table"></div>
+  </div>
+
+  <!-- TIMED TESTS -->
+  <div class="page" id="page-timed">
+    <div class="page-title">Timed Tests</div>
+    <div class="page-sub">Practice under real pressure.</div>
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card">
+        <h3 style="margin-bottom:14px;">LSAT Simulator</h3>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.7;">Two scored LR sections + one scored RC section + one unscored variable. 35 minutes per section.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">LR Section 1</div><div style="font-size:13px;font-weight:600;color:var(--lr);">35 min</div></div>
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">RC Section</div><div style="font-size:13px;font-weight:600;color:var(--rc);">35 min</div></div>
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">LR Section 2</div><div style="font-size:13px;font-weight:600;color:var(--lr);">35 min</div></div>
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Variable (unscored)</div><div style="font-size:13px;font-weight:600;color:var(--muted);">35 min</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="startTimer(35)">Start Full Test</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Section Timer</h3>
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:700;color:var(--text);letter-spacing:2px;" id="timer-display">35:00</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:4px;" id="timer-label">Ready</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;">
+          <button class="btn btn-secondary btn-sm" onclick="startTimer(35)">35 min</button>
+          <button class="btn btn-secondary btn-sm" onclick="startTimer(17)">17 min</button>
+          <button class="btn btn-secondary btn-sm" onclick="startTimer(5)">5 min</button>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn btn-primary btn-sm" id="timer-toggle" onclick="toggleTimer()">▶ Start</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetTimer()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:14px;">Recent Results</h3>
+      <div id="timed-results"></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="page" id="page-analytics">
+    <div class="page-title">Analytics</div>
+    <div class="page-sub">What to study next — based on your data.</div>
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Skill Mastery</div>
+        <div id="analytics-skills"></div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Recommendations</div>
+        <div id="analytics-recs"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Fastest +5 Path</div>
+      <div id="analytics-path" style="font-size:13px;line-height:1.8;color:rgba(240,237,232,0.8);"></div>
+    </div>
+  </div>
+
+  <!-- WRONG-ANSWER JOURNAL -->
+  <div class="page" id="page-journal">
+    <div class="page-title">Wrong-Answer Journal</div>
+    <div class="page-sub">Every miss teaches you something. Write the rule.</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <button class="btn btn-primary btn-sm" onclick="addJournalEntry()">+ Add Entry</button>
+      <button class="btn btn-secondary btn-sm" id="journal-filter-all" onclick="filterJournal('all')">All</button>
+      <button class="btn btn-sm" id="journal-filter-lr" style="background:rgba(232,168,56,0.1);color:var(--lr);border:1px solid rgba(232,168,56,0.2);" onclick="filterJournal('lr')">LR</button>
+      <button class="btn btn-sm" id="journal-filter-rc" style="background:rgba(91,141,239,0.1);color:var(--rc);border:1px solid rgba(91,141,239,0.2);" onclick="filterJournal('rc')">RC</button>
+    </div>
+    <div id="journal-entries"></div>
+  </div>
+
+  <!-- TEST REVIEW -->
+  <div class="page" id="page-testrev">
+    <div class="page-title">Test Review</div>
+    <div class="page-sub">PrepTest 130 — Section Analysis</div>
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card" style="border-color:rgba(224,92,92,0.2);">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Section 1 · LR</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:4px;">15<span style="font-size:16px;color:var(--muted)">/27</span></div>
+        <div style="color:var(--danger);font-size:13px;margin-bottom:14px;">56% · 34 min</div>
+        <div style="font-size:12px;color:var(--muted);">Priority: Flaws + Assumptions</div>
+      </div>
+      <div class="card" style="border-color:rgba(74,156,109,0.2);">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Next Target</div>
+        <div style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:8px;">Drill causal flaws</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">6 targeted questions → journal every miss → retest</div>
+        <button class="btn btn-primary btn-sm" onclick="navTo('drills')">Go to Drills</button>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">Missed Questions</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--border);">
+            <th style="padding:8px 12px;">#</th><th style="padding:8px 12px;">My Answer</th><th style="padding:8px 12px;">Correct</th><th style="padding:8px 12px;">Skill</th><th style="padding:8px 12px;">Level</th><th style="padding:8px 12px;">Action</th>
+          </tr></thead>
+          <tbody id="testrev-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDY PLAN -->
+  <div class="page" id="page-studyplan">
+    <div class="page-title">Study Plan</div>
+    <div class="page-sub">Weekly schedule based on your weakest skills.</div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:24px;">
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Test Date</label>
+        <input type="date" id="test-date" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Hours/week</label>
+        <select id="study-hours" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <option>6 hours</option><option selected>8 hours</option><option>10 hours</option><option>12 hours</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="margin-top:18px;" onclick="generatePlan()">Generate Plan</button>
+    </div>
+    <div id="study-plan-output"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Your progress at a glance.</div>
+    <div class="card-grid card-grid-3" style="margin-bottom:24px;">
+      <div class="card" style="border-color:rgba(232,168,56,0.2);text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:700;color:var(--accent);line-height:1;" id="dash-streak">0</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:6px;">Day Streak 🔥</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:700;color:var(--text);line-height:1;" id="dash-total">0</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:6px;">Questions Done</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:700;color:var(--accent2);line-height:1;" id="dash-score">—</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:6px;">Projected Score</div>
+      </div>
+    </div>
+    <div class="card-grid card-grid-2">
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">Recent Activity</div>
+        <div id="dash-activity"></div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">Next Up</div>
+        <div style="color:rgba(240,237,232,0.8);font-size:13px;line-height:1.8;margin-bottom:16px;" id="dash-next"></div>
+        <button class="btn btn-primary btn-sm" onclick="navTo('drills')">Start Next Drill →</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── VIDEO OVERLAY ── -->
+<div id="video-overlay">
+  <div class="vp-wrap">
+    <div class="vp-header">
+      <div class="vp-title" id="vp-title">Lesson</div>
+      <button class="vp-close" onclick="closeVideo()">✕</button>
+    </div>
+    <div class="vp-screen">
+      <div class="vp-frame" id="vp-frame">
+        <span class="vp-icon" id="vp-icon">📖</span>
+        <div class="vp-frame-title" id="vp-frame-title"></div>
+        <div class="vp-frame-body" id="vp-frame-body"></div>
+      </div>
+    </div>
+    <div class="vp-controls">
+      <button class="vp-btn" onclick="vpPrev()">‹</button>
+      <button class="vp-btn" id="vp-play-btn" onclick="vpTogglePlay()">▶</button>
+      <button class="vp-btn" onclick="vpNext()">›</button>
+      <div class="vp-progress"><div class="vp-prog-fill" id="vp-prog"></div></div>
+      <div class="vp-counter" id="vp-counter">1 / 1</div>
+    </div>
+    <div class="vp-footer">
+      <div style="font-size:12px;color:var(--muted);" id="vp-transcript"></div>
+      <button class="btn btn-primary btn-sm" id="vp-practice-btn" style="display:none;" onclick="vpGoToPractice()">Practice This →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const state = {
+  lessonsCompleted: JSON.parse(localStorage.getItem('jp_lessons')||'[]'),
+  sessions: JSON.parse(localStorage.getItem('jp_sessions')||'[]'),
+  journal: JSON.parse(localStorage.getItem('jp_journal')||JSON.stringify([
+    {id:1,section:'lr',skill:'Flaws',q:'PT130 S1 Q4',note:'Picked the premise as the conclusion. Find conclusion FIRST before reading choices.',date:'Today'},
+    {id:2,section:'lr',skill:'Assumptions',q:'PT130 S1 Q5',note:'Forgot to negate. Negation technique: if the negated answer breaks the conclusion, it IS the assumption.',date:'Today'},
+    {id:3,section:'rc',skill:'Inference',q:'RC Drill 1',note:'Went outside the passage. 100% Rule: answer must be true in the passage text, not just plausible.',date:'Yesterday'},
+  ])),
+  skills: JSON.parse(localStorage.getItem('jp_skills')||JSON.stringify({
+    'Flaws':44,'Assumptions':48,'Strengthen/Weaken':50,'Conditional Logic':55,
+    'Main Point':60,'Inference':52,'Author\'s Attitude':58,'Pacing':52
+  })),
+  streak: parseInt(localStorage.getItem('jp_streak')||'3'),
+  currentPage: 'content',
+};
+
+function save() {
+  localStorage.setItem('jp_lessons', JSON.stringify(state.lessonsCompleted));
+  localStorage.setItem('jp_sessions', JSON.stringify(state.sessions));
+  localStorage.setItem('jp_journal', JSON.stringify(state.journal));
+  localStorage.setItem('jp_skills', JSON.stringify(state.skills));
+}
+
+// ─── VIDEO LESSONS DATA ─────────────────────────────────────────────────────
+const VIDEOS = {
+  rc_map: {
+    title:'RC Passage Mapping',section:'rc',practice:'drills',
+    frames:[
+      {icon:'📖',title:'Why Mapping Changes Everything',body:'Most students read RC passages the same way they read a novel — linearly, hoping to remember everything. Mapping gives you a structure to fall back on when questions come at you.'},
+      {icon:'✏️',title:'Step 1: Label Each Paragraph (3-5 words)',body:'Write the PURPOSE of each paragraph, not a summary. "P1: introduces originalism debate." "P2: proponents argue." "P3: critics respond." This takes 10 seconds per paragraph.'},
+      {icon:'🔴',title:'Step 2: Circle Contrast Words',body:'BUT · HOWEVER · YET · ALTHOUGH · WHILE · NEVERTHELESS · DESPITE. Circle every single one. The LSAT\'s most important claim almost always comes right after a contrast word.'},
+      {icon:'🎭',title:'Step 3: Mark Opinion Signals',body:'Underline who thinks what: "scholars argue" / "critics contend" / "the author suggests" / "according to X." This is what Author\'s Attitude questions test — and they\'re worth points.'},
+      {icon:'📐',title:'Step 4: Identify the Passage Structure',body:'(A) One author\'s argument → the passage proves a claim. (B) Debate between views → no side is endorsed. (C) Historical narrative → chronological cause-effect. Structure determines which questions appear.'},
+      {icon:'📌',title:'The Golden Rule: Answer from the Text',body:'Every correct RC answer can be pointed to in the passage. If you cannot put your finger on a sentence that proves the answer — eliminate it. No outside knowledge. No "sounds reasonable."'},
+    ]
+  },
+  rc_author: {
+    title:"Author's Attitude & Tone",section:'rc',practice:'drills',
+    frames:[
+      {icon:'🎭',title:'Why Attitude Questions Trip People Up',body:'Students focus on WHAT the author says, not HOW they say it. Attitude questions test the second one. The answer lives in the word choice — specific verbs and adjectives.'},
+      {icon:'🔍',title:'Find the Evidence Word',body:'Look for: admires · praises · criticizes · questions · endorses · challenges · overlooks · ignores · acknowledges. These are your evidence. Can you point to one of these words in the passage?'},
+      {icon:'📊',title:'The Attitude Spectrum',body:'Dismissive ← Critical ← Skeptical ← Neutral ← Sympathetic → Supportive → Enthusiastic. Most LSAT passages fall in the skeptical-to-neutral zone. Pure enthusiasm or dismissal is rare.'},
+      {icon:'⚖️',title:'Mild Beats Extreme — Every Time',body:'"Critical" is correct more often than "dismissive." "Supportive" beats "enthusiastic." The LSAT rewards the milder descriptor. If you are choosing between two options, pick the less extreme one.'},
+      {icon:'✅',title:'The Point-to-It Test',body:'Before choosing an attitude answer, ask: can I point to a specific sentence that proves this attitude? If yes → likely correct. If you\'re guessing from a vague sense → dangerous.'},
+    ]
+  },
+  rc_infer: {
+    title:'Inference Questions: The 100% Rule',section:'rc',practice:'drills',
+    frames:[
+      {icon:'🔍',title:'What "Inference" Really Means on the LSAT',body:'An LSAT inference is NOT a guess. It is a conclusion that MUST be true whenever the passage statements are true. Think of it as a logical guarantee, not a reasonable guess.'},
+      {icon:'💯',title:'The 100% Rule',body:'The correct answer must be 100% supported by the passage. If there is ANY scenario where the answer could be false while the passage is true — eliminate it immediately. No exceptions.'},
+      {icon:'⚡',title:'Wrong Answer Type 1: Too Strong',body:'ALWAYS · NEVER · ALL · NONE · ONLY · MUST. These extreme words are danger signs. Replace the extreme word with "sometimes" — if it now sounds true, the original was too strong.'},
+      {icon:'🚫',title:'Wrong Answer Type 2: Outside Knowledge',body:'You know true things that the passage doesn\'t say. The LSAT exploits this constantly. An answer that\'s true in the real world but not supported by the passage TEXT is wrong on the LSAT.'},
+      {icon:'🔄',title:'Wrong Answer Type 3: Direction Reversal',body:'Some wrong answers flip cause and effect, or flip which group is being described. "A causes B" and "B causes A" are completely different statements. Read the direction carefully.'},
+      {icon:'✓',title:'What Correct Inference Answers Look Like',body:'Mild · Specific · Close to the explicit text · Often just a paraphrase of one or two sentences. If an answer makes you think "I guess that might be true" — that\'s your answer.'},
+    ]
+  },
+  lr_arg: {
+    title:'What Is an Argument?',section:'lr',practice:'drills',
+    frames:[
+      {icon:'⚖️',title:'Every LR Question Has an Argument',body:'An argument is: premises (evidence the author states) + a conclusion (what the author is trying to prove). Your first job on every LR question is to find the conclusion.'},
+      {icon:'🎯',title:'How to Find the Conclusion',body:'Conclusion indicators: therefore · thus · hence · so · consequently · it follows that · this shows that · clearly. The sentence with one of these words is almost always the conclusion.'},
+      {icon:'📋',title:'How to Find the Premises',body:'Premise indicators: because · since · given that · as · for · owing to · due to. Premises answer the question "why does the author believe the conclusion?"'},
+      {icon:'⚠️',title:'Critical Trap: The Conclusion Isn\'t Always Last',body:'In about 30% of LR stimuli, the conclusion comes FIRST. "John should not get the promotion [CONCLUSION], because he missed every deadline this quarter [PREMISE]."'},
+      {icon:'🔗',title:'The Gap Is Where the Points Are',body:'Between the premises and the conclusion lives an UNSTATED ASSUMPTION — the logical bridge the author never says out loud. Finding this gap is the foundation of Assumption, Flaw, Strengthen, and Weaken questions.'},
+      {icon:'🏆',title:'The Assumption Family = 40% of LR',body:'Assumption · Flaw · Strengthen · Weaken · Necessary assumption · Sufficient assumption. All five types test the same core skill: find the gap between evidence and conclusion.'},
+    ]
+  },
+  lr_flaw: {
+    title:'Flaw Questions: Name the Gap',section:'lr',practice:'drills',
+    frames:[
+      {icon:'🐛',title:'What a Flaw Question Asks',body:'The argument has a hole in its reasoning. Your job: name it in abstract terms. Not "the author was wrong about X" but "the argument assumes correlation equals causation."'},
+      {icon:'🔍',title:'Step 1: Find Conclusion and Evidence',body:'Before touching the answer choices — find the conclusion. Find the evidence. Now ask: what is the author ASSUMING that they never say? That assumption, if wrong, is the flaw.'},
+      {icon:'⚠️',title:'The Top 5 LSAT Flaws',body:'1. Correlation ≠ causation. 2. Treating a tendency as a certainty. 3. Necessary vs. sufficient confusion. 4. Unrepresentative sample. 5. Two different uses of a key word (equivocation).'},
+      {icon:'🎯',title:'The Correlation/Causation Flaw',body:'"Students who take notes by hand score higher → handwriting CAUSES better scores." The flaw: something else could explain the correlation (e.g., more motivated students tend to handwrite). This is the #1 flaw the LSAT tests.'},
+      {icon:'📊',title:'Tendency vs. Certainty',body:'"Greater awareness usually leads to increased sales. So doubling our ads WILL increase sales." The flaw: "usually" ≠ "will." The argument treats a probabilistic tendency as a guarantee.'},
+      {icon:'✅',title:'Match the Gap to the Answer',body:'After you name the flaw yourself, read the answer choices and find the one that describes the same error in abstract language. Correct flaw answers are descriptive, not emotional.'},
+    ]
+  },
+  lr_assume: {
+    title:'Necessary vs. Sufficient Assumptions',section:'lr',practice:'drills',
+    frames:[
+      {icon:'🧩',title:'Two Types of Assumption Questions',body:'NECESSARY assumptions: what must be true for the argument to work at all. SUFFICIENT assumptions: what would fully prove the conclusion if added as a premise. They require different approaches.'},
+      {icon:'🔑',title:'Necessary Assumptions: The Negation Technique™',body:'Negate each answer choice (flip it to the opposite). Ask: does the negated statement destroy the conclusion? If YES → that answer IS the necessary assumption. If NO → eliminate it.'},
+      {icon:'💡',title:'Negation Technique in Action',body:'Argument: "Breakfast eaters score higher. Schools should provide free breakfast." Assumption candidate: "Schools can afford it." Negate: "Schools CANNOT afford it." Does the conclusion collapse? Yes — confirmed assumption.'},
+      {icon:'⚡',title:'Sufficient Assumptions: The Justify Formula',body:'The correct sufficient assumption, when added to the premises, PROVES the conclusion with certainty. Think: premises + this answer = conclusion guaranteed. These answers tend to be strong and absolute.'},
+      {icon:'🚩',title:'Three Wrong Answer Traps',body:'1. Already stated in the argument (it\'s a premise, not an assumption). 2. Too strong — makes a claim bigger than what the argument needs. 3. Irrelevant — sounds related but doesn\'t bridge the logical gap.'},
+      {icon:'🏆',title:'The Unstated Bridge',body:'The assumption is always something the argument NEEDS but never says. It lives in the gap between the evidence and the conclusion. Every time you find that gap, you\'ve found where the assumption lives.'},
+    ]
+  },
+  lr_cond: {
+    title:'Conditional Logic & Contrapositives',section:'lr',practice:'drills',
+    frames:[
+      {icon:'🔗',title:'If-Then Statements: The Foundation',body:'"If A, then B" means: every time A is true, B must also be true. A is the SUFFICIENT condition (enough to guarantee B). B is the NECESSARY condition (required whenever A occurs).'},
+      {icon:'↔️',title:'The Contrapositive: Always Valid',body:'"If A → B" has one logically equivalent form: "If NOT B → NOT A." These two statements mean exactly the same thing. If one is true, the other must be true. Write it immediately.'},
+      {icon:'❌',title:'Affirming the Consequent: Always Wrong',body:'"If A → B. B is true. Therefore A." WRONG. B could be true for many reasons besides A. Just because B happened doesn\'t mean A caused it. This is the #1 conditional fallacy the LSAT tests.'},
+      {icon:'❌',title:'Denying the Antecedent: Always Wrong',body:'"If A → B. NOT A. Therefore NOT B." WRONG. A is sufficient for B, not the only way to get B. Something else could still produce B even without A.'},
+      {icon:'⛓️',title:'Chaining Conditionals',body:'"If A → B" and "If B → C" means "If A → C." Chain as many links as needed. The full contrapositive of A→B→C is: NOT C → NOT B → NOT A.'},
+      {icon:'📝',title:'Trigger Word Translation',body:'ALL / EVERY / EACH → If member → property. NONE / NO → If X, then NOT Y. ONLY / ONLY IF → the "only" term is necessary (goes on the right side of the arrow).'},
+    ]
+  },
+  lr_sw: {
+    title:'Strengthen & Weaken',section:'lr',practice:'drills',
+    frames:[
+      {icon:'⚡',title:'Both Question Types: Find the Bridge First',body:'Strengthen and Weaken questions both require you to identify the logical bridge between the premises and conclusion. That bridge is where the action is.'},
+      {icon:'💪',title:'How to Strengthen an Argument',body:'Eliminate alternate causes. Confirm the correlation is real. Provide a mechanism for the causal claim. Show the assumption is true. The best strengthener directly supports the gap, not just the topic.'},
+      {icon:'⚔️',title:'How to Weaken an Argument',body:'Introduce an alternate cause of B. Show A and B aren\'t really correlated. Demonstrate reverse causation (B causes A, not A→B). Attack the assumption. The best weakener breaks the logical bridge.'},
+      {icon:'🚩',title:'Three Wrong Answer Traps in Weaken',body:'Trap 1: Strengthens instead (makes the conclusion more likely). Trap 2: Irrelevant (discusses the topic but doesn\'t affect the logic). Trap 3: Too extreme (would only weaken in an edge case).'},
+      {icon:'🔍',title:'The Alternate Cause Test',body:'For causal arguments, the most powerful weakener is always: "Something else could explain the same result." If the answer provides an alternate cause of the effect, it\'s almost certainly correct.'},
+      {icon:'✅',title:'Pre-Phrase Before Reading Choices',body:'Before reading answer choices, predict what kind of thing would strengthen or weaken the argument. A rough prediction makes the correct answer obvious and the wrong answers easy to eliminate.'},
+    ]
+  },
+  rc_main: {
+    title:'RC Main Point Questions',section:'rc',practice:'drills',
+    frames:[
+      {icon:'🎯',title:'What Main Point Questions Ask',body:'Find the ONE claim that the entire passage exists to establish. Not a detail. Not a premise. The central conclusion — the sentence the whole passage is building toward or around.'},
+      {icon:'☂️',title:'The Umbrella Test',body:'Put the correct answer "over" the whole passage. Does every paragraph feel like supporting evidence underneath it? A correct Main Point answer should make every other paragraph seem like it\'s there to support that claim.'},
+      {icon:'🚩',title:'Wrong Answer: Too Narrow',body:'The most common wrong answer only covers one paragraph or one aspect of the passage. If the answer would only work as a description of paragraph 2, it\'s too narrow for Main Point.'},
+      {icon:'🚩',title:'Wrong Answer: Too Broad or Unsupported',body:'Some wrong answers claim more than the passage ever says. If the passage doesn\'t actually prove the answer — even if the answer sounds smart — eliminate it.'},
+      {icon:'🚩',title:'Wrong Answer: Picking a Premise',body:'The most seductive wrong answers are true statements FROM the passage. But they\'re premises, not the conclusion. Ask: "Is the passage TRYING to prove this, or is this just evidence for something bigger?"'},
+      {icon:'✅',title:'Find the Conclusion Word',body:'therefore · thus · so · consequently · this shows that · the point is · in short. The sentence containing one of these phrases is almost always the main conclusion — and the correct answer.'},
+    ]
+  },
+  lr_para: {
+    title:'Parallel Reasoning',section:'lr',practice:'drills',
+    frames:[
+      {icon:'🔄',title:'What Parallel Reasoning Tests',body:'Find an argument with the SAME LOGICAL FORM as the stimulus. The topic doesn\'t matter. The structure is everything. You need to abstract the argument\'s form first.'},
+      {icon:'📋',title:'How to Abstract the Form',body:'Replace specific content with letters. "All dogs bark. Rex is a dog. Therefore Rex barks." → "All A are B. X is A. Therefore X is B." (Modus Ponens — valid). Find the answer with the same structure.'},
+      {icon:'⚠️',title:'Common Trap: Matching the Topic',body:'Wrong answers use similar topics to lure you in. An argument about medicine with the same vocabulary as the stimulus but different logical structure is WRONG. Ignore the topic. Diagram the form.'},
+      {icon:'✅',title:'Check Validity First',body:'Is the original argument valid or flawed? If it\'s flawed (e.g., affirming the consequent), the correct answer must have the SAME flaw. If it\'s valid, the correct answer must also be valid.'},
+    ]
+  },
+  pacing: {
+    title:'Pacing & the Skip Decision',section:'both',practice:'drills',
+    frames:[
+      {icon:'⏱️',title:'The Math of LSAT Pacing',body:'LR: 35 minutes, ~26 questions = 1 min 20 sec per question. RC: 35 minutes, 4 passages ~7 questions each = 3-4 min reading + 1 min per question. Knowing these numbers is not enough — you need to internalize them.'},
+      {icon:'🚦',title:'The 20-Second Rule',body:'Within 20 seconds of reading the stimulus and question stem, you should know the task. If you don\'t understand what you\'re being asked — skip it. Return with a cleaner eye.'},
+      {icon:'🏃',title:'When to Skip',body:'Skip when: the stimulus is dense and you haven\'t found the conclusion after 30 seconds. The question type is your weakest. You feel yourself re-reading without progress. Flag it. Move on. Return.'},
+      {icon:'💡',title:'Every Question Is Worth One Point',body:'A hard question you spend 4 minutes on is worth exactly the same as an easy question you answer in 45 seconds. Never let perfection on one question cost you two questions you would have gotten right.'},
+      {icon:'✅',title:'End-of-Section Strategy',body:'With 5 minutes left: have answered or flagged all questions. Use the last 5 minutes to return to flagged questions. On the digital LSAT, use the review screen. Never leave a blank — there is no guessing penalty.'},
+    ]
+  },
+};
+
+// ─── QUESTIONS ─────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  {id:'q1',section:'rc',skill:'Main Point',difficulty:2,stimulus:"Legal scholars have long debated whether originalism — the theory that constitutional interpretation should be guided by the original meaning of the text — is a coherent judicial philosophy. Proponents argue that originalism constrains judicial discretion and maintains democratic legitimacy by deferring to the founding generation. Critics counter that the founders' intentions are often unknowable or inapplicable to modern circumstances. A third camp argues that while originalism provides a useful anchor, judges must also consider how constitutional principles evolve through lived democratic experience.",question:"Which of the following best describes the main point of the passage?",choices:["Originalism is a flawed judicial philosophy that should be abandoned.","The debate over originalism involves multiple competing perspectives on constitutional interpretation.","The founders' intentions should always guide constitutional decisions.","Modern judges should ignore the original text of the Constitution.","Judicial discretion is the primary threat to democratic legitimacy."],correct:1,explanation:"(B) is correct. The passage maps three positions without endorsing any — a 'survey of debate' structure. (A) and (D) are one-sided; the passage presents multiple views. (C) is only the originalist position. Watch for structure: three views presented neutrally = the main point is that the debate exists.",status:'unseen'},
+  {id:'q2',section:'rc',skill:'Inference',difficulty:2,stimulus:"The 'consumer welfare' standard, ascendant since the 1980s, holds that antitrust enforcement should focus exclusively on whether a practice raises prices for consumers. An older tradition, rooted in the Progressive era, viewed concentrated economic power as a threat to democracy itself — not merely to consumer prices. This older view held that large corporations could distort political processes and erode the independence of smaller competitors, regardless of their effect on prices.",question:"The passage suggests that proponents of the older antitrust tradition would most likely support action against a corporation that",choices:["charges prices above the competitive market rate.","dominates its industry but keeps consumer prices low.","employs workers at wages below the industry average.","produces goods that create environmental externalities.","enters markets in which it has no prior experience."],correct:1,explanation:"(B) is correct. The older tradition was concerned with concentrated power as a threat to democracy — independent of consumer prices. A company that dominates (concentrated power) but keeps prices low escapes the consumer welfare standard but raises exactly the concerns the older tradition identified. (A) would concern BOTH traditions.",status:'unseen'},
+  {id:'q3',section:'rc',skill:"Author's Attitude",difficulty:2,stimulus:"The standard account of the 1929 stock market crash holds that irrational speculation drove prices to unsustainable levels. Yet recent scholarship challenges this view. Economists studying the period found that price-to-earnings ratios in 1929, while elevated, were not dramatically higher than those in other non-crash years. What was distinctive, these scholars argue, was not market irrationality but a sudden collapse in investor confidence triggered by a cluster of bad economic news.",question:"The author's attitude toward the 'standard account' of the 1929 crash is best described as",choices:["strongly supportive and elaborating on its key insights.","mildly skeptical but ultimately accepting of its main claims.","neutral, presenting it simply as one of several competing theories.","critical, suggesting recent scholarship has undermined its core premises.","dismissive, treating it as obviously incorrect and outdated."],correct:3,explanation:"(D) is correct. 'Yet recent scholarship challenges this view' signals the author views the standard account as undermined. (B) is too mild — 'ultimately accepting' doesn't fit a passage that leads with a challenge. (E) is too strong — the tone is scholarly, not dismissive.",status:'unseen'},
+  {id:'q4',section:'lr',skill:'Flaws',difficulty:2,stimulus:"Sales of the new novel were surprisingly high in its first week. Typically, strong initial sales mean readers are excited about the author's previous work. Therefore, the author's earlier books are likely experiencing a resurgence in popularity.",question:"The publisher's argument is most vulnerable to criticism because it",choices:["fails to consider that the novel's high sales could be due to heavy discounting.","assumes that all first-week buyers were familiar with the author's previous work.","ignores the possibility that the new novel itself, not prior books, attracted readers.","treats a general pattern as if it were a universal law without exception.","confuses the direction of the causal relationship between sales and popularity."],correct:0,explanation:"(A) is correct. If the novel was heavily discounted, people bought for the price, not author loyalty — breaking the link between sales and interest in earlier books. The flaw is assuming that high sales can ONLY be explained by enthusiasm for past work.",status:'unseen'},
+  {id:'q5',section:'lr',skill:'Assumptions',difficulty:2,stimulus:"A recent study found that students who regularly eat breakfast perform better on standardized tests than those who skip breakfast. Therefore, schools should provide free breakfast programs to improve student academic performance.",question:"The argument depends on which of the following assumptions?",choices:["Providing free breakfast is cost-effective compared to other academic interventions.","The difference in test performance is not explained by factors that also affect breakfast habits.","Students who receive free breakfast will eat it every morning.","Standardized tests are the best measure of academic performance.","Breakfast programs have been shown to work in comparable school districts."],correct:1,explanation:"(B) is correct using the Negation Technique: negate it — 'The performance difference IS explained by other factors (like income, motivation).' If true, the conclusion collapses — correlation isn't causation. That confirms (B) is a required assumption. The argument assumes breakfast, not something else, explains the gap.",status:'unseen'},
+  {id:'q6',section:'lr',skill:'Strengthen/Weaken',difficulty:2,stimulus:"Company X's profits rose steadily for three years. This year, profits suddenly fell. The analyst concluded that market conditions must have changed drastically.",question:"Which of the following, if true, most weakens the analyst's conclusion?",choices:["The overall market grew significantly this year.","Company X introduced a flawed product line that was recalled this year.","Several of Company X's competitors also saw profit declines.","Market analysts predicted a stable economic environment for this year.","Company X's costs increased proportionally with its revenue."],correct:1,explanation:"(B) is correct. A recalled product line is an internal cause — the market didn't need to change at all to explain the profit drop. This directly attacks the analyst's conclusion that market conditions are responsible. (C) actually suggests market trouble, which would support the conclusion.",status:'unseen'},
+  {id:'q7',section:'lr',skill:'Conditional Logic',difficulty:3,stimulus:"If a country's inflation rate is higher than its trading partners, its currency typically depreciates. Last year, our country's inflation rate was higher than all of our trading partners' rates.",question:"Which one of the following conclusions is most strongly supported by the statements above?",choices:["Our currency definitely depreciated last year.","Our currency likely depreciated last year, all else being equal.","Our trading partners' currencies appreciated last year.","Higher inflation always causes currency depreciation.","Our country should raise interest rates to prevent further depreciation."],correct:1,explanation:"(B) is correct. The original statement says currencies 'typically' depreciate — a tendency, not a certainty. So the supported conclusion is 'likely,' not 'definitely.' (A) is too strong given 'typically.' (C) goes beyond the passage. (D) changes 'typically' to 'always.' (E) introduces a policy recommendation not supported by the premises.",status:'unseen'},
+  {id:'q8',section:'lr',skill:'Flaws',difficulty:3,stimulus:"When a product is heavily advertised, customers become more aware of it. Greater awareness usually leads to increased sales. So if we double our advertising budget, we should see higher sales.",question:"The reasoning in the marketing director's argument is flawed because it",choices:["assumes that awareness inevitably translates to sales growth.","confuses the cost of advertising with its effectiveness.","ignores the fact that competitors might also increase advertising.","presumes that doubling spending will double awareness.","fails to define what 'higher sales' means precisely."],correct:0,explanation:"(A) is correct. 'Usually leads to' is a tendency. 'Should see higher sales' treats it as a guarantee. The director moves from 'awareness usually increases sales' to 'doubling ads will produce higher sales' — treating a probabilistic relationship as certain. This is the flaw of converting a tendency into a certainty.",status:'unseen'},
+];
+
+// ─── NAVIGATION ────────────────────────────────────────────────────────────
+function navTo(pageId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pageId)?.classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
+  state.currentPage = pageId;
+  if(pageId==='analytics') renderAnalytics();
+  if(pageId==='journal') renderJournal();
+  if(pageId==='dashboard') renderDashboard();
+  if(pageId==='drills') renderDrillSkills();
+  if(pageId==='qbank') renderQBank();
+  if(pageId==='testrev') renderTestRev();
+  if(pageId==='lessons') renderLessons();
+  if(pageId==='studyplan') generatePlan();
+}
+
+// Sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const sbToggle = document.getElementById('sbToggle');
+let collapsed = false;
+sbToggle.addEventListener('click',()=>{
+  collapsed=!collapsed;
+  sidebar.classList.toggle('collapsed',collapsed);
+  sbToggle.textContent = collapsed ? '›' : '‹';
+});
+
+// Sidebar items
+document.querySelectorAll('.sb-item').forEach(item=>{
+  item.addEventListener('click',()=>navTo(item.dataset.page));
+});
+
+// Sidebar group dropdowns
+document.querySelectorAll('.sb-group-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const grp = btn.dataset.group;
+    const items = document.getElementById('group-'+grp);
+    const isOpen = items.classList.contains('open');
+    items.classList.toggle('open',!isOpen);
+    btn.classList.toggle('open',!isOpen);
+  });
+});
+
+// ─── VIDEO PLAYER ──────────────────────────────────────────────────────────
+let vpData=null,vpIdx=0,vpPlaying=false,vpTimer=null;
+
+function openVideo(id) {
+  vpData = VIDEOS[id];
+  if(!vpData) return;
+  vpIdx=0;
+  vpPlaying=false;
+  document.getElementById('video-overlay').classList.add('open');
+  document.getElementById('vp-title').textContent = vpData.title;
+  document.getElementById('vp-practice-btn').style.display='none';
+  renderVPFrame();
+}
+
+function renderVPFrame() {
+  if(!vpData) return;
+  const f = vpData.frames[vpIdx];
+  const total = vpData.frames.length;
+  document.getElementById('vp-icon').textContent = f.icon;
+  document.getElementById('vp-frame-title').textContent = f.title;
+  document.getElementById('vp-frame-body').textContent = f.body;
+  document.getElementById('vp-counter').textContent = `${vpIdx+1} / ${total}`;
+  document.getElementById('vp-prog').style.width = `${((vpIdx+1)/total)*100}%`;
+  document.getElementById('vp-transcript').textContent = f.body.substring(0,80)+'...';
+  // Show practice button on last frame
+  document.getElementById('vp-practice-btn').style.display = vpIdx===total-1?'inline-flex':'none';
+  // Force animation re-run
+  const frame = document.getElementById('vp-frame');
+  frame.style.animation='none';frame.offsetHeight;frame.style.animation='';
+}
+
+function vpNext(){
+  if(!vpData||vpIdx>=vpData.frames.length-1) return;
+  vpIdx++;renderVPFrame();
+}
+function vpPrev(){
+  if(!vpData||vpIdx<=0) return;
+  vpIdx--;renderVPFrame();
+}
+function vpTogglePlay(){
+  vpPlaying=!vpPlaying;
+  document.getElementById('vp-play-btn').textContent=vpPlaying?'⏸':'▶';
+  if(vpPlaying){
+    vpTimer=setInterval(()=>{
+      if(vpIdx>=vpData.frames.length-1){vpPlaying=false;clearInterval(vpTimer);document.getElementById('vp-play-btn').textContent='▶';return;}
+      vpIdx++;renderVPFrame();
+    },3500);
+  } else { clearInterval(vpTimer); }
+}
+function closeVideo(){
+  clearInterval(vpTimer);vpPlaying=false;
+  document.getElementById('video-overlay').classList.remove('open');
+  if(vpData){
+    const id = Object.keys(VIDEOS).find(k=>VIDEOS[k]===vpData);
+    if(id && !state.lessonsCompleted.includes(id)){
+      state.lessonsCompleted.push(id);
+      save();
+      updateLockState();
+    }
+  }
+}
+function vpGoToPractice(){closeVideo();navTo('drills');}
+
+// WTC: unlock gates
+function updateLockState() {
+  const done = state.lessonsCompleted;
+  const locks = {
+    'lock-rc_author': !done.includes('rc_map'),
+    'lock-rc_infer': !done.includes('rc_author'),
+    'lock-lr_arg': !done.includes('rc_map')||!done.includes('rc_author')||!done.includes('rc_infer'),
+    'lock-lr_flaw': !done.includes('lr_arg'),
+    'lock-lr_assume': !done.includes('lr_flaw'),
+  };
+  Object.entries(locks).forEach(([id,locked])=>{
+    const el=document.getElementById(id);
+    if(el){el.style.display=locked?'block':'none';}
+    const card=document.getElementById('lcard-'+id.replace('lock-',''));
+    if(card){card.classList.toggle('lesson-locked',locked);}
+  });
+}
+
+// ─── LESSONS PAGE ──────────────────────────────────────────────────────────
+function renderLessons() {
+  const all = [
+    {id:'rc_map',section:'rc',title:'RC Passage Mapping',duration:'16 min',badge:'Foundation'},
+    {id:'rc_author',section:'rc',title:"Author's Attitude & Tone",duration:'12 min',badge:'Question Type'},
+    {id:'rc_infer',section:'rc',title:'Inference Questions: The 100% Rule',duration:'14 min',badge:'Question Type'},
+    {id:'rc_main',section:'rc',title:'RC Main Point Questions',duration:'10 min',badge:'Question Type'},
+    {id:'lr_arg',section:'lr',title:'What Is an Argument?',duration:'8 min',badge:'Foundation'},
+    {id:'lr_flaw',section:'lr',title:'Flaw Questions: Name the Gap',duration:'14 min',badge:'Question Type'},
+    {id:'lr_assume',section:'lr',title:'Necessary vs. Sufficient Assumptions',duration:'18 min',badge:'Core Skill'},
+    {id:'lr_cond',section:'lr',title:'Conditional Logic & Contrapositives',duration:'12 min',badge:'Core Skill'},
+    {id:'lr_sw',section:'lr',title:'Strengthen & Weaken',duration:'15 min',badge:'Question Type'},
+    {id:'lr_para',section:'lr',title:'Parallel Reasoning',duration:'11 min',badge:'Question Type'},
+    {id:'pacing',section:'both',title:'Pacing & the Skip Decision',duration:'9 min',badge:'Strategy'},
+  ];
+  const container = document.getElementById('lessons-list');
+  container.innerHTML = all.map(l=>{
+    const done = state.lessonsCompleted.includes(l.id);
+    const tagClass = l.section==='rc'?'tag-rc':l.section==='lr'?'tag-lr':'tag-muted';
+    const tagLabel = l.section==='rc'?'📖 RC':l.section==='lr'?'⚖️ LR':'Both';
+    return `<div style="background:var(--surface);border:1px solid ${done?'rgba(74,156,109,0.3)':'var(--border)'};border-radius:14px;padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px;cursor:pointer;" onclick="openVideo('${l.id}')">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${l.section==='rc'?'📖':l.section==='lr'?'⚖️':'⏱️'}</div>
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px;">${l.title}</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="tag ${tagClass}">${tagLabel}</span>
+          <span style="color:var(--muted);font-size:12px;">${l.duration}</span>
+          <span class="tag tag-muted">${l.badge}</span>
+        </div>
+      </div>
+      <div style="flex-shrink:0;">${done?'<span class="tag tag-green">✓ Done</span>':'<button class="btn btn-secondary btn-sm">▶ Watch</button>'}</div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.lesson-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.lesson-filter').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+// ─── ADAPTIVE DRILLS ──────────────────────────────────────────────────────
+let drillQ=[], drillIdx=0, drillScore=0, drillAnswered=false;
+const drillFocuses = ['RC — Inference','RC — Main Point','RC — Author\'s Attitude','LR — Flaws','LR — Assumptions','LR — Strengthen/Weaken','LR — Conditional Logic'];
+let drillFocusIdx=0;
+
+function renderDrillSkills() {
+  const el = document.getElementById('drill-skills');
+  el.innerHTML = Object.entries(state.skills).map(([skill,pct])=>`
+    <div class="skill-row">
+      <div class="skill-name">${skill}</div>
+      <div style="flex:1"><div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${pct<50?'var(--danger)':pct<70?'var(--accent)':'var(--accent2)'}"></div></div></div>
+      <div class="skill-pct" style="color:${pct<50?'var(--danger)':pct<70?'var(--accent)':'var(--accent2)'}">${pct}%</div>
+    </div>`).join('');
+}
+
+function startDrill() {
+  const focus = document.getElementById('drill-focus').textContent;
+  const section = focus.startsWith('RC') ? 'rc' : 'lr';
+  drillQ = QUESTIONS.filter(q=>q.section===section).slice(0,6);
+  if(drillQ.length<3) drillQ=[...QUESTIONS].sort(()=>Math.random()-0.5).slice(0,6);
+  drillIdx=0;drillScore=0;
+  document.getElementById('drill-question-area').style.display='block';
+  renderDrillQ();
+}
+
+function renderDrillQ() {
+  const q=drillQ[drillIdx];
+  drillAnswered=false;
+  document.getElementById('drill-qnum').textContent=drillIdx+1;
+  document.getElementById('drill-qtotal').textContent=drillQ.length;
+  document.getElementById('drill-qtag').textContent=`${q.section.toUpperCase()} · ${q.skill}`;
+  document.getElementById('drill-qtag').className=`tag tag-${q.section}`;
+  document.getElementById('drill-stimulus').textContent=q.stimulus;
+  document.getElementById('drill-qtext').textContent=q.question;
+  document.getElementById('drill-choices').innerHTML=q.choices.map((c,i)=>`
+    <div class="q-choice" id="dc-${i}" onclick="answerDrill(${i})">
+      <span class="q-letter">${['A','B','C','D','E'][i]}.</span>
+      <span class="q-text-body">${c}</span>
+    </div>`).join('');
+  document.getElementById('drill-explanation').style.display='none';
+  document.getElementById('drill-next-btn').style.display='none';
+}
+
+function answerDrill(idx) {
+  if(drillAnswered)return;
+  drillAnswered=true;
+  const q=drillQ[drillIdx];
+  const correct=idx===q.correct;
+  if(correct)drillScore++;
+  document.querySelectorAll('.q-choice').forEach((el,i)=>{
+    el.classList.add('answered');
+    if(i===q.correct)el.classList.add('correct');
+    else if(i===idx&&!correct)el.classList.add('wrong');
+  });
+  const expEl=document.getElementById('drill-explanation');
+  expEl.innerHTML=`<strong>Explanation</strong>${q.explanation}`;
+  expEl.style.display='block';
+  document.getElementById('drill-next-btn').style.display='inline-flex';
+  // Update skill
+  const skill=q.skill;
+  if(!state.skills[skill])state.skills[skill]=50;
+  state.skills[skill]=Math.round(Math.min(100,Math.max(10,(state.skills[skill]*0.8)+(correct?100:0)*0.2)));
+  state.sessions.push({date:new Date().toDateString(),qid:q.id,section:q.section,skill,correct});
+  save();
+}
+
+function nextDrillQ() {
+  drillIdx++;
+  if(drillIdx>=drillQ.length){endDrill();return;}
+  renderDrillQ();
+}
+
+function endDrill() {
+  document.getElementById('drill-question-area').style.display='none';
+  alert(`Drill complete: ${drillScore}/${drillQ.length} correct (${Math.round(drillScore/drillQ.length*100)}%)`);
+  renderDrillSkills();
+}
+
+function changeFocus() {
+  drillFocusIdx=(drillFocusIdx+1)%drillFocuses.length;
+  document.getElementById('drill-focus').textContent=drillFocuses[drillFocusIdx];
+}
+
+// ─── QUESTION BANK ─────────────────────────────────────────────────────────
+function renderQBank() {
+  const rows = QUESTIONS.map(q=>`
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 12px;color:var(--muted);font-size:12px;">${q.id}</td>
+      <td style="padding:10px 12px;"><span class="tag tag-${q.section}">${q.section.toUpperCase()}</span></td>
+      <td style="padding:10px 12px;font-size:13px;">${q.skill}</td>
+      <td style="padding:10px 12px;font-size:12px;color:var(--muted);">Level ${q.difficulty}</td>
+      <td style="padding:10px 12px;"><span class="tag ${q.status==='missed'?'tag-red':'tag-muted'}">${q.status||'unseen'}</span></td>
+      <td style="padding:10px 12px;"><button class="btn btn-secondary btn-sm" onclick="startDrillWith('${q.id}')">Practice</button></td>
+    </tr>`).join('');
+  document.getElementById('qbank-table').innerHTML=`
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--border);">
+        <th style="padding:8px 12px;">Source</th><th style="padding:8px 12px;">Section</th><th style="padding:8px 12px;">Skill</th><th style="padding:8px 12px;">Level</th><th style="padding:8px 12px;">Status</th><th style="padding:8px 12px;">Action</th>
+      </tr></thead><tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function buildDrillFromBank() { navTo('drills'); startDrill(); }
+function startDrillWith(qid) {
+  drillQ = QUESTIONS.filter(q=>q.id===qid);
+  drillIdx=0;drillScore=0;
+  navTo('drills');
+  document.getElementById('drill-question-area').style.display='block';
+  renderDrillQ();
+}
+
+// ─── TIMER ─────────────────────────────────────────────────────────────────
+let timerSecs=35*60,timerRunning=false,timerInterval=null;
+function startTimer(mins){timerSecs=mins*60;timerRunning=false;clearInterval(timerInterval);updateTimerDisplay();document.getElementById('timer-label').textContent=`${mins} min section`;document.getElementById('timer-toggle').textContent='▶ Start';}
+function toggleTimer(){
+  timerRunning=!timerRunning;
+  document.getElementById('timer-toggle').textContent=timerRunning?'⏸ Pause':'▶ Resume';
+  if(timerRunning){timerInterval=setInterval(()=>{if(timerSecs<=0){clearInterval(timerInterval);document.getElementById('timer-label').textContent='Time!';return;}timerSecs--;updateTimerDisplay();},1000);}
+  else clearInterval(timerInterval);
+}
+function resetTimer(){timerRunning=false;clearInterval(timerInterval);startTimer(35);}
+function updateTimerDisplay(){
+  const m=Math.floor(timerSecs/60),s=timerSecs%60;
+  document.getElementById('timer-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  document.getElementById('timer-display').style.color=timerSecs<=300?'var(--danger)':timerSecs<=600?'var(--accent)':'var(--text)';
+}
+document.getElementById('timed-results').innerHTML='<div style="color:var(--muted);font-size:13px;">No test results yet. Run a timed section and log your result.</div>';
+
+// ─── ANALYTICS ─────────────────────────────────────────────────────────────
+function renderAnalytics() {
+  const sorted=Object.entries(state.skills).sort((a,b)=>a[1]-b[1]);
+  document.getElementById('analytics-skills').innerHTML=sorted.map(([skill,pct])=>`
+    <div class="skill-row">
+      <div class="skill-name" style="font-size:12px;">${skill}</div>
+      <div style="flex:1"><div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${pct<50?'var(--danger)':pct<70?'var(--accent)':'var(--accent2)'}"></div></div></div>
+      <div class="skill-pct" style="font-size:11px;color:${pct<50?'var(--danger)':pct<70?'var(--accent)':'var(--accent2)'}">${pct}%</div>
+    </div>`).join('');
+  const weakest=sorted[0];
+  document.getElementById('analytics-recs').innerHTML=`
+    <div style="margin-bottom:16px;"><span class="tag tag-red">Highest Impact</span><div style="font-family:'Playfair Display',serif;font-size:17px;margin:8px 0;">${weakest[0]}</div><div style="color:var(--muted);font-size:12px;">${weakest[1]}% mastery · Watch lesson → drill 6 questions → journal every miss</div><button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="navTo('drills')">Build This Drill</button></div>
+    <div><span class="tag tag-muted">Next Support</span><div style="font-family:'Playfair Display',serif;font-size:17px;margin:8px 0;">${sorted[1][0]}</div><div style="color:var(--muted);font-size:12px;">${sorted[1][1]}% mastery</div></div>`;
+  document.getElementById('analytics-path').innerHTML=`<strong style="color:var(--accent)">Fastest +5 path for ${weakest[0]}:</strong><br>1. Watch the ${weakest[0]} lesson (10–18 min).<br>2. Run 6 prediction-mode questions — pre-phrase before reading choices.<br>3. Journal every miss with the rule you violated.<br>4. Redo only the questions you got wrong at high confidence.<br>5. Retest after 48 hours to confirm retention.`;
+}
+
+// ─── JOURNAL ───────────────────────────────────────────────────────────────
+function renderJournal(filter='all'){
+  const filtered=filter==='all'?state.journal:state.journal.filter(e=>e.section===filter);
+  document.getElementById('journal-entries').innerHTML=filtered.length?filtered.map(e=>`
+    <div class="journal-entry ${e.section}-entry">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span class="tag tag-${e.section}">${e.section.toUpperCase()} · ${e.skill}</span>
+        <span style="color:var(--muted);font-size:11px;">${e.date}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">${e.q}</div>
+      <div style="font-size:13px;line-height:1.65;color:rgba(240,237,232,0.85);">${e.note}</div>
+    </div>`).join(''):'<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center;">No entries yet. Answer questions and journal your misses.</div>';
+}
+
+function filterJournal(f){renderJournal(f);}
+
+function addJournalEntry(){
+  const skill=prompt('Skill (e.g., Flaws, Inference):');
+  if(!skill)return;
+  const note=prompt('What did you miss, and what is the rule?');
+  if(!note)return;
+  const section=prompt('Section (lr or rc):')?.toLowerCase()||'lr';
+  state.journal.unshift({id:Date.now(),section,skill,q:'Manual entry',note,date:new Date().toLocaleDateString()});
+  save();renderJournal();
+}
+
+// ─── TEST REVIEW ───────────────────────────────────────────────────────────
+function renderTestRev(){
+  const misses=[
+    {n:4,my:'D',correct:'B',skill:'Flaws',level:2,action:'Drill causal flaws'},
+    {n:5,my:'B',correct:'A',skill:'Assumptions',level:2,action:'Negate answer choices'},
+    {n:6,my:'D',correct:'E',skill:'Conditional Logic',level:2,action:'Diagram arrows'},
+    {n:12,my:'C',correct:'A',skill:'Assumptions',level:2,action:'Find the bridge first'},
+    {n:19,my:'C',correct:'A',skill:'Flaws',level:3,action:'Name the gap first'},
+    {n:24,my:'B',correct:'D',skill:'Pacing',level:4,action:'Practice skip decision'},
+  ];
+  document.getElementById('testrev-rows').innerHTML=misses.map(m=>`
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 12px;color:var(--muted);">Q${m.n}</td>
+      <td style="padding:10px 12px;color:var(--danger);">${m.my}</td>
+      <td style="padding:10px 12px;color:var(--accent2);">${m.correct}</td>
+      <td style="padding:10px 12px;">${m.skill}</td>
+      <td style="padding:10px 12px;"><span class="tag tag-muted">Lv ${m.level}</span></td>
+      <td style="padding:10px 12px;font-size:12px;color:var(--muted);">${m.action}</td>
+    </tr>`).join('');
+}
+
+// ─── STUDY PLAN ────────────────────────────────────────────────────────────
+function generatePlan(){
+  const sorted=Object.entries(state.skills).sort((a,b)=>a[1]-b[1]);
+  const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const colors=['#E8A838','#5B8DEF','#4A9C6D','#E05C5C','#A78BFA','#F59E0B'];
+  const plan=days.map((day,i)=>{
+    const skill=sorted[i%sorted.length][0];
+    return {day,skill,color:colors[i%colors.length]};
+  });
+  document.getElementById('study-plan-output').innerHTML=plan.map(p=>`
+    <div class="plan-day">
+      <div class="plan-day-header">
+        <div class="plan-day-dot" style="background:${p.color}"></div>
+        <strong>${p.day}</strong><span class="tag" style="background:${p.color}20;color:${p.color};margin-left:8px;">${p.skill}</span>
+      </div>
+      <div class="plan-task"><div class="plan-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>Watch the ${p.skill} lesson (or framework review)</div>
+      <div class="plan-task"><div class="plan-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>Drill 6 targeted questions</div>
+      <div class="plan-task"><div class="plan-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>Write one journal takeaway for every miss</div>
+    </div>`).join('');
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────────────────────
+function renderDashboard(){
+  document.getElementById('dash-streak').textContent=state.streak;
+  document.getElementById('dash-total').textContent=state.sessions.length;
+  const overallPct=state.sessions.length>0?Math.round(state.sessions.filter(s=>s.correct).length/state.sessions.length*100):0;
+  function pctToScore(p){if(p>=97)return 180;if(p>=90)return 172;if(p>=80)return 163;if(p>=70)return 155;if(p>=60)return 148;return 140;}
+  document.getElementById('dash-score').textContent=state.sessions.length>=5?pctToScore(overallPct):'—';
+  const recent=state.sessions.slice(-5).reverse();
+  document.getElementById('dash-activity').innerHTML=recent.length?recent.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;">
+      <span>${s.correct?'✅':'❌'}</span>
+      <span style="color:var(--muted);">${s.section.toUpperCase()} · ${s.skill}</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:11px;">${s.date}</span>
+    </div>`).join(''):'<div style="color:var(--muted);font-size:13px;">No activity yet. Start a drill!</div>';
+  const sorted=Object.entries(state.skills).sort((a,b)=>a[1]-b[1]);
+  document.getElementById('dash-next').innerHTML=`<strong style="color:var(--accent)">Priority: ${sorted[0][0]}</strong><br>${sorted[0][1]}% mastery — watch the lesson, run 6 questions, journal every miss.`;
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+updateLockState();
+renderDashboard();
+renderDrillSkills();
+</script>
+</body>
+</html>

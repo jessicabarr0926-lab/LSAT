@@ -1727,6 +1727,91 @@ h3 {
   gap: 8px;
 }
 
+.lesson-connector {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.6fr) minmax(220px, 0.7fr);
+  align-items: center;
+  margin-bottom: 20px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(217, 107, 123, 0.1), rgba(127, 169, 139, 0.12)),
+    #ffffff;
+}
+
+.connector-copy h2 {
+  margin: 0 0 8px;
+}
+
+.connector-copy p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.connector-path {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.path-chip {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.path-arrow {
+  color: var(--teal-dark);
+  font-weight: 900;
+}
+
+.connector-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.connector-stats div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.connector-stats strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.connector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.lesson-route {
+  display: block;
+  margin: 10px 0;
+  color: var(--teal-dark);
+  font-weight: 800;
+}
+
+.dark-mode .lesson-connector,
+.dark-mode .path-chip,
+.dark-mode .connector-stats div {
+  background: rgba(36, 32, 41, 0.92);
+}
+
 .lesson-page h1 {
   margin: 0;
   font-size: clamp(2.2rem, 6vw, 4.4rem);
@@ -3135,6 +3220,7 @@ tbody tr:last-child td {
   .content-hero,
   .start-path,
   .manual-system,
+  .lesson-connector,
   .lesson-flow,
   .lesson-stepper,
   .lesson-kit,
@@ -3226,6 +3312,10 @@ tbody tr:last-child td {
   .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .connector-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -3248,6 +3338,7 @@ tbody tr:last-child td {
   .content-filters,
   .content-grid,
   .content-summary,
+  .lesson-connector,
   .explanation-grid,
   .automation-grid,
   .plugin-grid,

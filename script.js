@@ -2470,6 +2470,7 @@ function renderLessons() {
     button.classList.toggle("active", button.dataset.lessonTopic === topic);
   });
   const visible = orderContent(contentLibrary).filter((lesson) => topic === "all" || lesson.topic === topic);
+  renderLessonConnector(visible);
   $("#lessonList").innerHTML = visible
     .map((lesson) => {
       const done = state.completedContent.includes(lesson.id);
@@ -2482,6 +2483,7 @@ function renderLessons() {
             <span class="tag">${escapeHtml(lesson.minutes)} min</span>
           </header>
           <p>${escapeHtml(lesson.description)}</p>
+          <small class="lesson-route">Content Hub -> lesson-player.html?id=${escapeHtml(lesson.id)} -> mastery practice</small>
           <div class="lesson-meta">
             <span class="tag">${escapeHtml(lesson.topicLabel)}</span>
             <span class="tag">${escapeHtml(lesson.skill)}</span>
@@ -2497,6 +2499,45 @@ function renderLessons() {
       `;
     })
     .join("");
+}
+
+function renderLessonConnector(visibleLessons = orderContent(contentLibrary)) {
+  if (!has("#lessonConnector")) return;
+  const current =
+    visibleLessons.find((lesson) => !getLessonGate(lesson) && !state.watchedContent.includes(lesson.id)) ||
+    visibleLessons.find((lesson) => !getLessonGate(lesson)) ||
+    getRecommendedContent();
+  const completed = state.completedContent.length;
+  const watched = state.watchedContent.length;
+  const nextGate = getLessonGate(current);
+  $("#lessonConnector").innerHTML = `
+    <div class="connector-copy">
+      <p class="eyebrow">Connected flow</p>
+      <h2>${escapeHtml(current.title)}</h2>
+      <p>${escapeHtml(current.description)}</p>
+      <div class="connector-path" aria-label="Lesson flow">
+        <span class="path-chip">Content Hub</span>
+        <span class="path-arrow">-></span>
+        <span class="path-chip">Animated lesson</span>
+        <span class="path-arrow">-></span>
+        <span class="path-chip">90% practice gate</span>
+        <span class="path-arrow">-></span>
+        <span class="path-chip">Journal + drill</span>
+      </div>
+    </div>
+    <div class="connector-stats">
+      <div><span class="metric-label">Watched</span><strong>${watched}</strong></div>
+      <div><span class="metric-label">Completed</span><strong>${completed}/${contentLibrary.length}</strong></div>
+      <div><span class="metric-label">Current focus</span><strong>${escapeHtml(current.skill)}</strong></div>
+    </div>
+    <div class="connector-actions">
+      ${nextGate ? `<p class="lesson-gate-note">Watch ${escapeHtml(nextGate.title)} first.</p>` : ""}
+      <button class="button primary" type="button" data-open-content="${escapeHtml(current.id)}" ${nextGate ? "disabled" : ""}>Open connected lesson</button>
+      <button class="button secondary dark" type="button" data-preview-content="${escapeHtml(current.id)}" ${nextGate ? "disabled" : ""}>Preview animation</button>
+      <button class="button secondary dark" type="button" data-page-target="content.html">Back to Content Hub</button>
+      <a class="button secondary dark" href="jessipreps-v2.html">Open v2 prototype</a>
+    </div>
+  `;
 }
 
 function getFilteredContent() {
@@ -2599,6 +2640,7 @@ function renderContentCard(item) {
         </div>
         <h3>${escapeHtml(item.title)} ${completed ? "✓" : ""}</h3>
         <p>${escapeHtml(item.description)}</p>
+        <small class="lesson-route">Opens the connected lesson player, then unlocks translation and practice.</small>
         ${gate ? `<p class="lesson-gate-note"><strong>Locked:</strong> watch ${escapeHtml(gate.title)} first.</p>` : ""}
         <div class="lesson-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
         <div class="lesson-actions">
