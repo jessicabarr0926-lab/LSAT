@@ -242,6 +242,174 @@ const questionBank = [
     explanation:
       "The original uses contrapositive reasoning: advanced -> approval, no approval -> not advanced. Choice D has the same structure.",
   },
+  {
+    id: "v2-rc-main-point-1",
+    source: "JessiPreps v2 RC Q1",
+    section: "Reading Comprehension",
+    skill: "Reading Structure",
+    difficulty: 2,
+    status: "unseen",
+    answer: "B",
+    pattern: "Main Point",
+    prompt:
+      "Legal scholars have long debated whether originalism, the theory that constitutional interpretation should be guided by the original meaning of the text, is a coherent judicial philosophy. Proponents argue that originalism constrains judicial discretion and maintains democratic legitimacy by deferring to the founding generation. Critics counter that the founders' intentions are often unknowable or inapplicable to modern circumstances. A third camp argues that while originalism provides a useful anchor, judges must also consider how constitutional principles evolve through lived democratic experience. Which answer best describes the main point?",
+    choices: {
+      A: "Originalism is a flawed judicial philosophy that should be abandoned.",
+      B: "The debate over originalism involves multiple competing perspectives on constitutional interpretation.",
+      C: "The founders' intentions should always guide constitutional decisions.",
+      D: "Modern judges should ignore the original text of the Constitution.",
+      E: "Judicial discretion is the primary threat to democratic legitimacy.",
+    },
+    explanation:
+      "The passage maps competing perspectives without fully endorsing one. The correct main point is the structure of the debate, not one side of it.",
+  },
+  {
+    id: "v2-rc-inference-1",
+    source: "JessiPreps v2 RC Q2",
+    section: "Reading Comprehension",
+    skill: "Reading Structure",
+    difficulty: 2,
+    status: "unseen",
+    answer: "B",
+    pattern: "Inference",
+    prompt:
+      "The consumer welfare standard holds that antitrust enforcement should focus on whether a practice raises prices for consumers. An older tradition viewed concentrated economic power as a threat to democracy itself, because large corporations could distort political processes and erode smaller competitors' independence regardless of consumer prices. Which action would proponents of the older tradition most likely support?",
+    choices: {
+      A: "Action against a corporation that charges prices above the competitive market rate.",
+      B: "Action against a corporation that dominates its industry but keeps consumer prices low.",
+      C: "Action against a corporation that employs workers at below-average wages.",
+      D: "Action against a corporation whose goods create environmental externalities.",
+      E: "Action against a corporation that enters markets in which it has no prior experience.",
+    },
+    explanation:
+      "The older tradition cares about concentrated power even when prices stay low. Choice B matches that exact concern.",
+  },
+  {
+    id: "v2-rc-attitude-1",
+    source: "JessiPreps v2 RC Q3",
+    section: "Reading Comprehension",
+    skill: "Reading Structure",
+    difficulty: 2,
+    status: "unseen",
+    answer: "D",
+    pattern: "Author Attitude",
+    prompt:
+      "The standard account of the 1929 stock market crash holds that irrational speculation drove prices to unsustainable levels. Yet recent scholarship challenges this view, arguing that price-to-earnings ratios were not dramatically higher than in other non-crash years and that a sudden collapse in investor confidence better explains the crash. The author's attitude toward the standard account is best described as what?",
+    choices: {
+      A: "Strongly supportive and elaborating on its key insights.",
+      B: "Mildly skeptical but ultimately accepting of its main claims.",
+      C: "Neutral, presenting it simply as one of several competing theories.",
+      D: "Critical, suggesting recent scholarship has undermined its core premises.",
+      E: "Dismissive, treating it as obviously incorrect and outdated.",
+    },
+    explanation:
+      "The phrase 'recent scholarship challenges this view' signals criticism, but the tone is scholarly rather than dismissive.",
+  },
+  {
+    id: "v2-lr-flaw-1",
+    source: "JessiPreps v2 LR Q4",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 2,
+    status: "unseen",
+    answer: "A",
+    pattern: "Alternate Explanation",
+    prompt:
+      "Sales of a new novel were surprisingly high in its first week. Typically, strong initial sales mean readers are excited about the author's previous work. Therefore, the author's earlier books are likely experiencing a resurgence in popularity. The reasoning is most vulnerable because it does what?",
+    choices: {
+      A: "Fails to consider that the novel's high sales could be due to heavy discounting.",
+      B: "Assumes that all first-week buyers were familiar with the author's previous work.",
+      C: "Ignores the possibility that the new novel itself, not prior books, attracted readers.",
+      D: "Treats a general pattern as if it were a universal law without exception.",
+      E: "Confuses the direction of the causal relationship between sales and popularity.",
+    },
+    explanation:
+      "The argument assumes high sales show author loyalty. Heavy discounting is an alternate explanation for those sales.",
+  },
+  {
+    id: "v2-lr-assumption-1",
+    source: "JessiPreps v2 LR Q5",
+    section: "Logical Reasoning",
+    skill: "Assumptions",
+    difficulty: 2,
+    status: "unseen",
+    answer: "B",
+    pattern: "Correlation/Causation",
+    prompt:
+      "A study found that students who regularly eat breakfast perform better on standardized tests than students who skip breakfast. Therefore, schools should provide free breakfast programs to improve academic performance. Which assumption does the argument require?",
+    choices: {
+      A: "Providing free breakfast is cost-effective compared with other interventions.",
+      B: "The difference in test performance is not explained by factors that also affect breakfast habits.",
+      C: "Students who receive free breakfast will eat it every morning.",
+      D: "Standardized tests are the best measure of academic performance.",
+      E: "Breakfast programs have been shown to work in comparable districts.",
+    },
+    explanation:
+      "Negate B: if other factors explain both breakfast habits and test performance, breakfast may not be the cause. The argument collapses.",
+  },
+  {
+    id: "v2-lr-weaken-1",
+    source: "JessiPreps v2 LR Q6",
+    section: "Logical Reasoning",
+    skill: "Strengthen or Weaken",
+    difficulty: 2,
+    status: "unseen",
+    answer: "B",
+    pattern: "Alternate Cause",
+    prompt:
+      "Company X's profits rose steadily for three years. This year, profits suddenly fell. An analyst concluded that market conditions must have changed drastically. Which fact most weakens the conclusion?",
+    choices: {
+      A: "The overall market grew significantly this year.",
+      B: "Company X introduced a flawed product line that was recalled this year.",
+      C: "Several of Company X's competitors also saw profit declines.",
+      D: "Market analysts predicted a stable economic environment.",
+      E: "Company X's costs increased proportionally with revenue.",
+    },
+    explanation:
+      "The recalled product line is an internal alternate cause, so market conditions do not have to explain the profit drop.",
+  },
+  {
+    id: "v2-lr-conditional-1",
+    source: "JessiPreps v2 LR Q7",
+    section: "Logical Reasoning",
+    skill: "Conditional Logic",
+    difficulty: 3,
+    status: "unseen",
+    answer: "B",
+    pattern: "Qualified Conditional",
+    prompt:
+      "If a country's inflation rate is higher than its trading partners' rates, its currency typically depreciates. Last year, our country's inflation rate was higher than all of our trading partners' rates. Which conclusion is most strongly supported?",
+    choices: {
+      A: "Our currency definitely depreciated last year.",
+      B: "Our currency likely depreciated last year, all else being equal.",
+      C: "Our trading partners' currencies appreciated last year.",
+      D: "Higher inflation always causes currency depreciation.",
+      E: "Our country should raise interest rates to prevent further depreciation.",
+    },
+    explanation:
+      "'Typically' supports likelihood, not certainty. Avoid answers that turn tendencies into guarantees.",
+  },
+  {
+    id: "v2-lr-flaw-2",
+    source: "JessiPreps v2 LR Q8",
+    section: "Logical Reasoning",
+    skill: "Flaws",
+    difficulty: 3,
+    status: "unseen",
+    answer: "A",
+    pattern: "Tendency to Certainty",
+    prompt:
+      "When a product is heavily advertised, customers become more aware of it. Greater awareness usually leads to increased sales. So if we double our advertising budget, we should see higher sales. The reasoning is flawed because it does what?",
+    choices: {
+      A: "Assumes that awareness inevitably translates to sales growth.",
+      B: "Confuses the cost of advertising with its effectiveness.",
+      C: "Ignores that competitors might also increase advertising.",
+      D: "Presumes that doubling spending will double awareness.",
+      E: "Fails to define what higher sales means precisely.",
+    },
+    explanation:
+      "The argument treats 'usually leads to' as if it guarantees a result. That is the tendency-to-certainty flaw.",
+  },
 ];
 
 const sectionData = {
@@ -1284,6 +1452,10 @@ let timerDurationSeconds = 35 * 60;
 let timerId = null;
 let drillResults = [];
 let submittedCurrentQuestion = false;
+let previewLessonId = "";
+let previewSceneIndex = 0;
+let previewPlaying = false;
+let previewTimerId = null;
 let fullTest = {
   questions: [],
   index: 0,
@@ -2318,6 +2490,7 @@ function renderLessons() {
           ${gate ? `<p class="lesson-gate-note">Watch ${escapeHtml(gate.title)} first.</p>` : ""}
           <div class="lesson-actions">
             <button class="mini-button" type="button" data-open-content="${lesson.id}" ${gate ? "disabled" : ""}>${gate ? "Locked" : "Open animated lesson"}</button>
+            <button class="mini-button" type="button" data-preview-content="${lesson.id}" ${gate ? "disabled" : ""}>Quick preview</button>
             <button class="mini-button" type="button" data-start-content-drill="${escapeHtml(lesson.skill)}">Practice this skill</button>
           </div>
         </article>
@@ -2430,6 +2603,7 @@ function renderContentCard(item) {
         <div class="lesson-progress" aria-hidden="true"><span style="width: ${progress}%"></span></div>
         <div class="lesson-actions">
           <button class="mini-button" type="button" data-open-content="${item.id}" ${gate ? "disabled" : ""}>${gate ? "Locked" : "Watch lesson"}</button>
+          <button class="mini-button" type="button" data-preview-content="${item.id}" ${gate ? "disabled" : ""}>Quick preview</button>
           <button class="mini-button" type="button" data-save-content="${item.id}">${saved ? "Saved" : "Save"}</button>
           <button class="mini-button" type="button" data-open-content="${item.id}" ${gate ? "disabled" : ""} title="Unlock by scoring 90% or higher on 10 lesson practice attempts.">${gate ? "Wait" : completed ? "Review again" : "Mastery gate"}</button>
         </div>
@@ -2450,6 +2624,114 @@ function getLessonIcon(item) {
     "Techniques, Roles, and Principles": "Method",
   };
   return icons[item.skill] || item.type.replace(" lesson", "");
+}
+
+function renderLessonPreviewModal() {
+  if (has("#lessonPreviewOverlay")) return;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <div class="lesson-preview-overlay" id="lessonPreviewOverlay" aria-hidden="true">
+        <section class="lesson-preview-modal" role="dialog" aria-modal="true" aria-labelledby="lessonPreviewTitle">
+          <header class="lesson-preview-header">
+            <div>
+              <p class="eyebrow">Animated preview</p>
+              <h2 id="lessonPreviewTitle">Lesson preview</h2>
+            </div>
+            <button class="mini-button" type="button" data-close-preview>Close</button>
+          </header>
+          <div class="lesson-preview-screen">
+            <span id="lessonPreviewIcon">Map</span>
+            <strong id="lessonPreviewSceneTitle">Scene</strong>
+            <p id="lessonPreviewSceneBody">Preview ready.</p>
+          </div>
+          <div class="lesson-preview-controls">
+            <button class="preview-control" type="button" data-preview-prev aria-label="Previous preview frame">Prev</button>
+            <button class="preview-control" type="button" data-preview-play>Play</button>
+            <button class="preview-control" type="button" data-preview-next aria-label="Next preview frame">Next</button>
+            <div class="lesson-preview-progress" aria-hidden="true"><span id="lessonPreviewProgress"></span></div>
+            <span class="metric-label" id="lessonPreviewCounter">1 / 1</span>
+          </div>
+          <footer class="lesson-preview-footer">
+            <p id="lessonPreviewTranscript">Use this like a mini video. Pause on the frame that feels important.</p>
+            <div class="lesson-preview-actions">
+              <button class="button secondary dark" type="button" data-open-preview-lesson>Open full lesson</button>
+              <button class="button primary" type="button" data-preview-practice hidden>Practice this</button>
+            </div>
+          </footer>
+        </section>
+      </div>
+    `,
+  );
+}
+
+function openLessonPreview(id) {
+  const item = contentLibrary.find((lesson) => lesson.id === id);
+  if (!item) return;
+  const gate = getLessonGate(item);
+  if (gate) {
+    showToast(`Watch ${gate.title} first.`);
+    return;
+  }
+  renderLessonPreviewModal();
+  previewLessonId = id;
+  previewSceneIndex = 0;
+  previewPlaying = false;
+  clearInterval(previewTimerId);
+  $("#lessonPreviewOverlay").classList.add("open");
+  $("#lessonPreviewOverlay").setAttribute("aria-hidden", "false");
+  renderLessonPreviewFrame();
+}
+
+function closeLessonPreview() {
+  clearInterval(previewTimerId);
+  previewPlaying = false;
+  $("#lessonPreviewOverlay")?.classList.remove("open");
+  $("#lessonPreviewOverlay")?.setAttribute("aria-hidden", "true");
+}
+
+function renderLessonPreviewFrame() {
+  const item = contentLibrary.find((lesson) => lesson.id === previewLessonId);
+  if (!item || !has("#lessonPreviewOverlay")) return;
+  const scenes = getLessonScenes(item);
+  const scene = scenes[previewSceneIndex] || scenes[0];
+  $("#lessonPreviewTitle").textContent = item.title;
+  $("#lessonPreviewIcon").textContent = getLessonIcon(item);
+  $("#lessonPreviewSceneTitle").textContent = scene.title;
+  $("#lessonPreviewSceneBody").textContent = scene.body;
+  $("#lessonPreviewTranscript").textContent = scene.body;
+  $("#lessonPreviewCounter").textContent = `${previewSceneIndex + 1} / ${scenes.length}`;
+  $("#lessonPreviewProgress").style.width = `${((previewSceneIndex + 1) / scenes.length) * 100}%`;
+  $("[data-preview-play]").textContent = previewPlaying ? "Pause" : "Play";
+  $("[data-preview-practice]").hidden = previewSceneIndex < scenes.length - 1;
+}
+
+function stepLessonPreview(direction) {
+  const item = contentLibrary.find((lesson) => lesson.id === previewLessonId);
+  if (!item) return;
+  const scenes = getLessonScenes(item);
+  previewSceneIndex = (previewSceneIndex + direction + scenes.length) % scenes.length;
+  renderLessonPreviewFrame();
+}
+
+function toggleLessonPreviewPlayback() {
+  previewPlaying = !previewPlaying;
+  clearInterval(previewTimerId);
+  if (previewPlaying) {
+    previewTimerId = setInterval(() => {
+      const item = contentLibrary.find((lesson) => lesson.id === previewLessonId);
+      const scenes = item ? getLessonScenes(item) : [];
+      if (!scenes.length || previewSceneIndex >= scenes.length - 1) {
+        previewPlaying = false;
+        clearInterval(previewTimerId);
+        renderLessonPreviewFrame();
+        return;
+      }
+      previewSceneIndex += 1;
+      renderLessonPreviewFrame();
+    }, 3200);
+  }
+  renderLessonPreviewFrame();
 }
 
 const lessonDeepDives = {
@@ -2563,15 +2845,59 @@ const lessonDeepDives = {
   },
   "rc-map": {
     scenes: [
-      ["Read for jobs", "Each paragraph has a job: background, old view, problem, response, implication, or author position."],
-      ["Track viewpoint shifts", "Words like however, although, critics, and proponents tell you the passage is turning."],
-      ["Answer from structure", "Main point and function questions become easier when you know why each paragraph exists."],
+      ["Why mapping works", "Most students read RC like a novel and hope they remember everything. Mapping gives you a structure to return to when questions get dense."],
+      ["Label each paragraph", "Write the purpose, not a summary: old view, critics respond, author qualifies, evidence for new view."],
+      ["Circle contrast words", "But, however, yet, although, while, nevertheless, and despite usually mark the passage turn."],
+      ["Track opinion signals", "Underline who thinks what: scholars argue, critics contend, the author suggests, according to the study."],
+      ["Answer from text", "Every correct RC answer must be provable from the passage. If you cannot point to the proof, eliminate it."],
     ],
     concept: "RC is not memorization. It is structure plus proof.",
     example: "Paragraph 1 introduces a theory. Paragraph 2 gives a criticism. Paragraph 3 defends a narrower version of the theory.",
     breakdown: "The passage movement is theory, challenge, qualified defense.",
     trap: "A detail can be true but too narrow for main point or structure questions.",
     practice: "After each paragraph, write one tiny job label in plain English.",
+  },
+  "rc-viewpoints": {
+    scenes: [
+      ["What attitude tests", "Attitude questions ask how the author treats a view, not merely what topic the passage discusses."],
+      ["Find evidence words", "Look for praises, criticizes, questions, endorses, challenges, overlooks, acknowledges, or qualifies."],
+      ["Use the tone spectrum", "Dismissive, critical, skeptical, neutral, sympathetic, supportive, and enthusiastic are not interchangeable."],
+      ["Mild beats extreme", "Critical usually beats dismissive. Supportive usually beats enthusiastic. LSAT tone is often measured and qualified."],
+      ["Point to it", "Before choosing, point to a specific phrase that proves the attitude. Vibes are not evidence."],
+    ],
+    concept: "Viewpoint work is ownership work: know who believes each claim and how the author treats that belief.",
+    example: "The author says a theory is useful but incomplete.",
+    breakdown: "Useful is positive; incomplete is a limitation. The attitude is qualified approval, not hostility or full endorsement.",
+    trap: "Extreme tone words often overstate what the passage actually supports.",
+    practice: "For every viewpoint, write person plus attitude: critics object, author partly agrees, study qualifies.",
+  },
+  "rc-inference": {
+    scenes: [
+      ["Inference is not guessing", "An LSAT inference is a statement that must be supported by the passage, not a smart outside prediction."],
+      ["The 100 percent rule", "If the passage can be true while the answer is false, eliminate the answer."],
+      ["Watch strong words", "Always, never, all, none, only, and must need exact textual support."],
+      ["Avoid outside knowledge", "A real-world true answer is still wrong if the passage did not prove it."],
+      ["Check direction", "Do not flip cause and effect, old view and new view, or critic and author."],
+    ],
+    concept: "RC inference answers stay close to the text and usually sound mild, specific, and provable.",
+    example: "A passage says the older antitrust tradition cared about concentrated power even when prices stayed low.",
+    breakdown: "You can infer that this tradition would care about a dominant company even if consumers pay low prices.",
+    trap: "A plausible answer that imports outside economics is still wrong.",
+    practice: "Ask: where exactly does the passage prove this answer?",
+  },
+  "rc-main-point": {
+    scenes: [
+      ["Find the umbrella", "The main point should cover the whole passage, not just one paragraph."],
+      ["Separate detail from thesis", "A true sentence from the passage can be wrong if it is only support."],
+      ["Check passage shape", "Survey passages often have main points about the debate, not about one side winning."],
+      ["Too narrow or too broad", "Reject answers that cover only one viewpoint or claim more than the author proved."],
+      ["Prove the answer", "Every paragraph should feel like it belongs under the correct main point."],
+    ],
+    concept: "Main point is the passage's central job in one sentence.",
+    example: "A passage presents proponents, critics, and a third qualified view of originalism.",
+    breakdown: "The main point is that the debate has multiple competing perspectives, not that one side is obviously correct.",
+    trap: "A familiar view from paragraph one can be a premise, not the whole passage point.",
+    practice: "Before choices, write: this passage is mainly doing what?",
   },
   "rc-classification-instinct": {
     scenes: [
@@ -2608,6 +2934,19 @@ const lessonDeepDives = {
     breakdown: "A weakening answer says a new attendance policy started the same week.",
     trap: "A negative fact about the app is irrelevant unless it touches the attendance explanation.",
     practice: "State the bridge, then ask what would make that bridge less believable.",
+  },
+  "parallel-skeleton": {
+    scenes: [
+      ["Match logical form", "Parallel reasoning asks for the same argument skeleton, not the same topic."],
+      ["Abstract the structure", "Replace content with letters: all A are B, X is A, therefore X is B."],
+      ["Check valid or flawed", "If the original is flawed, the correct answer must repeat the same flaw."],
+      ["Ignore topic bait", "Similar vocabulary can hide a different structure. Structure beats subject matter."],
+    ],
+    concept: "Parallel questions reward skeleton matching. Topic is camouflage.",
+    example: "All archived files are labeled. This file is not labeled. Therefore, it is not archived.",
+    breakdown: "That is contrapositive form: A -> B, not B -> not A.",
+    trap: "A choice about the same topic can be wrong if it reverses the logic.",
+    practice: "Before choices, write the argument with letters and mark whether it is valid or flawed.",
   },
   "pacing-skip": {
     scenes: [
@@ -3818,6 +4157,7 @@ function renderAll() {
   renderAnalytics();
   renderAutomations();
   renderLessonPlayer();
+  renderLessonPreviewModal();
   renderScoreConverter();
   renderPodcastWidget();
 }
@@ -4014,9 +4354,51 @@ function bindEvents() {
       openContent(openContentButton.dataset.openContent);
     }
 
+    const previewContentButton = event.target.closest("[data-preview-content]");
+    if (previewContentButton) {
+      openLessonPreview(previewContentButton.dataset.previewContent);
+    }
+
+    if (event.target.closest("[data-close-preview]") || event.target.id === "lessonPreviewOverlay") {
+      closeLessonPreview();
+    }
+
+    if (event.target.closest("[data-preview-prev]")) {
+      stepLessonPreview(-1);
+    }
+
+    if (event.target.closest("[data-preview-next]")) {
+      stepLessonPreview(1);
+    }
+
+    if (event.target.closest("[data-preview-play]")) {
+      toggleLessonPreviewPlayback();
+    }
+
+    if (event.target.closest("[data-open-preview-lesson]")) {
+      const id = previewLessonId;
+      closeLessonPreview();
+      openContent(id);
+    }
+
+    if (event.target.closest("[data-preview-practice]")) {
+      const item = contentLibrary.find((lesson) => lesson.id === previewLessonId);
+      if (item) {
+        if (!state.watchedContent.includes(item.id)) state.watchedContent.push(item.id);
+        saveState();
+        closeLessonPreview();
+        startContentDrill(item.skill);
+      }
+    }
+
     const featuredContentButton = event.target.closest("[data-open-featured-content]");
     if (featuredContentButton) {
       openContent(getRecommendedContent().id);
+    }
+
+    const previewFeaturedContentButton = event.target.closest("[data-preview-featured-content]");
+    if (previewFeaturedContentButton) {
+      openLessonPreview(getRecommendedContent().id);
     }
 
     const saveFeaturedContentButton = event.target.closest("[data-save-featured-content]");
@@ -4296,6 +4678,10 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && $("#lessonPreviewOverlay")?.classList.contains("open")) {
+      closeLessonPreview();
+      return;
+    }
     if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
     const key = event.key.toLowerCase();
     if (has("#drillCard") && currentDrill.length && !submittedCurrentQuestion) {
