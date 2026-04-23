@@ -1207,6 +1207,99 @@ const QUESTION_TYPE_LESSONS = [
   },
 ];
 
+function runtimeToSeconds(runtime) {
+  const minutes = Number.parseInt(runtime, 10);
+  return Number.isNaN(minutes) ? 75 : Math.max(45, Math.round((minutes * 60) / 5));
+}
+
+function buildQuestionTypeScenes(lesson) {
+  const method = lesson.method;
+  const traps = lesson.traps;
+  const step1Seconds = runtimeToSeconds(lesson.step1Video.runtime);
+  const step2Seconds = runtimeToSeconds(lesson.step2Video.runtime);
+
+  return {
+    step1Scenes: [
+      {
+        type: "concept",
+        title: `What ${lesson.family} is really asking`,
+        explanation: `${lesson.summary} The goal is to understand the burden before the answer choices start steering you around.`,
+        storyboard: `${lesson.section} task -> identify the real burden -> keep the standard fixed while you solve.`,
+        actionCue: `Say out loud what a winning ${lesson.family} answer would have to do.`,
+        seconds: step1Seconds,
+      },
+      {
+        type: "recognition",
+        title: "How to spot it fast",
+        explanation: `${lesson.step1Video.focus} Your first job is recognition, because hesitation makes trap answers look more persuasive.`,
+        storyboard: `Question stem language + stimulus clues + family-specific burden = recognition pattern.`,
+        actionCue: `Before reading choices, classify the family and predict the job.`,
+        seconds: step1Seconds,
+      },
+      {
+        type: "framework",
+        title: "Core framework from the books",
+        explanation: `This lesson blends the big ideas from ${lesson.sourceTags.join(", ")} into an original study script: ${method[0]} Then ${method[1].toLowerCase()}`,
+        storyboard: `${lesson.sourceTags[0]} pattern + ${lesson.sourceTags[lesson.sourceTags.length - 1]} discipline + plain-English execution.`,
+        actionCue: `Write the framework in your own words before moving on.`,
+        seconds: step1Seconds,
+      },
+      {
+        type: "worked-example",
+        title: "Worked example: wrong vs right",
+        explanation: `Watch the process, not just the result: start with ${method[0].toLowerCase()} and compare a tempting wrong path against the answer that actually satisfies the burden.`,
+        storyboard: `Tempting answer -> why it feels right -> missing logical requirement -> credited answer.`,
+        actionCue: `Explain why the wrong answer is attractive before you defend the right one.`,
+        seconds: step1Seconds,
+      },
+      {
+        type: "recap",
+        title: "The strong-answer rule",
+        explanation: `The answer is strong when it follows the right burden and weak when it gives you ${traps[0].toLowerCase()}. Your recap rule is: ${method[2]}`,
+        storyboard: `Burden check -> trap check -> final selection rule.`,
+        actionCue: `Finish the sentence: for ${lesson.family}, the right answer must...`,
+        seconds: step1Seconds,
+      },
+    ],
+    step2Scenes: [
+      {
+        type: "method",
+        title: "Solve method, step by step",
+        explanation: `Use the same sequence every time: ${method.join(" ")}`,
+        storyboard: `Step 1 -> Step 2 -> Step 3.`,
+        actionCue: `Keep the checklist visible while you solve the next guided question.`,
+        seconds: step2Seconds,
+      },
+      {
+        type: "trap",
+        title: `Trap pattern 1: ${traps[0]}`,
+        explanation: `This trap works because it feels relevant before you test whether it actually satisfies the burden. Slow down and run your method against it.`,
+        storyboard: `Tempting wording -> false sense of relevance -> method exposes mismatch.`,
+        actionCue: `Ask exactly which method step would eliminate this trap.`,
+        seconds: step2Seconds,
+      },
+      {
+        type: "trap",
+        title: `Trap pattern 2: ${traps[1]}`,
+        explanation: `This wrong-answer family usually wins when you skip the middle of the process. ${method[1]}`,
+        storyboard: `Missed process step -> distorted choice comparison -> preventable miss.`,
+        actionCue: `Name the skipped step before you choose.`,
+        seconds: step2Seconds,
+      },
+      {
+        type: "contrast",
+        title: "Live wrong-vs-right contrast",
+        explanation: `Put the credited answer and the best trap side by side. The right answer survives every method step; the trap fails on the burden or overreaches in a way this family cannot support.`,
+        storyboard: `Compare two finalists -> test burden -> eliminate the trap with evidence.`,
+        actionCue: `Practice saying why the wrong answer fails in one sentence.`,
+        seconds: step2Seconds,
+      },
+    ],
+  };
+}
+
+QUESTION_TYPE_LESSONS.forEach((lesson) => Object.assign(lesson, buildQuestionTypeScenes(lesson)));
+
 window.JESSI_PREPS_DATA = {
   appMeta: {
     title: "JessiPreps",

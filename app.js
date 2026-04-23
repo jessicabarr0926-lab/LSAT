@@ -10,6 +10,8 @@ const heroMount = document.querySelector("#heroMount");
 const pageMount = document.querySelector("#pageMount");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
+let qtPlaybackTimer = null;
+let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
 
 const state = loadState();
 
@@ -133,6 +135,160 @@ function buildMissAnalysis(question) {
     "Point at Issue": "You likely chose a claim only one speaker addressed. Test each answer as a yes/no disagreement.",
   };
   return templates[question.family] || "You likely missed the exact reasoning task. Slow down, classify the family, and name the bridge or burden before answering.";
+}
+
+function familyWrongChoiceSummary(family) {
+  const entries = state.journal.filter((entry) => entry.family === family && entry.wrongChoiceText);
+  const grouped = entries.reduce((acc, entry) => {
+    acc[entry.wrongChoiceText] = (acc[entry.wrongChoiceText] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(grouped)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+}
+
+function buildDrillAnalysis(family) {
+  const attempts = familyAttempts(family);
+  const misses = state.journal.filter((entry) => entry.family === family);
+  const correct = attempts.filter((item) => state.attempts[item.id]?.correct).length;
+  const accuracy = attempts.length ? Math.round((correct / attempts.length) * 100) : 0;
+  const trapGroups = misses.reduce((acc, entry) => {
+    acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
+    return acc;
+  }, {});
+  const topTraps = Object.entries(trapGroups)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([trap, count]) => ({
+      trap,
+      count,
+      share: misses.length ? Math.round((count / misses.length) * 100) : 0,
+      advice: `Use the checklist before you choose. This trap keeps winning when you skip the burden and select on familiarity.`,
+    }));
+  const wrongChoices = familyWrongChoiceSummary(family);
+  const highConfidenceMisses = misses.filter((entry) => entry.confidence === "high").length;
+  const primaryTrap = topTraps[0]?.trap;
+  const dominantWrongChoice = wrongChoices[0]?.[0];
+  const diagnosis = primaryTrap
+    ? `Your misses cluster around ${primaryTrap.toLowerCase()}, which usually means the process is breaking before the final comparison. Slow down and force the method before you evaluate choices.`
+    : "Not enough misses yet to diagnose a stable pattern. Use the guided questions first so the system has real behavior to analyze.";
+  const methodFix = attempts.length
+    ? accuracy < 60
+      ? "You are likely skipping the first method step and letting answer choices define the task for you."
+      : accuracy < 80
+        ? "You see the family, but the second method step is still inconsistent under pressure."
+        : "Your structure is working. Keep drilling until the trap patterns stop feeling tempting."
+    : "No attempts logged yet. Start with Step 3 so the analysis can detect where the process breaks.";
+
+  return {
+    attempts: attempts.length,
+    accuracy,
+    topTraps,
+    wrongChoices,
+    highConfidenceMisses,
+    diagnosis,
+    methodFix,
+    dominantWrongChoice,
+    recentMisses: misses.slice(0, 5),
+  };
+}
+
+function qtScenesForPhase(lesson, phase) {
+  return phase === "step2" ? lesson.step2Scenes : lesson.step1Scenes;
+}
+
+function ensureQtPlayback(lesson, phase = qtPlaybackState.phase || "step1") {
+  if (qtPlaybackState.lessonId !== lesson.id || qtPlaybackState.phase !== phase) {
+    qtPlaybackState = { lessonId: lesson.id, phase, sceneIndex: 0, playing: false };
+  }
+}
+
+function stopQtPlayback() {
+  if (qtPlaybackTimer) {
+    clearTimeout(qtPlaybackTimer);
+    qtPlaybackTimer = null;
+  }
+  qtPlaybackState.playing = false;
+}
+
+function scheduleQtPlayback(lesson) {
+  stopQtPlayback();
+  if (!qtPlaybackState.playing) return;
+  const scenes = qtScenesForPhase(lesson, qtPlaybackState.phase);
+  const scene = scenes[qtPlaybackState.sceneIndex];
+  const duration = state.settings.reducedMotion ? 0 : scene?.seconds ?? 70000;
+  qtPlaybackTimer = setTimeout(() => {
+    if (qtPlaybackState.sceneIndex < scenes.length - 1) {
+      qtPlaybackState.sceneIndex += 1;
+      renderApp();
+    } else {
+      stopQtPlayback();
+      renderApp();
+    }
+  }, duration);
+}
+
+function renderQtVideoPanel(lesson, phase, label) {
+  ensureQtPlayback(lesson, phase);
+  const scenes = qtScenesForPhase(lesson, phase);
+  const videoMeta = phase === "step2" ? lesson.step2Video : lesson.step1Video;
+  const active = scenes[qtPlaybackState.sceneIndex];
+  const progressPercent = `${((qtPlaybackState.sceneIndex + 1) / scenes.length) * 100}%`;
+
+  return `
+    <section class="qt-video">
+      <div class="lesson-video__player">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">${label}</p>
+            <h4>${videoMeta.title}</h4>
+          </div>
+          <span class="status-pill">${videoMeta.runtime}</span>
+        </div>
+        <p>${videoMeta.focus}</p>
+        <div class="video-stage qt-video__stage">
+          <p class="mini-card__label">Now playing</p>
+          <h4>${active.title}</h4>
+          <p>${active.explanation}</p>
+          <div class="video-stage__story">${active.storyboard}</div>
+          <div class="video-stage__cue">${active.actionCue}</div>
+        </div>
+        <div class="video-controls">
+          <button class="button button--ghost" data-qt-video-nav="prev" data-qt-phase="${phase}" ${qtPlaybackState.sceneIndex === 0 ? "disabled" : ""}>Back</button>
+          <button class="button button--primary" data-qt-video-toggle="true" data-qt-phase="${phase}">${qtPlaybackState.playing ? "Pause video" : "Play video"}</button>
+          <button class="button button--ghost" data-qt-video-nav="next" data-qt-phase="${phase}" ${qtPlaybackState.sceneIndex === scenes.length - 1 ? "disabled" : ""}>Next</button>
+        </div>
+        <div class="video-progress">
+          <span style="width:${progressPercent}"></span>
+        </div>
+        <div class="video-timeline">
+          ${scenes
+            .map(
+              (scene, index) => `
+                <button class="qt-timeline-dot ${index === qtPlaybackState.sceneIndex ? "is-active" : ""}" data-qt-scene="${index}" data-qt-phase="${phase}" aria-label="Open ${scene.title}">
+                  ${index + 1}
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="lesson-video__chapters">
+        ${scenes
+          .map(
+            (scene, index) => `
+              <section class="video-chapter ${index === qtPlaybackState.sceneIndex ? "is-active" : ""}">
+                <strong>0${index + 1}. ${scene.title}</strong>
+                <span>${Math.max(1, Math.round((scene.seconds || 60) / 60))} min</span>
+                <p>${scene.explanation}</p>
+              </section>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function routeInfo() {
@@ -503,12 +659,15 @@ function renderLessonPlayer(lesson) {
 }
 
 function renderQuestionTypeLesson(lesson) {
+  ensureQtPlayback(lesson, qtPlaybackState.phase);
   const progress = state.questionTypeProgress[lesson.id];
   const questions = familyQuestions(lesson.family);
   const guided = questions.slice(0, 3);
-  const drill = questions.slice(3, 9);
+  const drill = questions.slice(3, 11);
   const attempts = familyAttempts(lesson.family);
   const accuracy = attempts.length ? Math.round((attempts.filter((item) => state.attempts[item.id].correct).length / attempts.length) * 100) : 0;
+  const analysis = buildDrillAnalysis(lesson.family);
+  const topTrap = analysis.topTraps[0]?.trap || lesson.traps[0];
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -529,7 +688,7 @@ function renderQuestionTypeLesson(lesson) {
         </section>
         <section class="mini-card">
           <p class="mini-card__label">Trap pattern</p>
-          <h4>${lesson.traps[0]}</h4>
+          <h4>${topTrap}</h4>
           <p>${familyTrapSummary(lesson.family)}</p>
         </section>
       </div>
@@ -537,50 +696,49 @@ function renderQuestionTypeLesson(lesson) {
     <article class="panel">
       <div class="panel__head">
         <h3>Step 1. Video Breakdown Lesson</h3>
-        <span class="status-pill">${lesson.step1Video.runtime}</span>
       </div>
-      <div class="lesson-video__player">
-        <p class="mini-card__label">${lesson.step1Video.title}</p>
-        <h4>${lesson.step1Video.focus}</h4>
-        <p>This first lesson video teaches the core structure of ${lesson.family} questions using the books' methods in original language.</p>
-        <div class="transcript-block">
-          <p>Start by learning the burden of this family: ${lesson.summary}</p>
-          <p>Then break down the reliable pattern: ${lesson.method[0]}</p>
-          <p>End by naming the most dangerous miss: ${lesson.traps[0]}.</p>
-        </div>
-      </div>
+      <p>This first video teaches what this family is really asking, how to recognize it quickly, and the core framework pulled into original language from the books.</p>
+      ${renderQtVideoPanel(lesson, "step1", "5-scene lesson")}
     </article>
     <article class="panel">
       <div class="panel__head">
         <h3>Step 2. Solve Method + Trap Answers Video</h3>
-        <span class="status-pill">${lesson.step2Video.runtime}</span>
       </div>
-      <div class="lesson-video__player">
-        <p class="mini-card__label">${lesson.step2Video.title}</p>
-        <h4>${lesson.step2Video.focus}</h4>
-        <ol class="method-list">
-          ${lesson.method.map((step) => `<li>${step}</li>`).join("")}
-        </ol>
-        <div class="tag-stack">
-          ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
-        </div>
+      <p>This second video slows the process down, shows the solve sequence, and contrasts the wrong answers that keep stealing points from you.</p>
+      ${renderQtVideoPanel(lesson, "step2", "4-scene solve video")}
+      <div class="qt-toolbox">
+        <section class="transcript-block">
+          <p class="mini-card__label">Method checklist</p>
+          <ol class="method-list">
+            ${lesson.method.map((step) => `<li>${step}</li>`).join("")}
+          </ol>
+        </section>
+        <section class="transcript-block">
+          <p class="mini-card__label">Trap chips</p>
+          <div class="tag-stack">
+            ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
+          </div>
+        </section>
       </div>
     </article>
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Step 3. Guided Questions</h3>
       </div>
-      <p>Answer these by forcing the method, not by guessing. Use the checklist before you choose.</p>
+      <p>Answer these by forcing the method, not by guessing. Each guided question puts the process in front of you before you pick an answer.</p>
       <div class="practice-list">
         ${guided
           .map(
             (question) => `
               <section class="question-card">
-                <p class="mini-card__label">Guided method</p>
-                <div class="transcript-block">
-                  <p><strong>Do this first:</strong> ${lesson.method[0]}</p>
-                  <p><strong>Then do this:</strong> ${lesson.method[1]}</p>
-                  <p><strong>Watch out for:</strong> ${lesson.traps[0]}</p>
+                <div class="method-enforcer">
+                  <p class="mini-card__label">Method enforcer</p>
+                  <div class="method-enforcer__grid">
+                    <section><strong>Step 1</strong><p>${lesson.method[0]}</p></section>
+                    <section><strong>Step 2</strong><p>${lesson.method[1]}</p></section>
+                    <section><strong>Step 3</strong><p>${lesson.method[2]}</p></section>
+                  </div>
+                  <p class="microcopy"><strong>Trap warning:</strong> ${lesson.traps[0]}</p>
                 </div>
                 ${renderQuestionCard(question, "guided")}
               </section>
@@ -593,33 +751,100 @@ function renderQuestionTypeLesson(lesson) {
       <div class="panel__head">
         <h3>Step 4. Mastery Drill</h3>
       </div>
-      <p>Complete this 5-10 question drill for mastery. The analysis system below updates as you answer.</p>
+      <p>Complete this 5-10 question drill for mastery. The analysis system below updates after every answer and shows what is repeatedly going wrong.</p>
       <div class="practice-list">
         ${drill.map((question) => renderQuestionCard(question, "mastery")).join("")}
       </div>
-      <button class="button button--primary" data-complete-question-type="${lesson.id}" ${progress.drillWins < 5 ? "disabled" : ""}>Mark question type mastered</button>
+      <button class="button button--primary" data-complete-question-type="${lesson.id}" ${progress.drillWins < 5 ? "disabled" : ""}>${progress.drillWins < 5 ? `Need ${5 - progress.drillWins} more drill wins` : "Mark question type mastered"}</button>
+      ${progress.drillWins >= 5 ? `<p class="microcopy">Mastery gate unlocked. You have enough drill wins to mark this question type complete.</p>` : ""}
     </article>
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Why You Are Missing This Type</h3>
       </div>
-      <div class="card-grid card-grid--three">
+      <div class="card-grid card-grid--four">
         <section class="mini-card">
-          <p class="mini-card__label">Recurring trap</p>
-          <h4>${familyTrapSummary(lesson.family)}</h4>
-          <p>This is the trap pattern showing up most often for this family.</p>
+          <p class="mini-card__label">Accuracy</p>
+          <h4 class="analysis-score ${analysis.accuracy >= 80 ? "is-strong" : analysis.accuracy >= 60 ? "is-medium" : "is-weak"}">${analysis.accuracy}%</h4>
+          <p>${analysis.attempts} attempts logged for ${lesson.family}.</p>
+        </section>
+        <section class="mini-card">
+          <p class="mini-card__label">High-confidence misses</p>
+          <h4>${analysis.highConfidenceMisses}</h4>
+          <p>These are the misses most likely caused by a repeatable process error, not simple confusion.</p>
         </section>
         <section class="mini-card">
           <p class="mini-card__label">Pattern diagnosis</p>
-          <h4>${lesson.method[0]}</h4>
-          <p>If you skip this step, the wrong answers in ${lesson.family} feel stronger than they are.</p>
+          <h4>${topTrap}</h4>
+          <p>${analysis.diagnosis}</p>
         </section>
         <section class="mini-card">
-          <p class="mini-card__label">Fix next</p>
-          <h4>${lesson.method[2]}</h4>
-          <p>That is the move the system wants you to repeat until accuracy stabilizes.</p>
+          <p class="mini-card__label">Method fix</p>
+          <h4>${lesson.method[0]}</h4>
+          <p>${analysis.methodFix}</p>
         </section>
       </div>
+      <div class="qt-analysis-grid">
+        <section class="transcript-block">
+          <p class="mini-card__label">Trap frequency</p>
+          <div class="trap-bars">
+            ${
+              analysis.topTraps.length
+                ? analysis.topTraps
+                    .map(
+                      (item) => `
+                        <div class="trap-bar">
+                          <div class="trap-bar__meta"><strong>${item.trap}</strong><span>${item.count} miss${item.count > 1 ? "es" : ""}</span></div>
+                          <div class="trap-bar__track"><span style="width:${Math.max(14, item.share)}%"></span></div>
+                          <p class="microcopy">${item.advice}</p>
+                        </div>
+                      `,
+                    )
+                    .join("")
+                : `<p class="muted">Trap bars will fill in once you log misses for this family.</p>`
+            }
+          </div>
+        </section>
+        <section class="transcript-block">
+          <p class="mini-card__label">Wrong answer choices you keep picking</p>
+          <div class="journal-list">
+            ${
+              analysis.wrongChoices.length
+                ? analysis.wrongChoices
+                    .map(
+                      ([choiceText, count]) => `
+                        <section class="journal-card">
+                          <strong>${count} time${count > 1 ? "s" : ""}</strong>
+                          <p>${choiceText}</p>
+                        </section>
+                      `,
+                    )
+                    .join("")
+                : `<p class="muted">Once you miss a question, the exact wrong answer text will appear here so you can spot your favorite traps.</p>`
+            }
+          </div>
+        </section>
+      </div>
+      <section class="transcript-block">
+        <p class="mini-card__label">Miss journal</p>
+        <div class="journal-list">
+          ${
+            analysis.recentMisses.length
+              ? analysis.recentMisses
+                  .map(
+                    (entry) => `
+                      <section class="journal-card">
+                        <strong>${entry.trapPattern}</strong>
+                        <p>${entry.whyWrong}</p>
+                        ${entry.wrongChoiceText ? `<p class="microcopy">Wrong choice picked: ${entry.wrongChoiceText}</p>` : ""}
+                      </section>
+                    `,
+                  )
+                  .join("")
+              : `<p class="muted">Your last five misses for this family will appear here with the trap and the wrong answer text.</p>`
+          }
+        </div>
+      </section>
     </article>
   `;
 }
@@ -867,7 +1092,7 @@ function renderQuestionCard(question, context) {
       <div id="feedback-${question.id}" class="answer-feedback">
         ${
           attempt
-            ? `<strong>${attempt.correct ? "Correct." : "Review this."}</strong><p>${question.explanation}</p><p class="microcopy">Trap pattern: ${question.trapPattern}</p>`
+            ? `<strong>${attempt.correct ? "Correct." : "Review this."}</strong><p>${question.explanation}</p><p class="microcopy">Trap pattern: ${question.trapPattern}</p>${!attempt.correct && attempt.wrongChoiceText ? `<p class="microcopy">You picked: ${attempt.wrongChoiceText}</p>` : ""}`
             : ""
         }
       </div>
@@ -901,6 +1126,7 @@ function wireInteractions(route) {
 
   if (route.page === "learn" && route.id && route.id !== "content") {
     const lesson = data.lessons.find((item) => item.id === route.id);
+    const questionTypeLesson = findQuestionTypeLesson(route.id);
     pageMount.querySelectorAll("[data-video-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
         lessonPlaybackState.playing = !lessonPlaybackState.playing;
@@ -916,8 +1142,37 @@ function wireInteractions(route) {
         renderApp();
       });
     });
-    if (lessonPlaybackState.playing) {
+    pageMount.querySelectorAll("[data-qt-video-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ensureQtPlayback(questionTypeLesson, button.dataset.qtPhase);
+        qtPlaybackState.playing = !qtPlaybackState.playing;
+        scheduleQtPlayback(questionTypeLesson);
+        renderApp();
+      });
+    });
+    pageMount.querySelectorAll("[data-qt-video-nav]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ensureQtPlayback(questionTypeLesson, button.dataset.qtPhase);
+        stopQtPlayback();
+        const scenes = qtScenesForPhase(questionTypeLesson, qtPlaybackState.phase);
+        qtPlaybackState.sceneIndex += button.dataset.qtVideoNav === "next" ? 1 : -1;
+        qtPlaybackState.sceneIndex = Math.max(0, Math.min(scenes.length - 1, qtPlaybackState.sceneIndex));
+        renderApp();
+      });
+    });
+    pageMount.querySelectorAll("[data-qt-scene]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ensureQtPlayback(questionTypeLesson, button.dataset.qtPhase);
+        stopQtPlayback();
+        qtPlaybackState.sceneIndex = Number(button.dataset.qtScene);
+        renderApp();
+      });
+    });
+    if (lesson && lessonPlaybackState.playing) {
       scheduleLessonPlayback(lesson);
+    }
+    if (questionTypeLesson && qtPlaybackState.playing) {
+      scheduleQtPlayback(questionTypeLesson);
     }
   }
 
@@ -955,10 +1210,12 @@ function wireInteractions(route) {
 function answerQuestion(questionId, choice, context) {
   const question = data.questionBank.find((item) => item.id === questionId);
   const correct = choice === question.answer;
+  const wrongChoiceText = correct ? null : question.options[choice];
   state.attempts[questionId] = {
     correct,
     choice,
     context,
+    wrongChoiceText,
     confidence: correct ? "steady" : "shaky",
   };
 
@@ -972,6 +1229,7 @@ function answerQuestion(questionId, choice, context) {
         trapPattern: question.trapPattern,
         confidence: "high",
         blindReviewOutcome: "pending",
+        wrongChoiceText,
         whyWrong: buildMissAnalysis(question),
         note: `${buildMissAnalysis(question)} Relearn: ${question.explanation}`,
       });

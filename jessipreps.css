@@ -468,6 +468,102 @@ a {
   margin-top: 14px;
 }
 
+.qt-video,
+.qt-toolbox,
+.qt-analysis-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+}
+
+.qt-video {
+  margin-top: 12px;
+}
+
+.qt-video__stage {
+  min-height: 210px;
+}
+
+.qt-timeline-dot {
+  border: 1px solid rgba(124, 55, 92, 0.18);
+  background: var(--accent-soft);
+  color: inherit;
+  border-radius: 999px;
+  min-width: 38px;
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.qt-timeline-dot.is-active {
+  background: rgba(124, 55, 92, 0.16);
+  border-color: rgba(124, 55, 92, 0.32);
+}
+
+.method-enforcer {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(124, 55, 92, 0.07), transparent 80%), var(--panel);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.method-enforcer__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.method-enforcer__grid section {
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+}
+
+.analysis-score.is-strong {
+  color: var(--success);
+}
+
+.analysis-score.is-medium {
+  color: #9a6a11;
+}
+
+.analysis-score.is-weak {
+  color: #a23d4b;
+}
+
+.trap-bars {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.trap-bar {
+  display: grid;
+  gap: 8px;
+}
+
+.trap-bar__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trap-bar__track {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(124, 55, 92, 0.12);
+}
+
+.trap-bar__track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c375c 0%, #cf8faa 100%);
+}
+
 .plan-form input,
 .plan-form select {
   width: 100%;
@@ -502,7 +598,10 @@ a {
   .hero-card,
   .card-grid--four,
   .roadmap,
-  .lesson-video {
+  .lesson-video,
+  .qt-video,
+  .qt-toolbox,
+  .qt-analysis-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -521,7 +620,11 @@ a {
   .scene-stack,
   .answer-grid,
   .roadmap,
-  .plan-form {
+  .plan-form,
+  .qt-video,
+  .qt-toolbox,
+  .qt-analysis-grid,
+  .method-enforcer__grid {
     grid-template-columns: 1fr;
     display: grid;
   }
