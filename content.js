@@ -114,6 +114,80 @@ function createQuestionBank() {
       ],
     },
     {
+      family: "RC Function",
+      section: "RC",
+      lessonId: "rc-function-main-point",
+      trapPattern: "Confuses paragraph topic with paragraph job",
+      timingTarget: 88,
+      stems: [
+        {
+          prompt:
+            "In a passage on environmental law, the second paragraph lists three failed regulatory experiments before the third paragraph introduces a narrower rule.",
+          question: "The primary role of the second paragraph is to",
+          options: [
+            "provide failed examples that motivate the narrower rule",
+            "state the author's final recommendation",
+            "define a technical legal term",
+            "summarize an unrelated historical dispute",
+          ],
+          answer: 0,
+          explanation:
+            "The failed experiments matter because they create the need for the narrower rule introduced later.",
+        },
+        {
+          prompt:
+            "A science passage opens by describing a common theory, then gives one paragraph to a rival explanation, and ends by comparing the evidence for both.",
+          question: "The paragraph presenting the rival explanation serves mainly to",
+          options: [
+            "introduce a competing account for later evaluation",
+            "reveal the author's final endorsement",
+            "list side notes with no structural purpose",
+            "change the subject away from the main passage topic",
+          ],
+          answer: 0,
+          explanation:
+            "The rival explanation is part of the passage's argumentative structure because the passage later compares it with the original theory.",
+        },
+      ],
+    },
+    {
+      family: "RC Main Point",
+      section: "RC",
+      lessonId: "rc-function-main-point",
+      trapPattern: "Picks a major detail instead of the overall mission",
+      timingTarget: 90,
+      stems: [
+        {
+          prompt:
+            "A passage reviews an old archaeological theory, shows new carbon-dating evidence against it, and argues for a revised chronology.",
+          question: "Which statement best captures the passage's main point?",
+          options: [
+            "New evidence supports replacing the older chronology with a revised one",
+            "Carbon dating is an exact science with no limitations",
+            "Archaeologists disagree frequently",
+            "Ancient settlements are difficult to excavate",
+          ],
+          answer: 0,
+          explanation:
+            "The whole passage is moving toward defending the revised chronology, not merely discussing dating methods.",
+        },
+        {
+          prompt:
+            "A comparative passage presents two critics who disagree about whether a novel's fragmented style improves or harms its emotional force.",
+          question: "The main point of the paired passages is to",
+          options: [
+            "present and contrast two interpretations of the novel's style",
+            "prove that fragmented novels are always superior",
+            "show that emotional force cannot be discussed critically",
+            "provide a biography of the novelist",
+          ],
+          answer: 0,
+          explanation:
+            "The paired passages are organized around contrasting interpretations rather than proving one broad rule about fiction.",
+        },
+      ],
+    },
+    {
       family: "Flaw",
       section: "LR",
       lessonId: "lr-classic-flaws",
@@ -372,6 +446,228 @@ function createQuestionBank() {
         },
       ],
     },
+    {
+      family: "Must Be True",
+      section: "LR",
+      lessonId: "lr-provable-parallel",
+      trapPattern: "Chooses a statement that sounds likely but is too strong",
+      timingTarget: 82,
+      stems: [
+        {
+          prompt:
+            "All of the committee's approved proposals included cost estimates. The library renovation proposal was approved.",
+          question: "Which statement must be true?",
+          options: [
+            "The library renovation proposal included a cost estimate",
+            "Only approved proposals included cost estimates",
+            "The committee approved very few proposals",
+            "Every proposal with a cost estimate was approved",
+          ],
+          answer: 0,
+          explanation:
+            "If all approved proposals included cost estimates and the renovation proposal was approved, then it too must have included a cost estimate.",
+        },
+        {
+          prompt:
+            "No students in the robotics club skipped the regional competition, and some robotics-club students volunteered at the science fair.",
+          question: "Which inference is most strongly supported?",
+          options: [
+            "Some science-fair volunteers did not skip the regional competition",
+            "All science-fair volunteers were in the robotics club",
+            "Anyone who skipped the regional competition was not a volunteer",
+            "The robotics club had more volunteers than nonvolunteers",
+          ],
+          answer: 0,
+          explanation:
+            "Because some robotics-club students volunteered and no robotics-club students skipped, at least some volunteers did not skip the competition.",
+        },
+      ],
+    },
+    {
+      family: "Evaluate",
+      section: "LR",
+      lessonId: "lr-principle-evaluate-resolve",
+      trapPattern: "Picks a relevant fact rather than the hinge issue",
+      timingTarget: 84,
+      stems: [
+        {
+          prompt:
+            "A department chair argues that moving office hours online will improve attendance, but a professor doubts students will use the new format.",
+          question: "Which answer would be most useful to evaluate the argument?",
+          options: [
+            "Whether students in comparable departments attended office hours more often after online scheduling was introduced",
+            "Whether the department chair prefers remote work",
+            "Whether office doors are clearly labeled",
+            "Whether some students enjoy in-person conversation",
+          ],
+          answer: 0,
+          explanation:
+            "The deciding issue is whether the online format actually increases attendance in comparable circumstances.",
+        },
+        {
+          prompt:
+            "A bookstore owner claims that adding a cafe will increase book sales because customers will stay longer in the store.",
+          question: "Which question is most important to answer in evaluating the argument?",
+          options: [
+            "Do customers who stay longer in similar stores buy more books?",
+            "Are cafes expensive to maintain?",
+            "Does the owner like coffee?",
+            "How many tables can fit near the windows?",
+          ],
+          answer: 0,
+          explanation:
+            "The argument rises or falls on whether longer customer visits actually translate into more book sales.",
+        },
+      ],
+    },
+    {
+      family: "Resolve / Explain",
+      section: "LR",
+      lessonId: "lr-principle-evaluate-resolve",
+      trapPattern: "Restates one side of the paradox instead of reconciling both",
+      timingTarget: 86,
+      stems: [
+        {
+          prompt:
+            "A neighborhood market lowered prices on fresh produce, yet produce sales remained flat while overall store traffic increased.",
+          question: "Which answer best resolves the apparent discrepancy?",
+          options: [
+            "The market reduced produce prices mainly on items that were already selling poorly",
+            "Some customers enjoy visiting neighborhood markets",
+            "Other stores in the area also sell produce",
+            "Fresh produce can spoil quickly if unsold",
+          ],
+          answer: 0,
+          explanation:
+            "If the price cuts were concentrated on weak sellers, store traffic could rise without total produce sales rising much.",
+        },
+        {
+          prompt:
+            "A professor's lectures became shorter this semester, but students report spending more time taking notes than before.",
+          question: "Which answer most helps explain the result?",
+          options: [
+            "The professor now presents denser slides and pauses less often for repetition",
+            "Students prefer lectures to textbooks",
+            "The semester began during unusually cold weather",
+            "Some students sit closer to the front than others",
+          ],
+          answer: 0,
+          explanation:
+            "Shorter lectures can still generate more note-taking if the information is delivered more densely.",
+        },
+      ],
+    },
+    {
+      family: "Principle",
+      section: "LR",
+      lessonId: "lr-principle-evaluate-resolve",
+      trapPattern: "Chooses a broad slogan instead of the argument's rule",
+      timingTarget: 84,
+      stems: [
+        {
+          prompt:
+            "An editor argues that anonymous sources should be used only when the information is highly important and cannot be obtained otherwise.",
+          question: "Which principle most justifies the editor's reasoning?",
+          options: [
+            "Risky reporting tools are justified only when the value of the information outweighs the costs and no safer alternative is available",
+            "Anonymous sources are usually unreliable",
+            "Editors should always trust experienced reporters",
+            "Important information should be published immediately",
+          ],
+          answer: 0,
+          explanation:
+            "The correct principle mirrors the argument's exact balancing rule and its insistence on no better alternative.",
+        },
+        {
+          prompt:
+            "A committee recommends funding school repairs before building a new sports complex because unsafe classrooms should be addressed before nonessential upgrades.",
+          question: "Which principle most supports the committee's recommendation?",
+          options: [
+            "When resources are limited, urgent safety needs should take priority over desirable but nonessential improvements",
+            "Sports complexes are too expensive for schools",
+            "Committees should avoid controversial decisions",
+            "Older buildings are always inefficient",
+          ],
+          answer: 0,
+          explanation:
+            "The committee's recommendation depends on prioritizing urgent safety needs over less essential improvements.",
+        },
+      ],
+    },
+    {
+      family: "Parallel Flaw",
+      section: "LR",
+      lessonId: "lr-provable-parallel",
+      trapPattern: "Matches topic similarity instead of reasoning form",
+      timingTarget: 92,
+      stems: [
+        {
+          prompt:
+            "Argument: If a policy is fair, it treats similar cases similarly. This policy treats similar cases similarly, so it is fair.",
+          question: "Which argument is flawed in the most similar way?",
+          options: [
+            "If a food is nutritious, it contains vitamins. This soup contains vitamins, so it is nutritious.",
+            "If an engine is defective, it makes noise. This engine is defective, so it makes noise.",
+            "If a player practices, performance often improves. This player practiced, so performance improved.",
+            "If a law is unconstitutional, courts may strike it down. Courts struck this law down, so it was unconstitutional.",
+          ],
+          answer: 0,
+          explanation:
+            "Both arguments treat a necessary condition as if it were sufficient.",
+        },
+        {
+          prompt:
+            "Argument: One customer disliked the tutoring program, so the program must be ineffective for students generally.",
+          question: "Which argument uses the same flawed pattern?",
+          options: [
+            "One commuter found the tram inconvenient, so the tram system will not help the city overall",
+            "Several students improved after tutoring, so the program helped them",
+            "A few restaurants raised prices after inflation increased",
+            "One coach prefers shorter practices to longer ones",
+          ],
+          answer: 0,
+          explanation:
+            "Both arguments overgeneralize from a single case to a broad conclusion.",
+        },
+      ],
+    },
+    {
+      family: "Point at Issue",
+      section: "LR",
+      lessonId: "lr-provable-parallel",
+      trapPattern: "Picks a claim only one speaker mentions",
+      timingTarget: 88,
+      stems: [
+        {
+          prompt:
+            "Speaker 1: The city should extend library hours because evening demand is rising. Speaker 2: Rising evening demand does not justify the cost because most branches are already underused during current hours.",
+          question: "The speakers disagree over whether",
+          options: [
+            "rising evening demand is sufficient reason to extend library hours",
+            "libraries lend books",
+            "some branches are underused during current hours",
+            "cities should have public libraries at all",
+          ],
+          answer: 0,
+          explanation:
+            "Speaker 1 says yes, while Speaker 2 says the demand does not justify the cost.",
+        },
+        {
+          prompt:
+            "Speaker 1: The student newspaper should publish unsigned editorials only rarely. Speaker 2: Unsigned editorials are acceptable whenever they reflect the staff's majority view.",
+          question: "The point at issue between the speakers is whether",
+          options: [
+            "unsigned editorials are acceptable whenever they represent the staff majority",
+            "student newspapers exist on college campuses",
+            "editorials are a form of opinion writing",
+            "staff members sometimes disagree with one another",
+          ],
+          answer: 0,
+          explanation:
+            "Speaker 2 endorses that broader condition while Speaker 1's 'only rarely' position rejects it.",
+        },
+      ],
+    },
   ];
 
   families.forEach((group) => {
@@ -403,6 +699,513 @@ function createQuestionBank() {
 }
 
 const QUESTION_BANK = createQuestionBank();
+
+const QUESTION_TYPE_LESSONS = [
+  {
+    id: "qt-rc-structure",
+    family: "RC Structure",
+    section: "RC",
+    sourceTags: ["PowerScore RC", "LSAT Trainer"],
+    title: "RC Structure",
+    summary: "Learn to read passages by movement, not by detail accumulation.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Structure breakdown",
+      focus: "Paragraph jobs, viewpoint shifts, and passage shape.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Solve + trap answers",
+      focus: "How to spot topic-only answers and fake summaries.",
+    },
+    method: [
+      "Read paragraph by paragraph and give each paragraph a job label.",
+      "Track whether the author is presenting a view, attacking it, or refining it.",
+      "Choose answers that describe the passage's movement, not just its topic.",
+    ],
+    traps: [
+      "Topic-only summary",
+      "Detail from one paragraph treated like the whole passage",
+      "Neutral description when the author clearly takes a side",
+    ],
+  },
+  {
+    id: "qt-rc-inference",
+    family: "RC Inference",
+    section: "RC",
+    sourceTags: ["PowerScore RC", "LSAT Trainer"],
+    title: "RC Inference",
+    summary: "Train yourself to choose only what the passage actually forces.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Inference control",
+      focus: "How to stay modest and evidence-bound.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Trap answers and overreach",
+      focus: "How strong wording turns tempting answers into wrong answers.",
+    },
+    method: [
+      "Locate the line or paragraph that supports the answer.",
+      "Check force words like all, always, only, best, and reject unnecessary strength.",
+      "Prefer the answer the author is forced to accept, not the answer that sounds insightful.",
+    ],
+    traps: [
+      "Strong wording beyond the passage",
+      "Outside knowledge disguised as inference",
+      "Author would agree vs passage proves",
+    ],
+  },
+  {
+    id: "qt-rc-attitude",
+    family: "RC Attitude",
+    section: "RC",
+    sourceTags: ["PowerScore RC"],
+    title: "RC Attitude",
+    summary: "Read tone precisely so you stop confusing qualified praise, skepticism, and neutrality.",
+    step1Video: {
+      runtime: "5 min",
+      title: "Video 1: Tone language",
+      focus: "How descriptive words reveal respect, skepticism, or criticism.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Tone traps",
+      focus: "How balanced or extreme answer choices distort the author's attitude.",
+    },
+    method: [
+      "Mark value-loaded adjectives and adverbs.",
+      "Translate tone into plain English before checking choices.",
+      "Reject answers more positive or negative than the actual wording.",
+    ],
+    traps: [
+      "Extreme tone",
+      "Neutral answer when the author is clearly skeptical",
+      "Hostility where the author only shows qualified doubt",
+    ],
+  },
+  {
+    id: "qt-rc-function",
+    family: "RC Function",
+    section: "RC",
+    sourceTags: ["PowerScore RC"],
+    title: "RC Function",
+    summary: "Figure out why a sentence or paragraph is there, not just what it says.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Function over content",
+      focus: "Examples, concessions, pivots, support, and rival views.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Function traps",
+      focus: "How to avoid confusing content description with structural role.",
+    },
+    method: [
+      "Ask what job the line or paragraph does for the larger passage.",
+      "Connect the local detail back to the author's broader mission.",
+      "Choose role language like support, challenge, illustrate, qualify, or contrast.",
+    ],
+    traps: [
+      "Repeats the content but not the function",
+      "Mistakes example for conclusion",
+      "Treats setup as author's final view",
+    ],
+  },
+  {
+    id: "qt-rc-main-point",
+    family: "RC Main Point",
+    section: "RC",
+    sourceTags: ["PowerScore RC", "LSAT Trainer"],
+    title: "RC Main Point",
+    summary: "Compress the entire passage into the author's real mission.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Passage mission",
+      focus: "How to locate the author's overall objective.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Main-point traps",
+      focus: "How detail-heavy answers and topic summaries mislead you.",
+    },
+    method: [
+      "Ask what the author is doing after all the setup and competing viewpoints.",
+      "Prefer answers broad enough to cover the full passage but narrow enough to stay accurate.",
+      "Reject answers that capture only one paragraph or one supporting detail.",
+    ],
+    traps: [
+      "Major detail mistaken for main point",
+      "Too broad summary",
+      "Topic label without author's mission",
+    ],
+  },
+  {
+    id: "qt-lr-flaw",
+    family: "Flaw",
+    section: "LR",
+    sourceTags: ["The Loophole", "PowerScore LR"],
+    title: "Flaw",
+    summary: "Recognize recurring reasoning errors so you can name the break before reading choices.",
+    step1Video: {
+      runtime: "7 min",
+      title: "Video 1: Flaw pattern library",
+      focus: "Causation, sampling, overgeneralization, and force shifts.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Trap answer wording",
+      focus: "How answer choices describe flaws abstractly and why topic words distract you.",
+    },
+    method: [
+      "State the conclusion and the support first.",
+      "Say in plain English why the support does not get you to the conclusion.",
+      "Then match that idea to the answer choice language.",
+    ],
+    traps: [
+      "Topic-focused answer",
+      "Abstract flaw label you cannot explain",
+      "Answer that sounds logical but does not match the actual break",
+    ],
+  },
+  {
+    id: "qt-lr-assumption",
+    family: "Assumption",
+    section: "LR",
+    sourceTags: ["The Loophole", "PowerScore LR"],
+    title: "Assumption",
+    summary: "Find the missing bridge the author must believe for the argument to work.",
+    step1Video: {
+      runtime: "7 min",
+      title: "Video 1: Find the bridge",
+      focus: "How to phrase the hidden link in plain English.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Necessary-assumption traps",
+      focus: "Helpful vs required answers and how negation exposes the difference.",
+    },
+    method: [
+      "Identify the conclusion and the last unsupported jump.",
+      "Finish the sentence: this argument assumes that...",
+      "Use negation to test whether the answer is truly required.",
+    ],
+    traps: [
+      "Helpful but unnecessary fact",
+      "Background fact about the topic",
+      "Answer stronger than the argument needs",
+    ],
+  },
+  {
+    id: "qt-lr-strengthen",
+    family: "Strengthen",
+    section: "LR",
+    sourceTags: ["The Loophole", "PowerScore LR"],
+    title: "Strengthen",
+    summary: "Repair the exact bridge the argument depends on.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Strengthen the gap",
+      focus: "How to prephrase the right kind of support before reading answers.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Strengthen traps",
+      focus: "Why relevant facts often do nothing to the argument.",
+    },
+    method: [
+      "Name the loophole before looking at the options.",
+      "Ask which answer most directly makes the bridge more believable.",
+      "Reject answers that are true-sounding but do not help the conclusion.",
+    ],
+    traps: [
+      "Topical but irrelevant fact",
+      "Support for a premise instead of the conclusion",
+      "Answer that only sounds good emotionally",
+    ],
+  },
+  {
+    id: "qt-lr-weaken",
+    family: "Weaken",
+    section: "LR",
+    sourceTags: ["The Loophole", "PowerScore LR"],
+    title: "Weaken",
+    summary: "Attack the exact point where the argument is most vulnerable.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Attack the bridge",
+      focus: "How to identify the specific jump to undermine.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Weaken traps",
+      focus: "How to distinguish direct weakening from mere disagreement with the topic.",
+    },
+    method: [
+      "Prephrase the loophole first.",
+      "Look for an answer that introduces an alternate cause, downside, or missing comparison.",
+      "Reject answers that criticize the topic without damaging the reasoning.",
+    ],
+    traps: [
+      "Opinionated but logically weak answer",
+      "Attacks a premise the conclusion does not need",
+      "Misses the exact bridge",
+    ],
+  },
+  {
+    id: "qt-lr-conditional",
+    family: "Conditional Logic",
+    section: "LR",
+    sourceTags: ["The Loophole", "PowerScore LR"],
+    title: "Conditional Logic",
+    summary: "Control if, only if, unless, and chained rules without reversing them.",
+    step1Video: {
+      runtime: "7 min",
+      title: "Video 1: Rule translation",
+      focus: "Sufficient and necessary conditions, contrapositives, and chaining.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Logic traps",
+      focus: "Reversal, negation, and forcing certainty where the rule does not allow it.",
+    },
+    method: [
+      "Translate the rule accurately before making inferences.",
+      "State or diagram the contrapositive.",
+      "Reject any answer that walks backward through the arrow without justification.",
+    ],
+    traps: [
+      "Reversal",
+      "Negation error",
+      "Overstating what the rule guarantees",
+    ],
+  },
+  {
+    id: "qt-lr-main-point",
+    family: "Main Point",
+    section: "LR",
+    sourceTags: ["LSAT Trainer", "PowerScore LR"],
+    title: "Main Point",
+    summary: "Find the conclusion the argument is actually trying to prove.",
+    step1Video: {
+      runtime: "5 min",
+      title: "Video 1: Conclusion hunting",
+      focus: "How to distinguish support from the sentence being supported.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Main-point traps",
+      focus: "Why vivid premises and background details feel tempting.",
+    },
+    method: [
+      "Ask which statement the rest of the argument is there to support.",
+      "Treat premise indicators as clues, not crutches.",
+      "Reject answers that merely restate evidence.",
+    ],
+    traps: [
+      "Premise instead of conclusion",
+      "Background detail instead of main point",
+      "Too broad policy summary",
+    ],
+  },
+  {
+    id: "qt-lr-method-role",
+    family: "Role / Method / Technique",
+    section: "LR",
+    sourceTags: ["LSAT Trainer", "PowerScore LR"],
+    title: "Role / Method / Technique",
+    summary: "Track sentence jobs and reasoning moves so structure questions become mechanical.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Sentence jobs",
+      focus: "Premise, conclusion, concession, example, and dialogue moves.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Method traps",
+      focus: "Why content familiarity does not tell you role or method.",
+    },
+    method: [
+      "Label what each sentence is doing before reading the answers.",
+      "In dialogue questions, identify how the second speaker treats the first speaker's claim.",
+      "Translate abstract answer wording into a plain-English job description.",
+    ],
+    traps: [
+      "Content description instead of role",
+      "Confusing example with conclusion",
+      "Missing concession or qualification",
+    ],
+  },
+  {
+    id: "qt-lr-mbt",
+    family: "Must Be True",
+    section: "LR",
+    sourceTags: ["PowerScore LR"],
+    title: "Must Be True",
+    summary: "Choose only what the stimulus forces and nothing stronger.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Provable discipline",
+      focus: "How to stay text-bound on inference questions.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Overstatement traps",
+      focus: "Why stronger-sounding answers often lose on provable questions.",
+    },
+    method: [
+      "Use only the stimulus, not outside common sense.",
+      "Prefer modest language that is fully earned.",
+      "Reject answers that require one extra assumption.",
+    ],
+    traps: [
+      "Too strong",
+      "Could be true but not must be true",
+      "Outside-knowledge answer",
+    ],
+  },
+  {
+    id: "qt-lr-evaluate",
+    family: "Evaluate",
+    section: "LR",
+    sourceTags: ["PowerScore LR"],
+    title: "Evaluate",
+    summary: "Find the hinge question whose answer would help either side.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Find the hinge",
+      focus: "How to isolate the one fact that would actually decide the argument.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Evaluate traps",
+      focus: "Relevant facts vs deciding facts.",
+    },
+    method: [
+      "Ask what the argument needs to know next.",
+      "Pick a question whose yes and no answers would matter in opposite ways.",
+      "Reject facts that are merely relevant but not decisive.",
+    ],
+    traps: [
+      "Relevant but not decisive",
+      "Background fact",
+      "One-sided answer that helps only one direction",
+    ],
+  },
+  {
+    id: "qt-lr-resolve",
+    family: "Resolve / Explain",
+    section: "LR",
+    sourceTags: ["PowerScore LR", "The Loophole"],
+    title: "Resolve / Explain",
+    summary: "Explain how both surprising facts can be true at the same time.",
+    step1Video: {
+      runtime: "5 min",
+      title: "Video 1: Reconcile both sides",
+      focus: "How to keep both facts alive while finding the hidden condition.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Paradox traps",
+      focus: "Why restating one side or choosing a new mystery does not resolve the paradox.",
+    },
+    method: [
+      "Keep both facts fixed and look for a missing condition.",
+      "Prefer answers that make the two facts fit together.",
+      "Reject answers that explain only one side or make the paradox worse.",
+    ],
+    traps: [
+      "Explains only one fact",
+      "Restates the discrepancy",
+      "Introduces a fresh problem instead of resolving the old one",
+    ],
+  },
+  {
+    id: "qt-lr-principle",
+    family: "Principle",
+    section: "LR",
+    sourceTags: ["PowerScore LR"],
+    title: "Principle",
+    summary: "Match the argument to the exact rule that would justify or apply its logic.",
+    step1Video: {
+      runtime: "6 min",
+      title: "Video 1: Abstract the rule",
+      focus: "How to turn an argument into its hidden principle.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Principle traps",
+      focus: "Broad slogans vs the actual decision rule used by the argument.",
+    },
+    method: [
+      "State the argument's rule in plain English before reading answers.",
+      "Match the answer to the exact burden and comparison in the stimulus.",
+      "Reject answers that are generally attractive but structurally off.",
+    ],
+    traps: [
+      "Pretty slogan",
+      "Too broad moral statement",
+      "Correct topic, wrong rule",
+    ],
+  },
+  {
+    id: "qt-lr-parallel-flaw",
+    family: "Parallel Flaw",
+    section: "LR",
+    sourceTags: ["PowerScore LR"],
+    title: "Parallel Flaw",
+    summary: "Match arguments by flawed reasoning skeleton, not by topic.",
+    step1Video: {
+      runtime: "7 min",
+      title: "Video 1: Strip the topic",
+      focus: "How to reduce the original argument to its bare flawed form.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Match-form traps",
+      focus: "Why topic similarity and strong language distract from the real pattern.",
+    },
+    method: [
+      "Identify the exact flaw in the original argument first.",
+      "Reduce it to a bare form or variable pattern.",
+      "Ignore topic overlap unless the logic also matches.",
+    ],
+    traps: [
+      "Topic lookalike",
+      "Similar conclusion type, different flaw",
+      "Correct flaw family but wrong force or structure",
+    ],
+  },
+  {
+    id: "qt-lr-poi",
+    family: "Point at Issue",
+    section: "LR",
+    sourceTags: ["PowerScore LR", "LSAT Trainer"],
+    title: "Point at Issue",
+    summary: "Find the claim one speaker would accept and the other would reject.",
+    step1Video: {
+      runtime: "5 min",
+      title: "Video 1: Find the disagreement",
+      focus: "How to test whether each answer gets a yes from one side and a no from the other.",
+    },
+    step2Video: {
+      runtime: "5 min",
+      title: "Video 2: Dialogue traps",
+      focus: "Why claims mentioned by only one speaker are wrong.",
+    },
+    method: [
+      "Treat each answer as a yes/no test.",
+      "Ask what Speaker 1 says and what Speaker 2 says about that exact claim.",
+      "Reject any answer that one speaker never actually addresses.",
+    ],
+    traps: [
+      "Mentioned by only one speaker",
+      "Both speakers would agree",
+      "Both speakers would reject",
+    ],
+  },
+];
 
 window.JESSI_PREPS_DATA = {
   appMeta: {
@@ -452,6 +1255,7 @@ window.JESSI_PREPS_DATA = {
     "I still freeze on RC attitude questions when two answers sound balanced.",
     "I rush through weaken questions before naming the exact gap.",
   ],
+  questionTypeLessons: QUESTION_TYPE_LESSONS,
   lessons: [
     {
       id: "rc-structure-map",
@@ -508,7 +1312,7 @@ window.JESSI_PREPS_DATA = {
       statusLabel: "RC advanced",
       masteryThreshold: 3,
       linkedQuestionFamilies: ["RC Structure", "RC Attitude"],
-      nextLessonId: "lr-argument-core",
+      nextLessonId: "rc-function-main-point",
       scenes: [
         { type: "concept", title: "Two voices, one task", explanation: "Comparative RC is about the relationship between passages, not two isolated summaries.", storyboard: "Common ground / disagreement / tone.", actionCue: "State the overlap before details." },
         { type: "worked-example", title: "Comparison map", explanation: "Passage A values speed; Passage B values accuracy. The relationship is tension, not contradiction on every point.", storyboard: "A: efficiency. B: caution.", actionCue: "Name the axis of disagreement." },
@@ -521,6 +1325,29 @@ window.JESSI_PREPS_DATA = {
         reasoning: "The passages are not fully opposed. B qualifies the conditions under which A's benefit is reliable.",
       },
       trapExplanation: "Answers that describe total disagreement often ignore the qualifying language in one of the passages.",
+    },
+    {
+      id: "rc-function-main-point",
+      title: "RC Function and Main Point",
+      track: "RC Advanced",
+      sourceTags: ["PowerScore RC", "LSAT Trainer"],
+      summary: "Move from paragraph maps to function and main-point control so RC questions feel structurally predictable.",
+      statusLabel: "RC capstone",
+      masteryThreshold: 3,
+      linkedQuestionFamilies: ["RC Function", "RC Main Point"],
+      nextLessonId: "lr-argument-core",
+      scenes: [
+        { type: "concept", title: "Paragraph job first", explanation: "Function questions ask what the author made a paragraph do, not what the paragraph happened to mention.", storyboard: "Example, challenge, concession, support, or pivot.", actionCue: "Label the job before the content." },
+        { type: "worked-example", title: "Main point compression", explanation: "The main point is the passage's mission after all the setup, not the most interesting detail along the way.", storyboard: "Setup -> tension -> author's move.", actionCue: "Ask what the whole passage was trying to earn." },
+        { type: "trap", title: "Detail trap", explanation: "A detailed statement can be important and still be only evidence for the larger mission.", storyboard: "Important detail is not the whole point.", actionCue: "Reject answers that sound too local." },
+        { type: "recap", title: "Fast RC control", explanation: "If you know each paragraph's job and the author's mission, most RC stems become location questions instead of mystery questions.", storyboard: "Job map + mission = control.", actionCue: "Summarize each passage in one sentence." },
+        { type: "next-step", title: "Transition to LR", explanation: "You now have a full RC foundation. Next comes LR structure and gaps.", storyboard: "RC map complete -> LR anatomy.", actionCue: "Open Argument Core." },
+      ],
+      workedExample: {
+        prompt: "A passage gives two failed experiments before proposing a narrower theory.",
+        reasoning: "Those failed experiments are not the main point. Their function is to motivate why the narrower theory is needed.",
+      },
+      trapExplanation: "A tempting wrong answer often repeats a vivid detail from the middle of the passage rather than the author's final mission.",
     },
     {
       id: "lr-argument-core",
@@ -669,7 +1496,7 @@ window.JESSI_PREPS_DATA = {
       statusLabel: "Flagship finisher",
       masteryThreshold: 3,
       linkedQuestionFamilies: ["Assumption", "Strengthen", "Role / Method / Technique"],
-      nextLessonId: null,
+      nextLessonId: "lr-provable-parallel",
       scenes: [
         { type: "concept", title: "Same core, new clothing", explanation: "Principle questions want the rule behind the reasoning. Evaluate questions want the fact that would decide the argument. Resolve questions want the fact that removes the tension.", storyboard: "Rule / decider / reconciler.", actionCue: "Classify the family before the answers." },
         { type: "worked-example", title: "Evaluate decider", explanation: "If the dispute is about whether commuters would switch, the right evaluate answer asks whether they actually would.", storyboard: "A fact that matters either way.", actionCue: "Find the hinge issue." },
@@ -683,6 +1510,29 @@ window.JESSI_PREPS_DATA = {
       },
       trapExplanation: "Broad rules about the value of student well-being may sound good but do not necessarily decide the specific dispute.",
     },
+    {
+      id: "lr-provable-parallel",
+      title: "Provable, Parallel, and Point at Issue",
+      track: "LR Advanced",
+      sourceTags: ["PowerScore LR", "LSAT Trainer"],
+      summary: "Finish the LR sequence with tighter provable-question discipline and better pattern matching on parallel and dialogue questions.",
+      statusLabel: "LR capstone",
+      masteryThreshold: 3,
+      linkedQuestionFamilies: ["Must Be True", "Parallel Flaw", "Point at Issue"],
+      nextLessonId: null,
+      scenes: [
+        { type: "concept", title: "Provable means modest", explanation: "Must-be-true and most-strongly-supported questions reward the answer that the stimulus fully earns, not the one that sounds most ambitious.", storyboard: "Text first, force second.", actionCue: "Check whether the wording is stronger than the evidence." },
+        { type: "worked-example", title: "Parallel by skeleton", explanation: "Parallel questions are solved by matching reasoning form and force, not by matching subject matter.", storyboard: "Strip the topic, keep the logic.", actionCue: "Reduce the original argument to a bare pattern." },
+        { type: "trap", title: "Dialogue miss", explanation: "Point-at-issue questions are missed when you choose a claim mentioned by only one speaker instead of a claim one affirms and the other denies.", storyboard: "Need yes/no opposition.", actionCue: "Test each choice for disagreement on both sides." },
+        { type: "recap", title: "Final LR discipline", explanation: "Strong language, topic similarity, and one-sided dialogue answers are the usual traps here.", storyboard: "Force, form, and true disagreement.", actionCue: "Run the three-check list before selecting." },
+        { type: "next-step", title: "Mixed review", explanation: "You are ready for broader mixed drills, realistic timed sets, and analytics-driven review.", storyboard: "Advanced LR -> mixed sets.", actionCue: "Jump to Practice." },
+      ],
+      workedExample: {
+        prompt: "If all approved proposals included cost estimates and this proposal was approved, what follows?",
+        reasoning: "The provable answer is only that this proposal included a cost estimate. Anything stronger goes beyond the text.",
+      },
+      trapExplanation: "Parallel-flaw questions love topic lookalikes that do not commit the same logical mistake, and dialogue questions love claims only one speaker ever mentions.",
+    },
   ],
   questionBank: QUESTION_BANK,
   drillPresets: [
@@ -690,6 +1540,8 @@ window.JESSI_PREPS_DATA = {
     { id: "gap-work", title: "Gap Spotting", section: "LR", families: ["Assumption", "Strengthen", "Weaken"], count: 5, rationale: "Train the bridge between support and conclusion." },
     { id: "logic-control", title: "Formal Logic Control", section: "LR", families: ["Conditional Logic"], count: 5, rationale: "Reduce reversal and contrapositive mistakes." },
     { id: "mixed-timed", title: "Mixed Timed Five", section: "Mixed", families: ["Flaw", "Assumption", "Strengthen", "Weaken", "RC Structure"], count: 5, rationale: "A fast realistic section slice with mixed reasoning demands." },
+    { id: "rc-depth", title: "RC Main Point + Function", section: "RC", families: ["RC Function", "RC Main Point", "RC Attitude"], count: 6, rationale: "Deepen passage-map payoff with function and main-point control." },
+    { id: "advanced-lr", title: "Advanced LR Families", section: "LR", families: ["Evaluate", "Resolve / Explain", "Principle", "Parallel Flaw", "Point at Issue", "Must Be True"], count: 6, rationale: "Widen coverage into the families that often feel abstract late in prep." },
   ],
   analyticsSnapshots: {
     strongestFamily: "RC Structure",

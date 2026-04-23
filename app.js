@@ -8,6 +8,8 @@ const routeEyebrow = document.querySelector("#routeEyebrow");
 const routeTitle = document.querySelector("#routeTitle");
 const heroMount = document.querySelector("#heroMount");
 const pageMount = document.querySelector("#pageMount");
+let lessonPlaybackTimer = null;
+let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 
 const state = loadState();
 
@@ -25,6 +27,7 @@ function defaultState() {
   return {
     settings: Object.fromEntries(data.settings.map((item) => [item.id, false])),
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
+    questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0 }])),
     attempts: {},
     journal: [],
     support: [...data.supportEntries],
@@ -43,6 +46,7 @@ function loadState() {
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings || {}) },
       lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
+      questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
       attempts: parsed.attempts || {},
       journal: parsed.journal || [],
       support: parsed.support || base.support,
@@ -82,6 +86,53 @@ function nextLesson() {
 
 function questionsForLesson(lessonId) {
   return data.questionBank.filter((question) => question.lessonIds.includes(lessonId)).slice(0, 5);
+}
+
+function findQuestionTypeLesson(id) {
+  return (data.questionTypeLessons || []).find((lesson) => lesson.id === id);
+}
+
+function familyQuestions(family) {
+  return data.questionBank.filter((question) => question.family === family);
+}
+
+function familyAttempts(family) {
+  return familyQuestions(family).filter((question) => state.attempts[question.id]);
+}
+
+function familyTrapSummary(family) {
+  const misses = state.journal.filter((entry) => entry.family === family);
+  if (!misses.length) return "No misses logged yet. Use the guided questions first so the system can detect trap patterns.";
+  const grouped = misses.reduce((acc, entry) => {
+    acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
+    return acc;
+  }, {});
+  const top = Object.entries(grouped).sort((a, b) => b[1] - a[1])[0];
+  return `Most common trap so far: ${top[0]} (${top[1]} miss${top[1] > 1 ? "es" : ""}).`;
+}
+
+function buildMissAnalysis(question) {
+  const templates = {
+    "RC Structure": "You likely tracked topic instead of passage movement. Slow down and label paragraph jobs before choosing.",
+    "RC Inference": "You likely picked an answer stronger than the passage proved. Recheck force words and stay modest.",
+    "RC Attitude": "You likely misread the author's tone. Translate the attitude into plain English before looking at choices.",
+    "RC Function": "You likely described content instead of function. Ask why the paragraph is there.",
+    "RC Main Point": "You likely chose a vivid detail over the passage mission. Ask what the whole passage was trying to do.",
+    Flaw: "You likely saw the topic but not the actual reasoning break. Say the flaw in ordinary language first.",
+    Assumption: "You likely chose something helpful but not required. Negate the answer and see whether the argument collapses.",
+    Strengthen: "You likely chose a relevant fact that did not repair the exact gap. Name the bridge before reading choices.",
+    Weaken: "You likely attacked the topic instead of the bridge. Ask what specific leap the author is making.",
+    "Conditional Logic": "You likely reversed or overread the rule. Rebuild the conditional and then test the contrapositive.",
+    "Main Point": "You likely selected support instead of the conclusion. Ask what the author was trying to prove.",
+    "Role / Method / Technique": "You likely focused on wording rather than sentence job. Label the role before checking answers.",
+    "Must Be True": "You likely chose something plausible but too strong. Pick only what the stimulus fully forces.",
+    Evaluate: "You likely chose a relevant fact instead of the hinge issue. Ask what answer would matter either way.",
+    "Resolve / Explain": "You likely explained one side of the paradox but not both. Keep both facts true and reconcile them.",
+    Principle: "You likely chose a good-sounding slogan instead of the exact decision rule the argument uses.",
+    "Parallel Flaw": "You likely matched topic instead of logic. Strip the subject matter and compare bare reasoning form.",
+    "Point at Issue": "You likely chose a claim only one speaker addressed. Test each answer as a yes/no disagreement.",
+  };
+  return templates[question.family] || "You likely missed the exact reasoning task. Slow down, classify the family, and name the bridge or burden before answering.";
 }
 
 function routeInfo() {
@@ -159,13 +210,15 @@ function renderToday() {
 function renderRouteMeta(route) {
   const nav = data.navigation.find((item) => item.route === route.page) || data.navigation[0];
   routeEyebrow.textContent = nav.eyebrow;
+  const questionTypeLesson = route.id ? findQuestionTypeLesson(route.id) : null;
   routeTitle.textContent =
     route.page === "learn" && route.id && route.subtype !== "content"
-      ? (data.lessons.find((lesson) => lesson.id === route.id) || {}).title || "Learn"
+      ? questionTypeLesson?.title || (data.lessons.find((lesson) => lesson.id === route.id) || {}).title || "Learn"
       : nav.label;
 }
 
 function renderPage(route) {
+  stopLessonPlayback();
   heroMount.innerHTML = route.page === "dashboard" ? renderDashboardHero() : "";
   const pageRenderers = {
     dashboard: renderDashboardPage,
@@ -254,6 +307,10 @@ function renderDashboardPage() {
 }
 
 function renderLearnPage(route) {
+  const questionTypeLesson = route.id ? findQuestionTypeLesson(route.id) : null;
+  if (questionTypeLesson) {
+    return renderQuestionTypeLesson(questionTypeLesson);
+  }
   if (route.id && route.id !== "content") {
     const lesson = data.lessons.find((item) => item.id === route.id) || nextLesson();
     return renderLessonPlayer(lesson);
@@ -284,12 +341,79 @@ function renderLearnPage(route) {
       </div>
       <p>Frameworks here are designed to turn misses into reusable rules: structure before detail, bridge before answer choice, and trap pattern before retry.</p>
     </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Question-Type Academy</h3>
+      </div>
+      <p>Each question family now has a 4-step lesson path: two video modules, guided method questions, and a mastery drill with trap analysis.</p>
+      <div class="card-grid card-grid--three">
+        ${(data.questionTypeLessons || [])
+          .map(
+            (lesson) => `
+              <a class="lesson-card" href="#/learn/${lesson.id}">
+                <p class="mini-card__label">${lesson.section} · ${lesson.family}</p>
+                <h4>${lesson.title}</h4>
+                <p>${lesson.summary}</p>
+                <span class="status-pill ${state.questionTypeProgress[lesson.id]?.complete ? "is-done" : ""}">${state.questionTypeProgress[lesson.id]?.complete ? "Completed" : "4-step lesson"}</span>
+              </a>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
   `;
 }
 
+function buildLessonVideo(lesson) {
+  const chapters = [
+    { title: "Concept setup", minutes: 1, seconds: 45, summary: lesson.scenes[0]?.explanation || lesson.summary },
+    { title: "Core framework", minutes: 2, seconds: 70, summary: lesson.scenes[1]?.explanation || lesson.summary },
+    { title: "Worked example", minutes: 2, seconds: 75, summary: lesson.workedExample.reasoning },
+    { title: "Trap answer breakdown", minutes: 1, seconds: 55, summary: lesson.trapExplanation },
+    { title: "Practice launch", minutes: 1, seconds: 45, summary: lesson.scenes[lesson.scenes.length - 1]?.explanation || "Move into mastery practice." },
+  ];
+
+  const runtime = `${chapters.reduce((sum, chapter) => sum + chapter.minutes, 0)} min`;
+  return { runtime, chapters };
+}
+
+function ensureLessonPlayback(lesson) {
+  if (lessonPlaybackState.lessonId !== lesson.id) {
+    lessonPlaybackState = { lessonId: lesson.id, sceneIndex: 0, playing: false };
+  }
+}
+
+function stopLessonPlayback() {
+  if (lessonPlaybackTimer) {
+    clearTimeout(lessonPlaybackTimer);
+    lessonPlaybackTimer = null;
+  }
+  lessonPlaybackState.playing = false;
+}
+
+function scheduleLessonPlayback(lesson) {
+  stopLessonPlayback();
+  if (!lessonPlaybackState.playing) return;
+  const scene = lesson.scenes[lessonPlaybackState.sceneIndex];
+  const duration = scene?.seconds ?? 1800;
+  lessonPlaybackTimer = setTimeout(() => {
+    if (lessonPlaybackState.sceneIndex < lesson.scenes.length - 1) {
+      lessonPlaybackState.sceneIndex += 1;
+      renderApp();
+    } else {
+      stopLessonPlayback();
+      renderApp();
+    }
+  }, duration);
+}
+
 function renderLessonPlayer(lesson) {
+  ensureLessonPlayback(lesson);
   const progress = state.lessonProgress[lesson.id];
   const linkedQuestions = questionsForLesson(lesson.id);
+  const video = buildLessonVideo(lesson);
+  const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
+  const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -297,6 +421,44 @@ function renderLessonPlayer(lesson) {
         <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
       </div>
       <p>${lesson.summary}</p>
+      <section class="lesson-video">
+        <div class="lesson-video__player">
+          <p class="mini-card__label">Video lesson</p>
+          <h4>${lesson.title} in ${video.runtime}</h4>
+          <p>This lesson is structured like a 5-10 minute walkthrough: concept first, then worked example, then trap-answer coaching, then your practice launch.</p>
+          <div class="video-stage">
+            <p class="mini-card__label">Now playing</p>
+            <h4>${activeScene.title}</h4>
+            <p>${activeScene.explanation}</p>
+            <div class="video-stage__story">${activeScene.storyboard}</div>
+            <div class="video-stage__cue">${activeScene.actionCue}</div>
+          </div>
+          <div class="video-controls">
+            <button class="button button--ghost" data-video-nav="prev" ${lessonPlaybackState.sceneIndex === 0 ? "disabled" : ""}>Back</button>
+            <button class="button button--primary" data-video-toggle="true">${lessonPlaybackState.playing ? "Pause lesson" : "Play lesson"}</button>
+            <button class="button button--ghost" data-video-nav="next" ${lessonPlaybackState.sceneIndex === lesson.scenes.length - 1 ? "disabled" : ""}>Next</button>
+          </div>
+          <div class="video-progress">
+            <span style="width:${progressPercent}"></span>
+          </div>
+          <div class="video-timeline">
+            ${video.chapters.map((chapter, index) => `<span class="${index === lessonPlaybackState.sceneIndex ? "is-active" : ""}" style="flex:${chapter.minutes}">${chapter.title}</span>`).join("")}
+          </div>
+        </div>
+        <div class="lesson-video__chapters">
+          ${video.chapters
+            .map(
+              (chapter, index) => `
+                <section class="video-chapter ${index === lessonPlaybackState.sceneIndex ? "is-active" : ""}">
+                  <strong>0${index + 1}. ${chapter.title}</strong>
+                  <span>${chapter.minutes} min</span>
+                  <p>${chapter.summary}</p>
+                </section>
+              `,
+            )
+            .join("")}
+        </div>
+      </section>
       <div class="scene-stack">
         ${lesson.scenes
           .map(
@@ -320,6 +482,12 @@ function renderLessonPlayer(lesson) {
       <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
       <p>${lesson.workedExample.reasoning}</p>
       <p class="microcopy"><strong>Trap pattern:</strong> ${lesson.trapExplanation}</p>
+      <div class="transcript-block">
+        <p class="mini-card__label">Video transcript excerpt</p>
+        <p>Start by naming the core move: ${lesson.scenes[0]?.explanation || lesson.summary}</p>
+        <p>Then walk the learner through the worked example: ${lesson.workedExample.reasoning}</p>
+        <p>Close by warning against the trap: ${lesson.trapExplanation}</p>
+      </div>
     </article>
     <article class="panel">
       <div class="panel__head">
@@ -330,6 +498,128 @@ function renderLessonPlayer(lesson) {
       </div>
       <button class="button button--primary" data-complete-lesson="${lesson.id}" ${progress.masteryWins < lesson.masteryThreshold ? "disabled" : ""}>Pass mastery gate</button>
       <a class="text-link" href="${lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed"}">What to do next</a>
+    </article>
+  `;
+}
+
+function renderQuestionTypeLesson(lesson) {
+  const progress = state.questionTypeProgress[lesson.id];
+  const questions = familyQuestions(lesson.family);
+  const guided = questions.slice(0, 3);
+  const drill = questions.slice(3, 9);
+  const attempts = familyAttempts(lesson.family);
+  const accuracy = attempts.length ? Math.round((attempts.filter((item) => state.attempts[item.id].correct).length / attempts.length) * 100) : 0;
+  return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>${lesson.title}</h3>
+        <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.guidedWins + progress.drillWins} wins logged`}</span>
+      </div>
+      <p>${lesson.summary}</p>
+      <div class="card-grid card-grid--three">
+        <section class="mini-card">
+          <p class="mini-card__label">Family</p>
+          <h4>${lesson.family}</h4>
+          <p>${lesson.section} question type</p>
+        </section>
+        <section class="mini-card">
+          <p class="mini-card__label">Accuracy so far</p>
+          <h4>${accuracy}%</h4>
+          <p>${attempts.length} attempts logged</p>
+        </section>
+        <section class="mini-card">
+          <p class="mini-card__label">Trap pattern</p>
+          <h4>${lesson.traps[0]}</h4>
+          <p>${familyTrapSummary(lesson.family)}</p>
+        </section>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>Step 1. Video Breakdown Lesson</h3>
+        <span class="status-pill">${lesson.step1Video.runtime}</span>
+      </div>
+      <div class="lesson-video__player">
+        <p class="mini-card__label">${lesson.step1Video.title}</p>
+        <h4>${lesson.step1Video.focus}</h4>
+        <p>This first lesson video teaches the core structure of ${lesson.family} questions using the books' methods in original language.</p>
+        <div class="transcript-block">
+          <p>Start by learning the burden of this family: ${lesson.summary}</p>
+          <p>Then break down the reliable pattern: ${lesson.method[0]}</p>
+          <p>End by naming the most dangerous miss: ${lesson.traps[0]}.</p>
+        </div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>Step 2. Solve Method + Trap Answers Video</h3>
+        <span class="status-pill">${lesson.step2Video.runtime}</span>
+      </div>
+      <div class="lesson-video__player">
+        <p class="mini-card__label">${lesson.step2Video.title}</p>
+        <h4>${lesson.step2Video.focus}</h4>
+        <ol class="method-list">
+          ${lesson.method.map((step) => `<li>${step}</li>`).join("")}
+        </ol>
+        <div class="tag-stack">
+          ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
+        </div>
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Step 3. Guided Questions</h3>
+      </div>
+      <p>Answer these by forcing the method, not by guessing. Use the checklist before you choose.</p>
+      <div class="practice-list">
+        ${guided
+          .map(
+            (question) => `
+              <section class="question-card">
+                <p class="mini-card__label">Guided method</p>
+                <div class="transcript-block">
+                  <p><strong>Do this first:</strong> ${lesson.method[0]}</p>
+                  <p><strong>Then do this:</strong> ${lesson.method[1]}</p>
+                  <p><strong>Watch out for:</strong> ${lesson.traps[0]}</p>
+                </div>
+                ${renderQuestionCard(question, "guided")}
+              </section>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Step 4. Mastery Drill</h3>
+      </div>
+      <p>Complete this 5-10 question drill for mastery. The analysis system below updates as you answer.</p>
+      <div class="practice-list">
+        ${drill.map((question) => renderQuestionCard(question, "mastery")).join("")}
+      </div>
+      <button class="button button--primary" data-complete-question-type="${lesson.id}" ${progress.drillWins < 5 ? "disabled" : ""}>Mark question type mastered</button>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Why You Are Missing This Type</h3>
+      </div>
+      <div class="card-grid card-grid--three">
+        <section class="mini-card">
+          <p class="mini-card__label">Recurring trap</p>
+          <h4>${familyTrapSummary(lesson.family)}</h4>
+          <p>This is the trap pattern showing up most often for this family.</p>
+        </section>
+        <section class="mini-card">
+          <p class="mini-card__label">Pattern diagnosis</p>
+          <h4>${lesson.method[0]}</h4>
+          <p>If you skip this step, the wrong answers in ${lesson.family} feel stronger than they are.</p>
+        </section>
+        <section class="mini-card">
+          <p class="mini-card__label">Fix next</p>
+          <h4>${lesson.method[2]}</h4>
+          <p>That is the move the system wants you to repeat until accuracy stabilizes.</p>
+        </section>
+      </div>
     </article>
   `;
 }
@@ -429,6 +719,11 @@ function renderPracticePage(route) {
 
 function renderReviewPage() {
   const weak = weakestFamily();
+  const trapGroups = state.journal.reduce((acc, entry) => {
+    acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
+    return acc;
+  }, {});
+  const topTraps = Object.entries(trapGroups).sort((a, b) => b[1] - a[1]).slice(0, 3);
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -460,6 +755,27 @@ function renderReviewPage() {
                 )
                 .join("")
             : `<p class="muted">No journal entries yet. Miss a question and it will appear here automatically.</p>`
+        }
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>Trap Analysis</h3>
+      </div>
+      <div class="journal-list">
+        ${
+          topTraps.length
+            ? topTraps
+                .map(
+                  ([trap, count]) => `
+                    <section class="journal-card">
+                      <strong>${trap}</strong>
+                      <p>${count} miss${count > 1 ? "es" : ""} logged. This pattern is costing you points because you are over-trusting the wrong answer shape before fully naming the task.</p>
+                    </section>
+                  `,
+                )
+                .join("")
+            : `<p class="muted">No recurring trap data yet. Guided lessons and mastery drills will build this analysis.</p>`
         }
       </div>
     </article>
@@ -561,7 +877,7 @@ function renderQuestionCard(question, context) {
 
 function wireInteractions(route) {
   pageMount.querySelectorAll("[data-question]").forEach((button) => {
-    button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice)));
+    button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
   });
 
   pageMount.querySelectorAll("[data-complete-lesson]").forEach((button) => {
@@ -573,6 +889,37 @@ function wireInteractions(route) {
       location.hash = lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed";
     });
   });
+
+  pageMount.querySelectorAll("[data-complete-question-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.completeQuestionType;
+      state.questionTypeProgress[lessonId].complete = true;
+      saveState();
+      renderApp();
+    });
+  });
+
+  if (route.page === "learn" && route.id && route.id !== "content") {
+    const lesson = data.lessons.find((item) => item.id === route.id);
+    pageMount.querySelectorAll("[data-video-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        lessonPlaybackState.playing = !lessonPlaybackState.playing;
+        scheduleLessonPlayback(lesson);
+        renderApp();
+      });
+    });
+    pageMount.querySelectorAll("[data-video-nav]").forEach((button) => {
+      button.addEventListener("click", () => {
+        stopLessonPlayback();
+        lessonPlaybackState.sceneIndex += button.dataset.videoNav === "next" ? 1 : -1;
+        lessonPlaybackState.sceneIndex = Math.max(0, Math.min(lesson.scenes.length - 1, lessonPlaybackState.sceneIndex));
+        renderApp();
+      });
+    });
+    if (lessonPlaybackState.playing) {
+      scheduleLessonPlayback(lesson);
+    }
+  }
 
   if (route.page === "plan") {
     const form = document.querySelector("#planForm");
@@ -605,12 +952,13 @@ function wireInteractions(route) {
   }
 }
 
-function answerQuestion(questionId, choice) {
+function answerQuestion(questionId, choice, context) {
   const question = data.questionBank.find((item) => item.id === questionId);
   const correct = choice === question.answer;
   state.attempts[questionId] = {
     correct,
     choice,
+    context,
     confidence: correct ? "steady" : "shaky",
   };
 
@@ -624,10 +972,22 @@ function answerQuestion(questionId, choice) {
         trapPattern: question.trapPattern,
         confidence: "high",
         blindReviewOutcome: "pending",
-        note: `Missed because the answer felt topical rather than structurally necessary. Relearn: ${question.explanation}`,
+        whyWrong: buildMissAnalysis(question),
+        note: `${buildMissAnalysis(question)} Relearn: ${question.explanation}`,
       });
     }
   });
+
+  const questionTypeLesson = (data.questionTypeLessons || []).find((lesson) => lesson.family === question.family);
+  if (questionTypeLesson) {
+    if (correct) {
+      if ((context || "").includes("guided")) {
+        state.questionTypeProgress[questionTypeLesson.id].guidedWins += 1;
+      } else {
+        state.questionTypeProgress[questionTypeLesson.id].drillWins += 1;
+      }
+    }
+  }
 
   saveState();
   renderApp();

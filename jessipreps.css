@@ -272,7 +272,8 @@ a {
 .practice-list,
 .family-grid,
 .journal-list,
-.link-list {
+.link-list,
+.lesson-video__chapters {
   display: grid;
   gap: 14px;
 }
@@ -315,6 +316,95 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.lesson-video {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.lesson-video__player,
+.video-chapter,
+.transcript-block {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(124, 55, 92, 0.06), transparent 70%), var(--panel);
+  padding: 16px;
+}
+
+.video-timeline {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.video-timeline span {
+  min-width: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  border-radius: 999px;
+  padding: 10px 8px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(124, 55, 92, 0.16);
+}
+
+.video-timeline span.is-active,
+.video-chapter.is-active {
+  background: rgba(124, 55, 92, 0.12);
+  border-color: rgba(124, 55, 92, 0.28);
+}
+
+.video-stage {
+  margin-top: 14px;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(160deg, rgba(124, 55, 92, 0.08), transparent 80%), rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--line);
+}
+
+.video-stage__story,
+.video-stage__cue {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid rgba(124, 55, 92, 0.16);
+  background: var(--accent-soft);
+}
+
+.video-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.video-progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 14px;
+  background: rgba(124, 55, 92, 0.12);
+}
+
+.video-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent) 0%, #af5f87 100%);
+}
+
+.video-chapter {
+  display: grid;
+  gap: 6px;
+}
+
+.video-chapter span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .scene-card {
   display: grid;
   gap: 10px;
@@ -344,6 +434,10 @@ a {
   margin-top: 12px;
 }
 
+.transcript-block {
+  margin-top: 14px;
+}
+
 .roadmap {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -360,6 +454,18 @@ a {
 .plan-form label {
   display: grid;
   gap: 6px;
+}
+
+.method-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.tag-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .plan-form input,
@@ -395,7 +501,8 @@ a {
 
   .hero-card,
   .card-grid--four,
-  .roadmap {
+  .roadmap,
+  .lesson-video {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -410,6 +517,7 @@ a {
   .hero-card,
   .card-grid--three,
   .card-grid--two,
+  .lesson-video,
   .scene-stack,
   .answer-grid,
   .roadmap,
