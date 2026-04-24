@@ -47,6 +47,15 @@ body.theme-dark {
   background: linear-gradient(180deg, #130f14 0%, #1a161c 100%);
 }
 
+body.theme-dark .app-shell {
+  background: rgba(30, 24, 38, 0.92);
+  border-color: rgba(246, 237, 244, 0.06);
+}
+
+body.theme-dark .sidebar {
+  background: linear-gradient(180deg, rgba(43, 34, 52, 0.96), rgba(35, 28, 46, 0.94));
+}
+
 body.theme-contrast {
   --line: rgba(0, 0, 0, 0.35);
   --shadow: none;
