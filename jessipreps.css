@@ -48,12 +48,12 @@ body.theme-dark {
 }
 
 body.theme-dark .app-shell {
-  background: rgba(30, 24, 38, 0.92);
+  background: rgba(30, 24, 38, 0.98);
   border-color: rgba(246, 237, 244, 0.06);
 }
 
 body.theme-dark .sidebar {
-  background: linear-gradient(180deg, rgba(43, 34, 52, 0.96), rgba(35, 28, 46, 0.94));
+  background: linear-gradient(180deg, rgba(43, 34, 52, 0.98), rgba(35, 28, 46, 0.96));
 }
 
 body.theme-contrast {
@@ -86,12 +86,9 @@ a {
 .app-shell {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
-  min-height: calc(100vh - 48px);
-  max-width: 1380px;
-  margin: 24px auto;
+  min-height: 100vh;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 32px;
   overflow: hidden;
   box-shadow: 0 30px 80px rgba(104, 96, 150, 0.16);
   position: relative;
@@ -103,11 +100,10 @@ a {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(244, 239, 255, 0.82));
   backdrop-filter: blur(18px);
   position: sticky;
-  top: 24px;
+  top: 0;
   align-self: start;
-  min-height: calc(100vh - 96px);
-  border-radius: 28px;
-  margin: 18px;
+  height: 100vh;
+  overflow-y: auto;
   box-shadow: 0 24px 60px rgba(109, 101, 155, 0.16);
   z-index: 4;
 }
@@ -485,6 +481,18 @@ body.sidebar-collapsed .main {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 20px;
+}
+
+/* Full-width containers that sit directly in page-grid */
+.dashboard-grid,
+.learn-focus,
+.command-strip,
+.flow-row,
+.roadmap,
+.card-grid--four,
+.card-grid--three,
+.card-grid--two {
+  grid-column: 1 / -1;
 }
 
 .panel {
