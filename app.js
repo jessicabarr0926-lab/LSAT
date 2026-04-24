@@ -8,6 +8,8 @@ const routeEyebrow = document.querySelector("#routeEyebrow");
 const routeTitle = document.querySelector("#routeTitle");
 const heroMount = document.querySelector("#heroMount");
 const pageMount = document.querySelector("#pageMount");
+const sidebarToggle = document.querySelector("#sidebarToggle");
+const sidebarClose = document.querySelector("#sidebarClose");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
@@ -21,6 +23,18 @@ document.querySelector("#quickStart").addEventListener("click", () => {
 
 document.querySelector("#openWeakest").addEventListener("click", () => {
   location.hash = "#/practice/drill/gap-work";
+});
+
+sidebarToggle?.addEventListener("click", () => {
+  if (window.innerWidth <= 1200) {
+    document.body.classList.toggle("sidebar-open");
+  } else {
+    document.body.classList.toggle("sidebar-collapsed");
+  }
+});
+
+sidebarClose?.addEventListener("click", () => {
+  document.body.classList.remove("sidebar-open");
 });
 
 window.addEventListener("hashchange", renderApp);
@@ -306,6 +320,9 @@ function renderApp() {
   renderNav();
   renderSettings();
   renderToday();
+  if (window.innerWidth <= 1200) {
+    document.body.classList.remove("sidebar-open");
+  }
   const route = routeInfo();
   renderRouteMeta(route);
   renderPage(route);
@@ -334,12 +351,32 @@ function renderNav() {
 }
 
 function renderSettings() {
+  const settingMeta = {
+    dyslexiaFont: "Switches reading text to a friendlier fallback for letter distinction.",
+    focusSpacing: "Adds more breathing room between lines, cards, and study blocks.",
+    darkMode: "Uses a darker color system for lower-glare studying.",
+    highContrast: "Strengthens borders and separation for easier scanning.",
+    uglyMode: "Uses louder colors so structure stands out over polish.",
+    predictionMode: "Keeps the interface focused on anticipating the answer before choices.",
+    reducedMotion: "Turns off autoplay-style motion and nonessential transitions.",
+  };
   settingsPanel.innerHTML = data.settings
     .map(
       (setting) => `
-        <label class="setting-toggle">
-          <input type="checkbox" data-setting="${setting.id}" ${state.settings[setting.id] ? "checked" : ""} />
-          <span>${setting.label}</span>
+        <label class="setting-toggle ${state.settings[setting.id] ? "is-on" : ""}">
+          <span class="setting-toggle__copy">
+            <strong>${setting.label}</strong>
+            <small>${settingMeta[setting.id] || "Personalize the way the app feels while you study."}</small>
+          </span>
+          <span class="setting-toggle__control">
+            <input
+              type="checkbox"
+              data-setting="${setting.id}"
+              aria-label="${setting.label}"
+              ${state.settings[setting.id] ? "checked" : ""}
+            />
+            <span class="setting-toggle__switch" aria-hidden="true"></span>
+          </span>
         </label>
       `,
     )
@@ -356,10 +393,23 @@ function renderSettings() {
 
 function renderToday() {
   const weak = weakestFamily();
+  const lesson = nextLesson();
   todayCard.innerHTML = `
-    <p><strong>Next lesson:</strong> ${nextLesson().title}</p>
-    <p><strong>Weakest skill:</strong> ${weak.family}</p>
-    <p><strong>Blind review gap:</strong> ${data.analyticsSnapshots.blindReviewGap} points</p>
+    <section class="today-stack">
+      <div class="today-pill">
+        <span>Next lesson</span>
+        <strong>${lesson.title}</strong>
+      </div>
+      <div class="today-pill">
+        <span>Weakest skill</span>
+        <strong>${weak.family}</strong>
+      </div>
+      <div class="today-pill">
+        <span>Blind review gap</span>
+        <strong>${data.analyticsSnapshots.blindReviewGap} pts</strong>
+      </div>
+      <a class="button button--ghost sidebar-card__action" href="#/learn/${lesson.id}">Resume study path</a>
+    </section>
   `;
 }
 
@@ -388,14 +438,20 @@ function renderPage(route) {
 }
 
 function renderDashboardHero() {
+  const lesson = nextLesson();
+  const weak = weakestFamily();
   return `
     <section class="hero-card">
-      <div>
+      <div class="hero-copy">
         <p class="eyebrow">${data.appMeta.currentPrepTest}</p>
-        <h3>Score-focused dashboard built to tell you what to do next.</h3>
+        <h3>Your LSAT command center should tell you what to do next, not make you decide from scratch.</h3>
         <p class="hero-copy">
           Readiness ${data.appMeta.readinessScore}. Raw ${data.appMeta.rawScore}. Scaled ${data.appMeta.scaledScore}. Target ${data.appMeta.targetScore}.
         </p>
+        <div class="hero-actions">
+          <a class="button button--primary" href="#/learn/${lesson.id}">Start ${lesson.title}</a>
+          <a class="button button--ghost" href="#/practice/drill/gap-work">Drill ${weak.family}</a>
+        </div>
       </div>
       <div class="hero-metrics">
         <article><span>Completed lessons</span><strong>${completedLessons()}/${data.lessons.length}</strong></article>
@@ -408,57 +464,97 @@ function renderDashboardHero() {
 
 function renderDashboardPage() {
   const weak = weakestFamily();
+  const lesson = nextLesson();
+  const studyModes = data.studyModes.slice(0, 3);
   return `
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Daily Command Center</h3>
-        <a href="#/learn/${nextLesson().id}" class="text-link">Continue learning</a>
-      </div>
-      <div class="card-grid card-grid--three">
-        <section class="mini-card">
-          <p class="mini-card__label">Next best move</p>
-          <h4>${nextLesson().title}</h4>
-          <p>${nextLesson().summary}</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Weakest family</p>
-          <h4>${weak.family}</h4>
-          <p>Current accuracy ${weak.score}%</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Blind review status</p>
-          <h4>${data.analyticsSnapshots.blindReviewGap}-point gap</h4>
-          <p>${data.analyticsSnapshots.confidenceMismatch}</p>
-        </section>
-      </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>140 to 175 Roadmap</h3>
-      </div>
-      <div class="roadmap">
-        ${data.roadmapSteps.map((step) => `<section class="roadmap__step"><strong>${step.band}</strong><p>${step.focus}</p></section>`).join("")}
-      </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Current LSAT Format</h3>
-      </div>
-      <p>Two scored LR sections, one scored RC section, and one variable section. Timed Tests follows that structure and links out to official review resources where helpful.</p>
-      <div class="link-list">
-        ${data.officialLinks.map((link) => `<a class="chip-link" href="${link.href}" target="_blank" rel="noreferrer">${link.label}</a>`).join("")}
-      </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Trend / Skill / Time</h3>
-      </div>
-      <div class="card-grid card-grid--three">
-        <section class="mini-card"><p class="mini-card__label">Strongest gain path</p><h4>${weak.family === "Assumption" ? "Gap Spotting" : "Mixed Timed Five"}</h4><p>Fix weakest family before pushing more speed.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Fatigue</p><h4>Monitor after Q18</h4><p>${data.analyticsSnapshots.fatigueNote}</p></section>
-        <section class="mini-card"><p class="mini-card__label">Confidence</p><h4>Watch high-confidence misses</h4><p>Use journal entries to compare confidence to correctness.</p></section>
-      </div>
-    </article>
+    <section class="dashboard-grid">
+      <article class="dashboard-card dashboard-card--hero">
+        <div class="dashboard-card__head">
+          <div>
+            <p class="mini-card__label">Next best move</p>
+            <h3>${lesson.title}</h3>
+          </div>
+          <span class="status-pill">Readiness ${data.appMeta.readinessScore}</span>
+        </div>
+        <p>${lesson.summary}</p>
+        <div class="dashboard-actions">
+          <a class="button button--primary" href="#/learn/${lesson.id}">Start lesson</a>
+          <a class="button button--ghost" href="#/practice/drill/gap-work">Drill ${weak.family}</a>
+        </div>
+        <div class="dashboard-metrics">
+          <section class="mini-card"><p class="mini-card__label">Scaled score</p><h4>${data.appMeta.scaledScore}</h4><p>Current snapshot from ${data.appMeta.currentPrepTest}</p></section>
+          <section class="mini-card"><p class="mini-card__label">Question bank</p><h4>${data.questionBank.length}</h4><p>Original questions across RC and LR families</p></section>
+          <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap} pts</h4><p>${data.analyticsSnapshots.confidenceMismatch}</p></section>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--profile">
+        <div class="dashboard-profile">
+          <div class="dashboard-avatar">JB</div>
+          <div>
+            <h3>Jessica Barr</h3>
+            <p class="microcopy">JessiPreps study profile</p>
+          </div>
+        </div>
+        <div class="today-stack">
+          <div class="today-pill"><span>Target</span><strong>${data.appMeta.targetScore}</strong></div>
+          <div class="today-pill"><span>Weakest family</span><strong>${weak.family}</strong></div>
+          <div class="today-pill"><span>Journal entries</span><strong>${state.journal.length}</strong></div>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--courses">
+        <div class="dashboard-card__head">
+          <h3>Study Tracks</h3>
+          <a class="text-link" href="#/learn">View all</a>
+        </div>
+        <div class="course-strip">
+          ${data.lessons.slice(0, 3).map((item, index) => `
+            <a class="course-card course-card--${index + 1}" href="#/learn/${item.id}">
+              <p class="mini-card__label">${item.track}</p>
+              <h4>${item.title}</h4>
+              <p>${item.summary}</p>
+            </a>
+          `).join("")}
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--table">
+        <div class="dashboard-card__head">
+          <h3>Study Queue</h3>
+          <a class="text-link" href="#/plan">Open plan</a>
+        </div>
+        <div class="queue-list">
+          ${studyModes.map((mode, index) => `
+            <section class="queue-row">
+              <strong>${index + 1}. ${mode.title}</strong>
+              <span>${index === 0 ? "Today" : index === 1 ? "After lesson" : "This week"}</span>
+              <p>${mode.description}</p>
+            </section>
+          `).join("")}
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--progress">
+        <div class="dashboard-card__head">
+          <h3>Homework Progress</h3>
+        </div>
+        <div class="progress-stack">
+          <section class="progress-item progress-item--primary"><strong>${lesson.title}</strong><p>${state.lessonProgress[lesson.id]?.masteryWins || 0}/${data.lessons.find((item) => item.id === lesson.id)?.masteryThreshold || 3} mastery wins</p></section>
+          <section class="progress-item"><strong>${weak.family}</strong><p>${weak.score}% accuracy so far</p></section>
+          <section class="progress-item"><strong>Review loop</strong><p>${state.journal.length} misses saved for analysis</p></section>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--roadmap">
+        <div class="dashboard-card__head">
+          <h3>Roadmap</h3>
+        </div>
+        <div class="roadmap dashboard-roadmap">
+          ${data.roadmapSteps.map((step) => `<section class="roadmap__step"><strong>${step.band}</strong><p>${step.focus}</p></section>`).join("")}
+        </div>
+      </article>
+    </section>
   `;
 }
 
@@ -478,6 +574,33 @@ function renderLearnPage(route) {
         <a href="#/learn/${nextLesson().id}" class="text-link">Open featured lesson</a>
       </div>
       <p>Guided sequence: RC structure first, then LR fundamentals, then advanced LR families, then timed integration and review.</p>
+      <div class="learn-focus">
+        <section class="learn-focus__lead">
+          <p class="mini-card__label">Featured next step</p>
+          <h4>${nextLesson().title}</h4>
+          <p>${nextLesson().summary}</p>
+          <a class="button button--primary" href="#/learn/${nextLesson().id}">Continue lesson path</a>
+        </section>
+        <section class="learn-focus__meta">
+          <div class="today-pill">
+            <span>Flagship lessons</span>
+            <strong>${data.lessons.length}</strong>
+          </div>
+          <div class="today-pill">
+            <span>Question-type academy</span>
+            <strong>${(data.questionTypeLessons || []).length}</strong>
+          </div>
+          <div class="today-pill">
+            <span>Best use</span>
+            <strong>Learn first, then drill</strong>
+          </div>
+        </section>
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Flagship Lesson Path</h3>
+      </div>
       <div class="card-grid card-grid--two">
         ${data.lessons
           .map((lesson) => `

@@ -4,11 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JessiPreps</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./jessipreps.css" />
   </head>
   <body>
+    <button id="sidebarToggle" class="sidebar-fab" aria-label="Toggle sidebar">☰</button>
     <div class="app-shell">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebarPanel">
+        <div class="sidebar__toolbar">
+          <button id="sidebarClose" class="sidebar__close" aria-label="Close sidebar">×</button>
+        </div>
         <div class="brand">
           <p class="eyebrow">Personal LSAT Operating System</p>
           <h1>JessiPreps</h1>
