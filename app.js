@@ -14,6 +14,7 @@ let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
 let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
+const questionRenderTimes = {};
 
 const state = loadState();
 
@@ -40,6 +41,9 @@ function defaultState() {
     settings: Object.fromEntries(data.settings.map((item) => [item.id, false])),
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
     questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
+    rcProgress: Object.fromEntries(
+      (data.rcPassages || []).map((p) => [p.id, { phase: "reading", readStartTime: null, readTimeSeconds: null, mapText: "" }])
+    ),
     attempts: {},
     journal: [],
     support: [...data.supportEntries],
@@ -59,6 +63,7 @@ function loadState() {
       settings: { ...base.settings, ...(parsed.settings || {}) },
       lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
       questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
+      rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
       attempts: parsed.attempts || {},
       journal: parsed.journal || [],
       support: parsed.support || base.support,
@@ -177,6 +182,11 @@ function buildDrillAnalysis(family) {
       advice: `Use the checklist before you choose. This trap keeps winning when you skip the burden and select on familiarity.`,
     }));
   const wrongChoices = familyWrongChoiceSummary(family);
+  const timedAttempts = attempts.filter((item) => state.attempts[item.id]?.timeSeconds != null);
+  const avgTime = timedAttempts.length
+    ? Math.round(timedAttempts.reduce((sum, item) => sum + state.attempts[item.id].timeSeconds, 0) / timedAttempts.length)
+    : null;
+  const targetTime = familyQuestions(family)[0]?.timingTarget ?? 80;
   const highConfidenceMisses = misses.filter((entry) => entry.confidence === "high").length;
   const primaryTrap = topTraps[0]?.trap;
   const dominantWrongChoice = wrongChoices[0]?.[0];
@@ -201,6 +211,8 @@ function buildDrillAnalysis(family) {
     methodFix,
     dominantWrongChoice,
     recentMisses: misses.slice(0, 5),
+    avgTime,
+    targetTime,
   };
 }
 
@@ -436,6 +448,12 @@ function renderToday() {
 }
 
 function renderRouteMeta(route) {
+  if (route.page === "practice" && route.subtype === "rc") {
+    const passage = route.id && route.id !== "rc" ? (data.rcPassages || []).find((p) => p.id === route.id) : null;
+    routeEyebrow.textContent = "RC Passage Practice";
+    routeTitle.textContent = passage ? passage.title : "Passage Library";
+    return;
+  }
   const nav = data.navigation.find((item) => item.route === route.page) || data.navigation[0];
   routeEyebrow.textContent = nav.eyebrow;
   const questionTypeLesson = route.id ? findQuestionTypeLesson(route.id) : null;
@@ -949,6 +967,13 @@ function renderQuestionTypeLesson(lesson) {
             <p>${analysis.methodFix}</p>
           </section>
         </div>
+        ${analysis.avgTime != null ? `
+          <section class="mini-card">
+            <p class="mini-card__label">Avg time per question</p>
+            <h4 class="analysis-score ${analysis.avgTime <= analysis.targetTime ? "is-strong" : analysis.avgTime <= analysis.targetTime * 1.3 ? "is-medium" : "is-weak"}">${analysis.avgTime}s</h4>
+            <p>Target: ${analysis.targetTime}s. ${analysis.avgTime <= analysis.targetTime ? "On pace." : "Spending too long — trust the method and move."}</p>
+          </section>
+        ` : ""}
         <div class="qt-analysis-grid">
           <section class="transcript-block">
             <p class="mini-card__label">Trap frequency</p>
@@ -1017,7 +1042,158 @@ function renderQuestionTypeLesson(lesson) {
   return header + stepContent;
 }
 
+function renderRCPassageList() {
+  return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>RC Passage Library</h3>
+        <span class="status-pill">${(data.rcPassages || []).length} passages</span>
+      </div>
+      <p>Each passage is a full multi-paragraph reading with 5 questions across RC question types. Read, map the passage structure, then answer the questions.</p>
+      <div class="card-grid card-grid--two">
+        ${(data.rcPassages || [])
+          .map((passage) => {
+            const prog = state.rcProgress[passage.id];
+            const answered = passage.questions.filter((q) => state.attempts[q.id]).length;
+            const complete = answered === passage.questions.length;
+            return `
+              <a class="lesson-card" href="#/practice/rc/${passage.id}">
+                <p class="mini-card__label">${passage.topic}${passage.isComparative ? " · Comparative" : ""} · ${passage.difficulty}</p>
+                <h4>${passage.title}</h4>
+                <p>~${passage.estimatedReadMinutes} min read · ${passage.questions.length} questions</p>
+                <div class="passage-card-meta">
+                  <span class="status-pill ${complete ? "is-done" : ""}">${complete ? "Completed" : prog?.phase === "questions" ? `${answered}/${passage.questions.length} answered` : "Not started"}</span>
+                  <span class="muted">${passage.questions.map((q) => q.family.replace("RC ", "")).join(" · ")}</span>
+                </div>
+              </a>
+            `;
+          })
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderRCPassage(passage) {
+  const prog = state.rcProgress[passage.id];
+  const phase = prog?.phase || "reading";
+  const answered = passage.questions.filter((q) => state.attempts[q.id]).length;
+
+  const passageTextHtml = `
+    <div class="passage-text">
+      ${passage.paragraphs
+        .map(
+          (p) => `
+            <div class="passage-paragraph">
+              <span class="passage-para-label">${p.label}</span>
+              <p>${p.text}</p>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+
+  if (phase === "reading") {
+    return `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">${passage.topic}${passage.isComparative ? " · Comparative Passages" : ""}</p>
+            <h3>${passage.title}</h3>
+          </div>
+          <span class="status-pill">~${passage.estimatedReadMinutes} min read</span>
+        </div>
+        <p class="muted">Read the passage carefully. Map each paragraph's job in your own words before starting the questions. This is the most important habit you can build for RC.</p>
+        <div class="passage-reading-layout">
+          <div class="passage-reading-main">
+            ${passageTextHtml}
+          </div>
+          <div class="passage-reading-sidebar">
+            <div class="method-enforcer">
+              <p class="mini-card__label">Passage map</p>
+              <p class="microcopy">Give each paragraph a job label in plain English before you answer any questions.</p>
+              ${passage.paragraphs
+                .map(
+                  (p) => `
+                    <div class="passage-map-row">
+                      <strong>${p.label}:</strong>
+                      <textarea class="passage-map-input" data-passage-map="${passage.id}" data-para="${p.label}" placeholder="What job does ${p.label} do?" rows="2">${(prog?.mapText || "").split("||").find((t) => t.startsWith(p.label + ":"))?.slice(p.label.length + 1) || ""}</textarea>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>
+            <div class="step-continue-bar" style="margin-top:20px; padding-top:16px;">
+              <span class="muted">${passage.questions.length} questions waiting</span>
+              <button class="button button--primary" data-rc-begin="${passage.id}">Begin Questions →</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  // Questions phase
+  return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">${passage.topic}</p>
+          <h3>${passage.title}</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          ${prog?.readTimeSeconds ? `<span class="status-pill">Read in ${Math.round(prog.readTimeSeconds / 60)} min ${prog.readTimeSeconds % 60}s</span>` : ""}
+          <span class="status-pill ${answered === passage.questions.length ? "is-done" : ""}">${answered}/${passage.questions.length} answered</span>
+        </div>
+      </div>
+    </article>
+    <div class="passage-questions-layout">
+      <div class="passage-questions-text">
+        <div class="passage-sticky-reader">
+          <p class="mini-card__label">Passage</p>
+          ${passageTextHtml}
+          ${prog?.mapText ? `
+            <div class="passage-map-display">
+              <p class="mini-card__label">Your passage map</p>
+              ${passage.paragraphs
+                .map((p) => {
+                  const entry = (prog.mapText || "").split("||").find((t) => t.startsWith(p.label + ":"));
+                  return entry ? `<p><strong>${p.label}:</strong> ${entry.slice(p.label.length + 1)}</p>` : "";
+                })
+                .join("")}
+            </div>
+          ` : ""}
+        </div>
+      </div>
+      <div class="passage-questions-list">
+        <div class="practice-list">
+          ${passage.questions.map((q) => renderQuestionCard(q, "rc-passage")).join("")}
+        </div>
+        ${answered === passage.questions.length ? `
+          <div class="passage-complete-bar">
+            <p><strong>Passage complete.</strong> All ${passage.questions.length} questions answered.</p>
+            <a class="button button--ghost" href="#/practice/rc">← Back to passage list</a>
+          </div>
+        ` : ""}
+        <div class="step-continue-bar">
+          <a class="button button--ghost" href="#/practice/rc">← All passages</a>
+          <span class="muted">${passage.questions.length - answered} question${passage.questions.length - answered !== 1 ? "s" : ""} remaining</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderPracticePage(route) {
+  if (route.subtype === "rc") {
+    if (!route.id || route.id === "rc") {
+      return renderRCPassageList();
+    }
+    const passage = (data.rcPassages || []).find((p) => p.id === route.id);
+    return passage ? renderRCPassage(passage) : renderRCPassageList();
+  }
+
   if (route.subtype === "drill") {
     const preset = data.drillPresets.find((item) => item.id === route.id) || data.drillPresets[0];
     const questions = data.questionBank.filter((question) => preset.families.includes(question.family)).slice(0, preset.count);
@@ -1099,6 +1275,13 @@ function renderPracticePage(route) {
       <div class="card-grid card-grid--two">
         ${data.drillPresets.map((preset) => `<a class="lesson-card" href="#/practice/drill/${preset.id}"><h4>${preset.title}</h4><p>${preset.rationale}</p></a>`).join("")}
       </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>RC Passage Practice</h3>
+        <a class="text-link" href="#/practice/rc">Open library</a>
+      </div>
+      <p>${(data.rcPassages || []).length} full passages across natural science, law, humanities, and social science. Each passage has a reading phase, a passage-map prompt, and 5 questions.</p>
     </article>
     <article class="panel">
       <div class="panel__head">
@@ -1264,6 +1447,7 @@ function renderQuestionCard(question, context) {
             : ""
         }
       </div>
+      ${attempt && attempt.timeSeconds != null ? `<p class="microcopy question-time">Time taken: ${attempt.timeSeconds}s${attempt.timeSeconds > 120 ? " — aim for under 90s" : ""}</p>` : ""}
     </section>
   `;
 }
@@ -1271,6 +1455,13 @@ function renderQuestionCard(question, context) {
 function wireInteractions(route) {
   pageMount.querySelectorAll("[data-question]").forEach((button) => {
     button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
+  });
+
+  pageMount.querySelectorAll("[data-question]").forEach((button) => {
+    const qId = button.dataset.question;
+    if (!questionRenderTimes[qId] && !state.attempts[qId]) {
+      questionRenderTimes[qId] = Date.now();
+    }
   });
 
   pageMount.querySelectorAll("[data-complete-lesson]").forEach((button) => {
@@ -1366,6 +1557,43 @@ function wireInteractions(route) {
     }
   }
 
+  // RC passage: begin questions
+  pageMount.querySelectorAll("[data-rc-begin]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const passageId = button.dataset.rcBegin;
+      if (!state.rcProgress[passageId]) {
+        state.rcProgress[passageId] = { phase: "reading", readStartTime: null, readTimeSeconds: null, mapText: "" };
+      }
+      const prog = state.rcProgress[passageId];
+      prog.readTimeSeconds = prog.readStartTime ? Math.round((Date.now() - prog.readStartTime) / 1000) : null;
+      prog.phase = "questions";
+      saveState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      renderApp();
+    });
+  });
+
+  // RC passage: map text inputs
+  pageMount.querySelectorAll("[data-passage-map]").forEach((textarea) => {
+    textarea.addEventListener("input", () => {
+      const passageId = textarea.dataset.passageMap;
+      const para = textarea.dataset.para;
+      if (!state.rcProgress[passageId]) return;
+      const existing = (state.rcProgress[passageId].mapText || "").split("||").filter((t) => !t.startsWith(para + ":"));
+      existing.push(`${para}:${textarea.value}`);
+      state.rcProgress[passageId].mapText = existing.join("||");
+      saveState();
+    });
+  });
+
+  if (route.page === "practice" && route.subtype === "rc" && route.id && route.id !== "rc") {
+    const passageId = route.id;
+    if (state.rcProgress[passageId] && !state.rcProgress[passageId].readStartTime) {
+      state.rcProgress[passageId].readStartTime = Date.now();
+      saveState();
+    }
+  }
+
   if (route.page === "plan") {
     const form = document.querySelector("#planForm");
     if (form) {
@@ -1397,21 +1625,38 @@ function wireInteractions(route) {
   }
 }
 
+function findQuestion(questionId) {
+  const bankQ = data.questionBank.find((item) => item.id === questionId);
+  if (bankQ) return bankQ;
+  for (const passage of (data.rcPassages || [])) {
+    const passageQ = passage.questions.find((q) => q.id === questionId);
+    if (passageQ) return passageQ;
+  }
+  return null;
+}
+
 function answerQuestion(questionId, choice, context) {
-  const question = data.questionBank.find((item) => item.id === questionId);
+  const question = findQuestion(questionId);
   const correct = choice === question.answer;
   const wrongChoiceText = correct ? null : question.options[choice];
+  const timeSeconds = questionRenderTimes[questionId]
+    ? Math.round((Date.now() - questionRenderTimes[questionId]) / 1000)
+    : null;
+  delete questionRenderTimes[questionId];
   state.attempts[questionId] = {
     correct,
     choice,
     context,
     wrongChoiceText,
     confidence: correct ? "steady" : "shaky",
+    timeSeconds,
   };
 
   question.lessonIds.forEach((lessonId) => {
     if (correct) {
-      state.lessonProgress[lessonId].masteryWins += 1;
+      if (state.lessonProgress[lessonId]) {
+        state.lessonProgress[lessonId].masteryWins += 1;
+      }
     } else {
       state.journal.unshift({
         questionId,

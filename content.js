@@ -1300,6 +1300,492 @@ function buildQuestionTypeScenes(lesson) {
 
 QUESTION_TYPE_LESSONS.forEach((lesson) => Object.assign(lesson, buildQuestionTypeScenes(lesson)));
 
+const RC_PASSAGES = [
+  {
+    id: "rc-coral-reefs",
+    title: "The Adaptive Capacity of Coral Reefs",
+    topic: "Natural Science",
+    difficulty: "Medium",
+    estimatedReadMinutes: 3,
+    paragraphs: [
+      {
+        label: "P1",
+        text: "Coral reefs depend on a symbiotic relationship between coral polyps and photosynthetic algae called zooxanthellae. The algae provide the coral with up to 90 percent of its energy through photosynthesis, while the coral offers the algae shelter and access to nutrients. When seawater temperatures rise even slightly above seasonal norms, this relationship breaks down: the coral expels its algae, turns white—a process called bleaching—and, if temperatures remain elevated, dies. For decades, marine biologists largely agreed that accelerating ocean warming posed an existential threat to reef ecosystems worldwide, with mass bleaching events becoming more frequent and more severe."
+      },
+      {
+        label: "P2",
+        text: "Recent field research has complicated that consensus. Studies on reef systems in the Great Barrier Reef and the wider Caribbean have documented populations of coral that survive temperatures lethal to nearby colonies of the same species. Crucially, offspring of these heat-tolerant individuals also displayed elevated thermal tolerance, suggesting a heritable genetic basis rather than individual acclimation. This finding challenged the assumption that all coral populations face uniform extinction risk and raised the possibility that natural selection could, given sufficient time and population size, propagate heat-resistant traits across reef systems."
+      },
+      {
+        label: "P3",
+        text: "Critics of this optimistic interpretation point to a fundamental mismatch in timescales. Evolutionary adaptation through natural selection operates across hundreds of generations, a process that for slow-reproducing corals spans centuries. Contemporary ocean warming, by contrast, is occurring over decades. Even granting that heat tolerance is heritable and that selection pressure is strong, the pace of adaptation almost certainly cannot match the pace of environmental change. Additionally, the survival of individual coral colonies is not equivalent to reef recovery: a functional reef ecosystem requires fish, invertebrates, and complex trophic interactions that bleaching events disrupt regardless of whether some coral polyps endure."
+      },
+      {
+        label: "P4",
+        text: "The author argues that this framing—natural selection versus extinction—presents a false binary. The practical question is not whether unaided evolution can rescue reefs on its own but whether human intervention using thermally tolerant coral stock can supplement natural selection and slow the rate of loss sufficiently to allow broader ecosystem stabilization. Selective breeding programs and assisted gene flow, where tolerant colonies are transplanted to stressed reef zones, are already underway at several research institutions. Whether these efforts can be scaled from experimental plots to reef-wide restoration remains uncertain, but they reposition the scientific and policy debate from passive prognosis to active strategy."
+      }
+    ],
+    modelMap: [
+      "P1: Establishes coral-algae symbiosis and the traditional doom consensus",
+      "P2: Introduces heritable thermal tolerance — evidence that complicates the consensus",
+      "P3: Critics respond — timescale mismatch makes natural selection too slow",
+      "P4: Author's synthesis — the real question is intervention strategy, not natural selection vs. extinction"
+    ],
+    questions: [
+      {
+        id: "rc-coral-q1",
+        section: "RC",
+        family: "RC Main Point",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The main point of the passage is that",
+        options: [
+          "the debate over coral reef survival should be reframed as a question about intervention strategy rather than natural selection alone",
+          "heritable thermal tolerance in coral populations proves that reefs can survive current warming trends",
+          "the timescale mismatch between evolution and climate change makes coral reef preservation impossible",
+          "the symbiotic relationship between coral polyps and zooxanthellae is more fragile than previously understood"
+        ],
+        answer: 0,
+        explanation: "The author's final paragraph explicitly repositions the debate: not natural selection vs. extinction, but whether human intervention can supplement natural selection. This is the passage's mission, not any of the intermediate findings.",
+        trapPattern: "Picks a major detail instead of the overall mission"
+      },
+      {
+        id: "rc-coral-q2",
+        section: "RC",
+        family: "RC Function",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The primary function of the second paragraph is to",
+        options: [
+          "introduce evidence of heritable thermal tolerance that complicates the traditional pessimistic view",
+          "prove that coral reefs will survive accelerating ocean warming",
+          "explain the biochemical mechanism by which coral expels zooxanthellae",
+          "argue that the traditional consensus on reef extinction is entirely wrong"
+        ],
+        answer: 0,
+        explanation: "Paragraph 2 introduces the heritable tolerance finding, which the passage immediately frames as complicating ('complicated that consensus') the view established in P1. It doesn't prove survival or explain bleaching biochemistry.",
+        trapPattern: "Confuses paragraph topic with paragraph job"
+      },
+      {
+        id: "rc-coral-q3",
+        section: "RC",
+        family: "RC Inference",
+        difficulty: "medium",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "Based on the passage, which of the following can most reasonably be inferred about assisted gene flow programs?",
+        options: [
+          "They are currently being tested at some research institutions but have not yet been applied at reef-wide scale",
+          "They have already demonstrated the ability to restore full reef ecosystems in bleaching-affected zones",
+          "They represent the scientific consensus on the best strategy for reef preservation",
+          "They were developed in response to the criticism described in the third paragraph"
+        ],
+        answer: 0,
+        explanation: "The final paragraph explicitly states that selective breeding and assisted gene flow 'are already underway at several research institutions' and that scaling to reef-wide restoration 'remains uncertain.' This directly supports answer A.",
+        trapPattern: "Chooses a claim stronger than the passage supports"
+      },
+      {
+        id: "rc-coral-q4",
+        section: "RC",
+        family: "RC Attitude",
+        difficulty: "hard",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "The author's attitude toward the critics described in the third paragraph is best characterized as",
+        options: [
+          "partial agreement — their timescale objection is accepted, but the author argues it motivates intervention rather than pessimism",
+          "full endorsement — the critics are correct that natural selection cannot save reefs",
+          "dismissal — the critics ignore the evidence of heritable tolerance presented in the second paragraph",
+          "confusion — the author is uncertain whether the critics or the optimists are correct"
+        ],
+        answer: 0,
+        explanation: "The author does not refute the timescale mismatch argument; the fourth paragraph concedes that 'unaided evolution' cannot rescue reefs, which accepts the critics' point. But the author redirects to intervention strategy rather than concluding doom, suggesting partial agreement rather than full endorsement or dismissal.",
+        trapPattern: "Reads neutral summary as endorsement"
+      },
+      {
+        id: "rc-coral-q5",
+        section: "RC",
+        family: "RC Structure",
+        difficulty: "medium",
+        lessonIds: ["rc-structure-map"],
+        prompt: "",
+        question: "Which of the following best describes the overall structure of the passage?",
+        options: [
+          "An established scientific consensus is introduced, complicating evidence is presented, that evidence is criticized, and the author synthesizes a new framing",
+          "Two competing scientific theories are presented and the author selects one as superior",
+          "A biological process is explained and its implications for policy are described without critical analysis",
+          "A series of failed experiments is described leading to a new experimental design"
+        ],
+        answer: 0,
+        explanation: "P1 = consensus, P2 = complicating evidence, P3 = criticism of the evidence, P4 = author's synthesis that reframes the debate. This is a classic LSAT passage structure.",
+        trapPattern: "Mistakes topic for structure"
+      }
+    ]
+  },
+  {
+    id: "rc-stare-decisis",
+    title: "Stare Decisis and the Evolution of Common Law",
+    topic: "Law",
+    difficulty: "Hard",
+    estimatedReadMinutes: 3,
+    paragraphs: [
+      {
+        label: "P1",
+        text: "The common law of English-speaking legal systems develops not through comprehensive legislative codes but through the accumulation of judicial decisions over time. Courts are bound by the doctrine of stare decisis—standing by decisions—which requires that courts follow the rulings of higher courts in cases involving materially similar facts. Proponents of the doctrine argue that it provides the legal predictability on which commerce, planning, and private ordering depend. A rule that shifts with each new judicial appointment is, in this view, no rule at all."
+      },
+      {
+        label: "P2",
+        text: "A school of reform-minded legal scholars has contested this view with increasing force. They argue that stare decisis creates institutional inertia that preserves unjust or outdated precedents long past their utility. Legal history offers familiar examples: courts sustained legally enforced segregation, coverture rules that stripped married women of property rights, and liability rules that immunized industrial polluters, in each case citing the need for continuity. These scholars contend that the value of predictability is routinely overstated relative to the costs of entrenching substantively wrong rules, and that legislative correction—often the traditionalist's preferred remedy—operates too slowly and unevenly to serve as a reliable check."
+      },
+      {
+        label: "P3",
+        text: "Traditionalists respond that the predictability stare decisis provides is not a mere convenience but a structural feature of markets and personal planning. Firms make long-term investments based on their legal environment; individuals organize their affairs in reliance on settled rules. Abrupt judicial overruling can retroactively invalidate those reliance interests in ways that the reformers' cost-benefit framing fails to capture. The traditionalists also note that what looks like harmful entrenchment in hindsight was often defensible under the epistemic conditions that obtained when the precedent was set—a point the reformers' selective use of historical examples tends to obscure."
+      },
+      {
+        label: "P4",
+        text: "The author argues that both camps treat stare decisis as a binary choice between following and overruling precedent, and in doing so miss the most common technique by which common law actually evolves: distinguishing. When a court distinguishes a precedent, it rules that the prior case does not govern the present facts because of some material difference between the two, without formally overruling the earlier decision. Distinguishing allows courts to adapt legal rules to new circumstances incrementally and without the disruptive finality of overruling. The real debate, the author contends, is not whether to follow precedent but whether distinguishing is being used honestly to identify genuine factual differences or dishonestly as a pretext for sub rosa overruling that avoids the institutional costs of saying so openly."
+      }
+    ],
+    modelMap: [
+      "P1: Explains stare decisis and the traditionalist case for it",
+      "P2: Reform scholars attack — stare decisis entrenches unjust rules",
+      "P3: Traditionalists respond — predictability has real structural value",
+      "P4: Author's synthesis — both miss 'distinguishing,' the real mechanism of common law evolution"
+    ],
+    questions: [
+      {
+        id: "rc-stare-q1",
+        section: "RC",
+        family: "RC Main Point",
+        difficulty: "hard",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "Which statement best expresses the main point of the passage?",
+        options: [
+          "The debate over stare decisis is misdirected because both sides ignore the technique of distinguishing, which is how common law actually evolves",
+          "Stare decisis should be abolished because it has historically entrenched unjust legal rules",
+          "The doctrine of stare decisis provides essential predictability that markets depend on",
+          "Reform-minded legal scholars have the better of the argument about the costs of following precedent"
+        ],
+        answer: 0,
+        explanation: "The author's thesis appears in P4: both camps treat stare decisis as a binary, missing distinguishing. The author's goal is to reframe the debate, not to endorse either the reform or traditionalist position.",
+        trapPattern: "Picks a major detail instead of the overall mission"
+      },
+      {
+        id: "rc-stare-q2",
+        section: "RC",
+        family: "RC Function",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The primary role of the third paragraph in the passage is to",
+        options: [
+          "present the traditionalist counterargument before the author introduces a synthesis that reframes the debate",
+          "show that the reform scholars in the second paragraph are wrong about the costs of stare decisis",
+          "explain why the doctrine of stare decisis was originally developed by English courts",
+          "describe the legal rules that stare decisis has historically preserved"
+        ],
+        answer: 0,
+        explanation: "P3 gives the traditionalist response to P2's reform critique. Its structural job in the passage is to complete the two-sided debate that P4 then reframes. It doesn't declare a winner or explain the doctrine's historical origins.",
+        trapPattern: "Confuses paragraph topic with paragraph job"
+      },
+      {
+        id: "rc-stare-q3",
+        section: "RC",
+        family: "RC Inference",
+        difficulty: "hard",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "Based on the passage, which of the following can most reasonably be inferred about the technique of distinguishing?",
+        options: [
+          "Courts use it to adapt legal rules incrementally without the disruptive finality of formally overruling prior decisions",
+          "It is viewed by reform scholars as an adequate substitute for legislative correction of unjust precedents",
+          "It requires courts to identify precedents that are substantively wrong before declining to follow them",
+          "The doctrine was developed as a response to the traditionalist critique described in the third paragraph"
+        ],
+        answer: 0,
+        explanation: "P4 explicitly states that distinguishing 'allows courts to adapt legal rules to new circumstances incrementally and without the disruptive finality of overruling.' Answer A paraphrases this directly.",
+        trapPattern: "Chooses a claim stronger than the passage supports"
+      },
+      {
+        id: "rc-stare-q4",
+        section: "RC",
+        family: "RC Attitude",
+        difficulty: "hard",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "The author's attitude toward both the reform scholars and the traditionalists is best described as",
+        options: [
+          "critical of both for framing the debate too narrowly and overlooking the central mechanism of common law evolution",
+          "sympathetic to the reform scholars but skeptical that their proposals would be practically effective",
+          "neutral — the author presents both views without taking any evaluative position",
+          "fully endorsing the traditionalist view while acknowledging some merit in the reform critique"
+        ],
+        answer: 0,
+        explanation: "The author explicitly criticizes both camps in P4 for treating the question as binary and missing distinguishing. This is critical of both, not neutral and not aligned with either side.",
+        trapPattern: "Reads neutral summary as endorsement"
+      },
+      {
+        id: "rc-stare-q5",
+        section: "RC",
+        family: "RC Structure",
+        difficulty: "medium",
+        lessonIds: ["rc-structure-map"],
+        prompt: "",
+        question: "Which of the following best describes how the passage is organized?",
+        options: [
+          "A legal doctrine is introduced, two opposing critiques of it are presented, and the author argues both critiques miss a more important distinction",
+          "A legal doctrine is explained and the author argues it should be abolished based on its historical record",
+          "Two legal scholars debate a doctrine and the author endorses one position over the other",
+          "A series of historical legal examples is presented to show that a doctrine has been applied inconsistently"
+        ],
+        answer: 0,
+        explanation: "P1 introduces stare decisis; P2 gives the reform critique; P3 gives the traditionalist response; P4 argues both miss distinguishing. Answer A accurately describes this four-part structure.",
+        trapPattern: "Mistakes topic for structure"
+      }
+    ]
+  },
+  {
+    id: "rc-documentary-photography",
+    title: "Documentary Photography and the Question of Art",
+    topic: "Humanities",
+    difficulty: "Medium",
+    estimatedReadMinutes: 3,
+    isComparative: true,
+    paragraphs: [
+      {
+        label: "Passage A",
+        text: "Documentary photography and fine art photography differ not in medium but in purpose. The documentary photographer's primary obligation is accuracy: the image must faithfully represent the conditions, events, or subjects it depicts. Aesthetic choices—framing, light, moment of capture—are instrumentalized in service of this evidentiary function. When those choices conflict with accurate representation, the documentary photographer must subordinate aesthetic preference to factual fidelity. This purposive distinction matters because it determines how photographs are properly evaluated. We assess documentary work by asking whether it is an accurate and informative record; we ask whether fine art photography achieves expressive originality and aesthetic force. Conflating the two categories distorts both standards and produces confused criticism."
+      },
+      {
+        label: "Passage B",
+        text: "The distinction between documentary and fine art photography that Passage A relies on is philosophically incoherent. Every photographic decision—what to frame, when to release the shutter, how to set the exposure, where to position the body—is an expressive choice, not a mechanical transcription of fact. The claim that documentary photographers subordinate aesthetics to accuracy misunderstands what photography does: two photographers with identical equipment facing the same scene will produce meaningfully different images because they make different choices. Those choices constitute aesthetic expression regardless of intent. The greatest documentary photographers are widely exhibited in major art institutions not as historical curiosities but as artists, because their work demonstrates that expressive power and documentary purpose are not merely compatible but mutually reinforcing. Passage A's categorical distinction survives only if we pretend that aesthetic decisions can be factored out of photographic practice—a pretense the history of the medium does not support."
+      }
+    ],
+    modelMap: [
+      "Passage A: Documentary and fine art photography differ in purpose; evaluation criteria differ accordingly",
+      "Passage B: The art/document distinction is incoherent; every photographic choice is expressive"
+    ],
+    questions: [
+      {
+        id: "rc-photo-q1",
+        section: "RC",
+        family: "RC Main Point",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The main point of Passage B is that",
+        options: [
+          "the distinction between documentary and fine art photography is philosophically incoherent because all photographic choices are inherently expressive",
+          "documentary photographers should aspire to the same aesthetic standards as fine art photographers",
+          "documentary photographs are superior to fine art photographs because they serve a social purpose",
+          "the evaluation of photography should focus exclusively on expressive originality rather than accuracy"
+        ],
+        answer: 0,
+        explanation: "Passage B's central claim is that the documentary/art distinction fails because photography is always expressive — the distinction 'is philosophically incoherent.' It does not argue for superior standards or exclusive focus on one criterion.",
+        trapPattern: "Picks a major detail instead of the overall mission"
+      },
+      {
+        id: "rc-photo-q2",
+        section: "RC",
+        family: "RC Inference",
+        difficulty: "medium",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "Based on Passage A, which of the following can most reasonably be inferred?",
+        options: [
+          "The author of Passage A believes documentary photographs should be evaluated primarily by how accurately they represent their subjects",
+          "The author of Passage A believes documentary photographs cannot achieve genuine aesthetic quality",
+          "The author of Passage A agrees with Passage B that photographic choices are always expressive",
+          "The author of Passage A argues that all photography should serve documentary purposes"
+        ],
+        answer: 0,
+        explanation: "Passage A states directly that documentary work is 'properly evaluated' by asking 'whether it is an accurate and informative record.' This strongly supports A. Passage A does not claim documentary work lacks aesthetic quality, only that aesthetic choices are secondary to accuracy.",
+        trapPattern: "Chooses a claim stronger than the passage supports"
+      },
+      {
+        id: "rc-photo-q3",
+        section: "RC",
+        family: "RC Attitude",
+        difficulty: "medium",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "The author of Passage B's attitude toward the central distinction drawn in Passage A is best described as",
+        options: [
+          "dismissive — the author considers the distinction philosophically incoherent and historically unsupported",
+          "partially sympathetic — the author agrees that evaluation criteria differ but disputes the reason",
+          "neutral — the author presents Passage A's view fairly before offering a mild qualification",
+          "uncertain — the author raises doubts but stops short of rejecting the distinction"
+        ],
+        answer: 0,
+        explanation: "Passage B calls the distinction 'philosophically incoherent' and says it 'survives only if we pretend' something false. This is dismissive, not partial or neutral.",
+        trapPattern: "Reads neutral summary as endorsement"
+      },
+      {
+        id: "rc-photo-q4",
+        section: "RC",
+        family: "RC Function",
+        difficulty: "hard",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "In Passage B, the reference to major art institutions primarily serves to",
+        options: [
+          "provide concrete evidence that documentary photographers are recognized as artists, undermining Passage A's categorical distinction",
+          "argue that fine art museums should collect more documentary photography",
+          "show that institutional recognition is the correct standard for defining art",
+          "establish that Passage A's evaluation criteria are used by art critics worldwide"
+        ],
+        answer: 0,
+        explanation: "The gallery/institution reference is evidence that documentary photographers are exhibited as artists — this directly undermines Passage A's claim that the two categories should be kept distinct. It is an evidentiary move in support of Passage B's argument, not a normative claim about what museums should do.",
+        trapPattern: "Confuses paragraph topic with paragraph job"
+      },
+      {
+        id: "rc-photo-q5",
+        section: "RC",
+        family: "RC Structure",
+        difficulty: "medium",
+        lessonIds: ["rc-structure-map"],
+        prompt: "",
+        question: "The two passages are related in which of the following ways?",
+        options: [
+          "Passage B directly attacks the central distinction that Passage A relies on to differentiate documentary from fine art photography",
+          "Passage B extends Passage A's argument by providing additional historical evidence",
+          "Passage A responds to the arguments made in Passage B",
+          "The two passages agree on evaluation criteria but disagree on which photographers qualify as artists"
+        ],
+        answer: 0,
+        explanation: "Passage B explicitly targets and rejects the documentary/art distinction that is the foundation of Passage A's argument. Passage B does not extend A; A does not respond to B; and the passages disagree on evaluation criteria themselves.",
+        trapPattern: "Mistakes topic for structure"
+      }
+    ]
+  },
+  {
+    id: "rc-informal-credit",
+    title: "Informal Credit Networks in Nineteenth-Century America",
+    topic: "Social Science",
+    difficulty: "Medium",
+    estimatedReadMinutes: 3,
+    paragraphs: [
+      {
+        label: "P1",
+        text: "Economic historians have long credited formal banking institutions with financing the rapid expansion of the American economy in the nineteenth century. In this account, chartered banks, commercial paper markets, and eventually the national banking system created during the Civil War era provided the credit that allowed businesses to invest beyond their immediate cash reserves and farmers to purchase equipment and land before harvests came in. The infrastructure of formal finance is visible in the historical record—bank charters, balance sheets, regulatory filings—and has attracted correspondingly extensive scholarly attention."
+      },
+      {
+        label: "P2",
+        text: "A revisionist strand of economic history has recently drawn attention to a parallel credit system that the formal-banking account largely ignores. Using merchant account books, personal correspondence, and the records of fraternal organizations and mutual aid societies, these scholars have documented extensive informal credit networks operating throughout rural and small-town America. Country storekeepers routinely extended credit on what was called the 'open book'—recording balances in ledgers without formal legal instruments—to farming families who would settle accounts in labor, produce, or cash months or even years later. These arrangements were more flexible than bank loans, required no collateral, and extended to populations—recent immigrants, tenant farmers, freed people in the post-war South—that formal banks consistently refused to serve."
+      },
+      {
+        label: "P3",
+        text: "The revisionist account acknowledges significant weaknesses in informal credit. These networks depended on the personal knowledge and reputational information that relationships in small, stable communities generate; they could not easily be transplanted to the anonymous transactions of large cities or extended across unfamiliar populations. When an anchor figure—a long-established storekeeper or the leader of a fraternal society—died, relocated, or faced personal financial crisis, the network often collapsed, sometimes taking decades of accumulated obligations with it. The informal system also lacked the diversification that formal banks could achieve: a crop failure or local economic shock could render dozens of customers unable to repay simultaneously, cascading through the network in ways a bank with geographically distributed assets could absorb."
+      },
+      {
+        label: "P4",
+        text: "Despite these limitations, the author argues that informal credit should be understood not as a primitive precursor that the formal banking system eventually displaced, but as a structural complement that co-evolved with formal institutions throughout the period. As bank networks expanded, storekeepers increasingly used formal banking relationships to backstop their book credit—depositing trade receipts and accessing lines of credit that allowed them to absorb local shocks that would previously have destroyed the network. At the same time, formal banks used informal networks as distribution channels, directing customers to local storekeepers for the small, relationship-intensive transactions that formal banking found unprofitable to service directly. The two systems addressed different needs within the same economy simultaneously, and the expansion of one did not crowd out the other."
+      }
+    ],
+    modelMap: [
+      "P1: Traditional account — formal banking drove 19th century American economic expansion",
+      "P2: Revisionist scholarship — informal credit networks were extensive and served populations banks ignored",
+      "P3: Weaknesses of informal credit — local, fragile, not diversified",
+      "P4: Author's argument — informal credit was a structural complement, not a primitive precursor"
+    ],
+    questions: [
+      {
+        id: "rc-credit-q1",
+        section: "RC",
+        family: "RC Main Point",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The main argument of the passage is that",
+        options: [
+          "informal credit networks were not primitive precursors to formal banking but structural complements that co-evolved with formal institutions throughout the nineteenth century",
+          "the traditional account of formal banking's role in American economic expansion is entirely mistaken",
+          "informal credit networks were superior to formal banking for most nineteenth-century Americans because they were more flexible",
+          "the weaknesses of informal credit eventually caused it to be displaced by the expanding formal banking system"
+        ],
+        answer: 0,
+        explanation: "The author's thesis is stated in P4: informal credit was a 'structural complement that co-evolved' with formal institutions — not displaced by them and not their precursor. The author is not arguing the traditional account is entirely wrong, only incomplete.",
+        trapPattern: "Picks a major detail instead of the overall mission"
+      },
+      {
+        id: "rc-credit-q2",
+        section: "RC",
+        family: "RC Function",
+        difficulty: "medium",
+        lessonIds: ["rc-function-main-point"],
+        prompt: "",
+        question: "The third paragraph primarily functions to",
+        options: [
+          "acknowledge the real limitations of informal credit before the author argues for its structural importance alongside formal banking",
+          "argue that informal credit was not economically significant because of its fragility and geographic constraints",
+          "explain why the formal banking system eventually displaced informal credit networks",
+          "provide historical examples that support the revisionist account described in the second paragraph"
+        ],
+        answer: 0,
+        explanation: "P3 follows the revisionist case in P2 with an acknowledgment of informal credit's weaknesses. Its structural job is concession: granting real problems before P4 makes the stronger claim about co-evolution. It is not an argument against informal credit's significance.",
+        trapPattern: "Confuses paragraph topic with paragraph job"
+      },
+      {
+        id: "rc-credit-q3",
+        section: "RC",
+        family: "RC Inference",
+        difficulty: "medium",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "Based on the passage, which of the following is most strongly supported regarding formal banks in nineteenth-century America?",
+        options: [
+          "They did not generally extend credit to tenant farmers, recent immigrants, and freed people in the post-war South",
+          "They were entirely dependent on informal credit networks to distribute their services",
+          "Their geographic diversification meant they were unaffected by regional economic shocks",
+          "They operated primarily in rural areas rather than cities"
+        ],
+        answer: 0,
+        explanation: "P2 explicitly states that informal credit 'extended to populations—recent immigrants, tenant farmers, freed people in the post-war South—that formal banks consistently refused to serve.' Answer A paraphrases this directly.",
+        trapPattern: "Chooses a claim stronger than the passage supports"
+      },
+      {
+        id: "rc-credit-q4",
+        section: "RC",
+        family: "RC Attitude",
+        difficulty: "medium",
+        lessonIds: ["rc-inference-attitude"],
+        prompt: "",
+        question: "The author's attitude toward the traditional economic historians described in the first paragraph is best characterized as",
+        options: [
+          "critical of their incomplete account — they have overlooked a significant parallel credit system",
+          "strongly dismissive — the traditional account is wrong in all of its major claims",
+          "fully endorsing — the author accepts the traditional account and adds minor details",
+          "confused — the author is uncertain whether the traditional account or the revisionist account is correct"
+        ],
+        answer: 0,
+        explanation: "The author endorses the revisionist scholarship in P2 and builds on it in P4, implying the traditional account is incomplete rather than entirely wrong. The author never says formal banking was unimportant, only that informal credit was equally important and has been neglected.",
+        trapPattern: "Reads neutral summary as endorsement"
+      },
+      {
+        id: "rc-credit-q5",
+        section: "RC",
+        family: "RC Structure",
+        difficulty: "medium",
+        lessonIds: ["rc-structure-map"],
+        prompt: "",
+        question: "Which of the following best describes the overall organization of the passage?",
+        options: [
+          "A dominant historical account is presented, revisionist scholarship is introduced that expands that account, the limitations of the new scholarship are acknowledged, and the author presents a synthesis",
+          "Two competing economic systems are described and the author argues one was more effective than the other",
+          "A historical phenomenon is described, its causes are analyzed, and policy recommendations are offered",
+          "A series of case studies is used to demonstrate a general principle about economic development"
+        ],
+        answer: 0,
+        explanation: "P1 = traditional account; P2 = revisionist scholarship; P3 = limits of the new view; P4 = author's synthesis about co-evolution. This matches answer A precisely.",
+        trapPattern: "Mistakes topic for structure"
+      }
+    ]
+  }
+];
+
 window.JESSI_PREPS_DATA = {
   appMeta: {
     title: "JessiPreps",
@@ -1628,6 +2114,7 @@ window.JESSI_PREPS_DATA = {
     },
   ],
   questionBank: QUESTION_BANK,
+  rcPassages: RC_PASSAGES,
   drillPresets: [
     { id: "rc-start", title: "RC Structure Reset", section: "RC", families: ["RC Structure", "RC Inference"], count: 5, rationale: "Rebuild structure and inference discipline before detail-chasing." },
     { id: "gap-work", title: "Gap Spotting", section: "LR", families: ["Assumption", "Strengthen", "Weaken"], count: 5, rationale: "Train the bridge between support and conclusion." },
