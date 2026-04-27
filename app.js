@@ -26,11 +26,7 @@ document.querySelector("#openWeakest").addEventListener("click", () => {
 });
 
 sidebarToggle?.addEventListener("click", () => {
-  if (window.innerWidth <= 1200) {
-    document.body.classList.toggle("sidebar-open");
-  } else {
-    document.body.classList.toggle("sidebar-collapsed");
-  }
+  document.body.classList.toggle("sidebar-open");
 });
 
 sidebarClose?.addEventListener("click", () => {
@@ -43,7 +39,7 @@ function defaultState() {
   return {
     settings: Object.fromEntries(data.settings.map((item) => [item.id, false])),
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
-    questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0 }])),
+    questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
     attempts: {},
     journal: [],
     support: [...data.supportEntries],
@@ -305,6 +301,28 @@ function renderQtVideoPanel(lesson, phase, label) {
   `;
 }
 
+function renderStepIndicator(currentStep) {
+  const steps = ["Video 1", "Video 2", "Guided Questions", "Mastery Drill"];
+  return `
+    <div class="step-indicator">
+      ${steps
+        .map((label, i) => {
+          const num = i + 1;
+          const isActive = num === currentStep;
+          const isDone = num < currentStep;
+          return `
+            ${num > 1 ? `<div class="step-indicator__line ${isDone ? "is-done" : ""}"></div>` : ""}
+            <div class="step-indicator__item ${isActive ? "is-active" : ""} ${isDone ? "is-done" : ""}">
+              <div class="step-indicator__dot">${isDone ? "✓" : num}</div>
+              <span class="step-indicator__label">${label}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function routeInfo() {
   const hash = location.hash || "#/dashboard";
   const parts = hash.replace(/^#\//, "").split("/");
@@ -320,9 +338,13 @@ function renderApp() {
   renderNav();
   renderSettings();
   renderToday();
-  if (window.innerWidth <= 1200) {
-    document.body.classList.remove("sidebar-open");
+  if (!document.querySelector(".sidebar-backdrop")) {
+    const backdrop = document.createElement("div");
+    backdrop.className = "sidebar-backdrop";
+    backdrop.addEventListener("click", () => document.body.classList.remove("sidebar-open"));
+    document.body.appendChild(backdrop);
   }
+  document.body.classList.remove("sidebar-open");
   const route = routeInfo();
   renderRouteMeta(route);
   renderPage(route);
@@ -784,6 +806,7 @@ function renderLessonPlayer(lesson) {
 function renderQuestionTypeLesson(lesson) {
   ensureQtPlayback(lesson, qtPlaybackState.phase);
   const progress = state.questionTypeProgress[lesson.id];
+  const currentStep = progress.currentStep || 1;
   const questions = familyQuestions(lesson.family);
   const guided = questions.slice(0, 3);
   const drill = questions.slice(3, 11);
@@ -791,185 +814,207 @@ function renderQuestionTypeLesson(lesson) {
   const accuracy = attempts.length ? Math.round((attempts.filter((item) => state.attempts[item.id].correct).length / attempts.length) * 100) : 0;
   const analysis = buildDrillAnalysis(lesson.family);
   const topTrap = analysis.topTraps[0]?.trap || lesson.traps[0];
-  return `
+
+  const header = `
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>${lesson.title}</h3>
-        <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.guidedWins + progress.drillWins} wins logged`}</span>
+        <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `Step ${currentStep} of 4`}</span>
       </div>
       <p>${lesson.summary}</p>
-      <div class="card-grid card-grid--three">
-        <section class="mini-card">
-          <p class="mini-card__label">Family</p>
-          <h4>${lesson.family}</h4>
-          <p>${lesson.section} question type</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Accuracy so far</p>
-          <h4>${accuracy}%</h4>
-          <p>${attempts.length} attempts logged</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Trap pattern</p>
-          <h4>${topTrap}</h4>
-          <p>${familyTrapSummary(lesson.family)}</p>
-        </section>
-      </div>
+      ${renderStepIndicator(currentStep)}
     </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Step 1. Video Breakdown Lesson</h3>
-      </div>
-      <p>This first video teaches what this family is really asking, how to recognize it quickly, and the core framework pulled into original language from the books.</p>
-      ${renderQtVideoPanel(lesson, "step1", "5-scene lesson")}
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Step 2. Solve Method + Trap Answers Video</h3>
-      </div>
-      <p>This second video slows the process down, shows the solve sequence, and contrasts the wrong answers that keep stealing points from you.</p>
-      ${renderQtVideoPanel(lesson, "step2", "4-scene solve video")}
-      <div class="qt-toolbox">
-        <section class="transcript-block">
-          <p class="mini-card__label">Method checklist</p>
-          <ol class="method-list">
-            ${lesson.method.map((step) => `<li>${step}</li>`).join("")}
-          </ol>
-        </section>
-        <section class="transcript-block">
-          <p class="mini-card__label">Trap chips</p>
-          <div class="tag-stack">
-            ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
-          </div>
-        </section>
-      </div>
-    </article>
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Step 3. Guided Questions</h3>
-      </div>
-      <p>Answer these by forcing the method, not by guessing. Each guided question puts the process in front of you before you pick an answer.</p>
-      <div class="practice-list">
-        ${guided
-          .map(
-            (question) => `
-              <section class="question-card">
-                <div class="method-enforcer">
-                  <p class="mini-card__label">Method enforcer</p>
-                  <div class="method-enforcer__grid">
-                    <section><strong>Step 1</strong><p>${lesson.method[0]}</p></section>
-                    <section><strong>Step 2</strong><p>${lesson.method[1]}</p></section>
-                    <section><strong>Step 3</strong><p>${lesson.method[2]}</p></section>
+  `;
+
+  let stepContent = "";
+
+  if (currentStep === 1) {
+    stepContent = `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Step 1 — Video Breakdown Lesson</h3>
+          <span class="status-pill">${lesson.step1Video.runtime}</span>
+        </div>
+        <p>This first video teaches what this family is really asking, how to recognize it quickly, and the core framework pulled from the books in original language.</p>
+        ${renderQtVideoPanel(lesson, "step1", "5-scene lesson")}
+        <div class="step-continue-bar">
+          <span class="muted">Watch the full video before moving on.</span>
+          <button class="button button--primary" data-qt-step-next="${lesson.id}">Continue to Step 2 →</button>
+        </div>
+      </article>
+    `;
+  } else if (currentStep === 2) {
+    stepContent = `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Step 2 — Solve Method + Trap Answers Video</h3>
+          <span class="status-pill">${lesson.step2Video.runtime}</span>
+        </div>
+        <p>This second video slows the process down, shows the full solve sequence step by step, and contrasts the wrong answers that keep stealing points.</p>
+        ${renderQtVideoPanel(lesson, "step2", "4-scene solve video")}
+        <div class="qt-toolbox">
+          <section class="transcript-block">
+            <p class="mini-card__label">Method checklist</p>
+            <ol class="method-list">
+              ${lesson.method.map((step) => `<li>${step}</li>`).join("")}
+            </ol>
+          </section>
+          <section class="transcript-block">
+            <p class="mini-card__label">Trap chips</p>
+            <div class="tag-stack">
+              ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
+            </div>
+          </section>
+        </div>
+        <div class="step-continue-bar">
+          <button class="button button--ghost" data-qt-step-back="${lesson.id}">← Back to Step 1</button>
+          <button class="button button--primary" data-qt-step-next="${lesson.id}">Continue to Step 3 →</button>
+        </div>
+      </article>
+    `;
+  } else if (currentStep === 3) {
+    stepContent = `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Step 3 — Guided Questions</h3>
+        </div>
+        <p>Answer these using the method, not guessing. The method enforcer sits above each question to keep the process in front of you before you pick an answer.</p>
+        <div class="practice-list">
+          ${guided
+            .map(
+              (question) => `
+                <section class="question-card">
+                  <div class="method-enforcer">
+                    <p class="mini-card__label">Method enforcer — use this before answering</p>
+                    <div class="method-enforcer__grid">
+                      <section><strong>Step 1</strong><p>${lesson.method[0]}</p></section>
+                      <section><strong>Step 2</strong><p>${lesson.method[1]}</p></section>
+                      <section><strong>Step 3</strong><p>${lesson.method[2]}</p></section>
+                    </div>
+                    <p class="microcopy"><strong>Trap to watch for:</strong> ${lesson.traps[0]}</p>
                   </div>
-                  <p class="microcopy"><strong>Trap warning:</strong> ${lesson.traps[0]}</p>
-                </div>
-                ${renderQuestionCard(question, "guided")}
-              </section>
-            `,
-          )
-          .join("")}
-      </div>
-    </article>
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Step 4. Mastery Drill</h3>
-      </div>
-      <p>Complete this 5-10 question drill for mastery. The analysis system below updates after every answer and shows what is repeatedly going wrong.</p>
-      <div class="practice-list">
-        ${drill.map((question) => renderQuestionCard(question, "mastery")).join("")}
-      </div>
-      <button class="button button--primary" data-complete-question-type="${lesson.id}" ${progress.drillWins < 5 ? "disabled" : ""}>${progress.drillWins < 5 ? `Need ${5 - progress.drillWins} more drill wins` : "Mark question type mastered"}</button>
-      ${progress.drillWins >= 5 ? `<p class="microcopy">Mastery gate unlocked. You have enough drill wins to mark this question type complete.</p>` : ""}
-    </article>
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Why You Are Missing This Type</h3>
-      </div>
-      <div class="card-grid card-grid--four">
-        <section class="mini-card">
-          <p class="mini-card__label">Accuracy</p>
-          <h4 class="analysis-score ${analysis.accuracy >= 80 ? "is-strong" : analysis.accuracy >= 60 ? "is-medium" : "is-weak"}">${analysis.accuracy}%</h4>
-          <p>${analysis.attempts} attempts logged for ${lesson.family}.</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">High-confidence misses</p>
-          <h4>${analysis.highConfidenceMisses}</h4>
-          <p>These are the misses most likely caused by a repeatable process error, not simple confusion.</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Pattern diagnosis</p>
-          <h4>${topTrap}</h4>
-          <p>${analysis.diagnosis}</p>
-        </section>
-        <section class="mini-card">
-          <p class="mini-card__label">Method fix</p>
-          <h4>${lesson.method[0]}</h4>
-          <p>${analysis.methodFix}</p>
-        </section>
-      </div>
-      <div class="qt-analysis-grid">
+                  ${renderQuestionCard(question, "guided")}
+                </section>
+              `,
+            )
+            .join("")}
+        </div>
+        <div class="step-continue-bar">
+          <button class="button button--ghost" data-qt-step-back="${lesson.id}">← Back to Step 2</button>
+          <button class="button button--primary" data-qt-step-next="${lesson.id}">Continue to Step 4 →</button>
+        </div>
+      </article>
+    `;
+  } else {
+    stepContent = `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Step 4 — Mastery Drill</h3>
+        </div>
+        <p>Complete this 5-10 question drill. The analysis system below updates after every answer and shows what is repeatedly going wrong.</p>
+        <div class="practice-list">
+          ${drill.map((question) => renderQuestionCard(question, "mastery")).join("")}
+        </div>
+        <button class="button button--primary" data-complete-question-type="${lesson.id}" ${progress.drillWins < 5 ? "disabled" : ""}>${progress.drillWins < 5 ? `Need ${5 - progress.drillWins} more drill wins` : "Mark question type mastered"}</button>
+        ${progress.drillWins >= 5 ? `<p class="microcopy">Mastery gate unlocked. Mark this question type complete when you are ready.</p>` : ""}
+        <div class="step-continue-bar">
+          <button class="button button--ghost" data-qt-step-back="${lesson.id}">← Back to Step 3</button>
+          <span></span>
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Why You Are Missing This Type</h3>
+        </div>
+        <p class="muted">This section updates automatically as you answer questions. Every miss is logged with its trap pattern and the exact wrong choice so you can see what is happening.</p>
+        <div class="card-grid card-grid--four">
+          <section class="mini-card">
+            <p class="mini-card__label">Accuracy</p>
+            <h4 class="analysis-score ${analysis.accuracy >= 80 ? "is-strong" : analysis.accuracy >= 60 ? "is-medium" : "is-weak"}">${analysis.accuracy}%</h4>
+            <p>${analysis.attempts} attempts logged for ${lesson.family}.</p>
+          </section>
+          <section class="mini-card">
+            <p class="mini-card__label">High-confidence misses</p>
+            <h4>${analysis.highConfidenceMisses}</h4>
+            <p>Misses where you were confident. These signal a repeatable process error, not confusion.</p>
+          </section>
+          <section class="mini-card">
+            <p class="mini-card__label">Pattern diagnosis</p>
+            <h4>${topTrap}</h4>
+            <p>${analysis.diagnosis}</p>
+          </section>
+          <section class="mini-card">
+            <p class="mini-card__label">Method fix</p>
+            <h4>${lesson.method[0]}</h4>
+            <p>${analysis.methodFix}</p>
+          </section>
+        </div>
+        <div class="qt-analysis-grid">
+          <section class="transcript-block">
+            <p class="mini-card__label">Trap frequency</p>
+            <div class="trap-bars">
+              ${
+                analysis.topTraps.length
+                  ? analysis.topTraps
+                      .map(
+                        (item) => `
+                          <div class="trap-bar">
+                            <div class="trap-bar__meta"><strong>${item.trap}</strong><span>${item.count} miss${item.count > 1 ? "es" : ""}</span></div>
+                            <div class="trap-bar__track"><span style="width:${Math.max(14, item.share)}%"></span></div>
+                            <p class="microcopy">${item.advice}</p>
+                          </div>
+                        `,
+                      )
+                      .join("")
+                  : `<p class="muted">Trap bars will fill in once you log misses for this family.</p>`
+              }
+            </div>
+          </section>
+          <section class="transcript-block">
+            <p class="mini-card__label">Wrong answers you keep picking</p>
+            <div class="journal-list">
+              ${
+                analysis.wrongChoices.length
+                  ? analysis.wrongChoices
+                      .map(
+                        ([choiceText, count]) => `
+                          <section class="journal-card">
+                            <strong>${count} time${count > 1 ? "s" : ""}</strong>
+                            <p>${choiceText}</p>
+                          </section>
+                        `,
+                      )
+                      .join("")
+                  : `<p class="muted">Once you miss a question, the exact wrong answer text will appear here so you can spot your favorite traps.</p>`
+              }
+            </div>
+          </section>
+        </div>
         <section class="transcript-block">
-          <p class="mini-card__label">Trap frequency</p>
-          <div class="trap-bars">
-            ${
-              analysis.topTraps.length
-                ? analysis.topTraps
-                    .map(
-                      (item) => `
-                        <div class="trap-bar">
-                          <div class="trap-bar__meta"><strong>${item.trap}</strong><span>${item.count} miss${item.count > 1 ? "es" : ""}</span></div>
-                          <div class="trap-bar__track"><span style="width:${Math.max(14, item.share)}%"></span></div>
-                          <p class="microcopy">${item.advice}</p>
-                        </div>
-                      `,
-                    )
-                    .join("")
-                : `<p class="muted">Trap bars will fill in once you log misses for this family.</p>`
-            }
-          </div>
-        </section>
-        <section class="transcript-block">
-          <p class="mini-card__label">Wrong answer choices you keep picking</p>
+          <p class="mini-card__label">Miss journal</p>
           <div class="journal-list">
             ${
-              analysis.wrongChoices.length
-                ? analysis.wrongChoices
+              analysis.recentMisses.length
+                ? analysis.recentMisses
                     .map(
-                      ([choiceText, count]) => `
+                      (entry) => `
                         <section class="journal-card">
-                          <strong>${count} time${count > 1 ? "s" : ""}</strong>
-                          <p>${choiceText}</p>
+                          <strong>${entry.trapPattern}</strong>
+                          <p>${entry.whyWrong}</p>
+                          ${entry.wrongChoiceText ? `<p class="microcopy">Wrong choice picked: ${entry.wrongChoiceText}</p>` : ""}
                         </section>
                       `,
                     )
                     .join("")
-                : `<p class="muted">Once you miss a question, the exact wrong answer text will appear here so you can spot your favorite traps.</p>`
+              : `<p class="muted">Your last five misses for this family will appear here with the trap and the wrong answer text.</p>`
             }
           </div>
         </section>
-      </div>
-      <section class="transcript-block">
-        <p class="mini-card__label">Miss journal</p>
-        <div class="journal-list">
-          ${
-            analysis.recentMisses.length
-              ? analysis.recentMisses
-                  .map(
-                    (entry) => `
-                      <section class="journal-card">
-                        <strong>${entry.trapPattern}</strong>
-                        <p>${entry.whyWrong}</p>
-                        ${entry.wrongChoiceText ? `<p class="microcopy">Wrong choice picked: ${entry.wrongChoiceText}</p>` : ""}
-                      </section>
-                    `,
-                  )
-                  .join("")
-              : `<p class="muted">Your last five misses for this family will appear here with the trap and the wrong answer text.</p>`
-          }
-        </div>
-      </section>
-    </article>
-  `;
+      </article>
+    `;
+  }
+
+  return header + stepContent;
 }
 
 function renderPracticePage(route) {
@@ -1247,6 +1292,28 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-qt-step-next]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.qtStepNext;
+      const progress = state.questionTypeProgress[lessonId];
+      progress.currentStep = Math.min(4, (progress.currentStep || 1) + 1);
+      saveState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-qt-step-back]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.qtStepBack;
+      const progress = state.questionTypeProgress[lessonId];
+      progress.currentStep = Math.max(1, (progress.currentStep || 1) - 1);
+      saveState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      renderApp();
+    });
+  });
+
   if (route.page === "learn" && route.id && route.id !== "content") {
     const lesson = data.lessons.find((item) => item.id === route.id);
     const questionTypeLesson = findQuestionTypeLesson(route.id);
@@ -1378,4 +1445,5 @@ if (!location.hash) {
   location.hash = "#/dashboard";
 }
 
+document.body.classList.add("sidebar-collapsed");
 renderApp();
