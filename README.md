@@ -26,7 +26,6 @@ Open `index.html` for the dashboard app, or open `content.html` for the static m
 - `analytics.html` - weak-area recommendations
 - `journal.html` - wrong-answer journal and spaced review
 - `plan.html` - weekly plan, print, calendar export, backup/restore
-- `gap-analysis.html` - competitive gap analysis and cause/effect roadmap
 - `automations.html` - in-app study automations
 - `plugins.html` - recommended plugin stack
 

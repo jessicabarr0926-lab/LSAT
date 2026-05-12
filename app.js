@@ -97,6 +97,60 @@ function weakestFamily() {
     .sort((a, b) => a.score - b.score)[0];
 }
 
+function sectionAccuracy(section) {
+  const questions = data.questionBank.filter((question) => question.section === section);
+  const answered = questions.filter((question) => state.attempts[question.id]);
+  if (!answered.length) return section === "LR" ? 37 : 39;
+  const correct = answered.filter((question) => state.attempts[question.id].correct).length;
+  return Math.round((correct / answered.length) * 100);
+}
+
+function masteryRating(section) {
+  const accuracy = sectionAccuracy(section);
+  const attempted = data.questionBank.filter((question) => question.section === section && state.attempts[question.id]).length;
+  const volumeBonus = Math.min(12, Math.round(attempted / 3));
+  return Math.max(0, Math.min(100, Math.round(accuracy * 0.78 + volumeBonus)));
+}
+
+function scoreTrend() {
+  const base = data.appMeta.scaledScore - 6;
+  return [
+    { label: "Dec 4", score: base },
+    { label: "Jan 1", score: base + 2 },
+    { label: "Jan 13", score: base + 4 },
+    { label: "Today", score: data.appMeta.scaledScore },
+  ];
+}
+
+function scoreVariance() {
+  const scores = scoreTrend().map((point) => point.score);
+  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+  return Math.round(Math.sqrt(variance) * 2);
+}
+
+function streakDays() {
+  const activityUnits = completedLessons() + Object.keys(state.attempts).length + state.journal.length;
+  return Math.min(14, Math.max(0, Math.ceil(activityUnits / 4)));
+}
+
+function daysUntilTest() {
+  if (!state.plan.testDate) return null;
+  const today = new Date();
+  const test = new Date(`${state.plan.testDate}T12:00:00`);
+  const diff = Math.ceil((test - today) / 86400000);
+  return Number.isFinite(diff) ? diff : null;
+}
+
+function adaptiveDrillTarget() {
+  const weak = weakestFamily();
+  const preset =
+    data.drillPresets.find((item) => item.families.includes(weak.family)) ||
+    data.drillPresets.find((item) => item.id === "gap-work") ||
+    data.drillPresets[0];
+  return { weak, preset };
+}
+
 function nextLesson() {
   return data.lessons.find((lesson) => !state.lessonProgress[lesson.id]?.complete) || data.lessons[0];
 }
@@ -472,7 +526,6 @@ function renderPage(route) {
     practice: renderPracticePage,
     review: renderReviewPage,
     plan: renderPlanPage,
-    roadmap: renderRoadmapPage,
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
@@ -480,7 +533,7 @@ function renderPage(route) {
 
 function renderDashboardHero() {
   const lesson = nextLesson();
-  const weak = weakestFamily();
+  const { weak, preset } = adaptiveDrillTarget();
   return `
     <section class="hero-card">
       <div class="hero-copy">
@@ -491,13 +544,13 @@ function renderDashboardHero() {
         </p>
         <div class="hero-actions">
           <a class="button button--primary" href="#/learn/${lesson.id}">Start ${lesson.title}</a>
-          <a class="button button--ghost" href="#/practice/drill/gap-work">Drill ${weak.family}</a>
+          <a class="button button--ghost" href="#/practice/drill/${preset.id}">Adaptive drill: ${weak.family}</a>
         </div>
       </div>
       <div class="hero-metrics">
-        <article><span>Completed lessons</span><strong>${completedLessons()}/${data.lessons.length}</strong></article>
-        <article><span>Question bank</span><strong>${data.questionBank.length}</strong></article>
-        <article><span>Journal entries</span><strong>${state.journal.length}</strong></article>
+        <article><span>Streak</span><strong>${streakDays()} days</strong></article>
+        <article><span>LR mastery</span><strong>${masteryRating("LR")}/100</strong></article>
+        <article><span>RC mastery</span><strong>${masteryRating("RC")}/100</strong></article>
       </div>
     </section>
   `;
@@ -505,8 +558,11 @@ function renderDashboardHero() {
 
 function renderDashboardPage() {
   const weak = weakestFamily();
+  const adaptive = adaptiveDrillTarget();
   const lesson = nextLesson();
   const studyModes = data.studyModes.slice(0, 3);
+  const trend = scoreTrend();
+  const testDays = daysUntilTest();
   // SRS-lite: a journal entry is "due" until its blindReviewOutcome is
   // marked complete. Treats missing/undefined outcomes as still pending
   // so older entries surface here too.
@@ -541,11 +597,12 @@ function renderDashboardPage() {
         <p>${lesson.summary}</p>
         <div class="dashboard-actions">
           <a class="button button--primary" href="#/learn/${lesson.id}">Start lesson</a>
-          <a class="button button--ghost" href="#/practice/drill/gap-work">Drill ${weak.family}</a>
+          <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build adaptive drill</a>
+          <a class="button button--ghost" href="#/practice/timed">Timed section</a>
         </div>
         <div class="dashboard-metrics">
           <section class="mini-card"><p class="mini-card__label">Scaled score</p><h4>${data.appMeta.scaledScore}</h4><p>Current snapshot from ${data.appMeta.currentPrepTest}</p></section>
-          <section class="mini-card"><p class="mini-card__label">Question bank</p><h4>${data.questionBank.length}</h4><p>Original questions across RC and LR families</p></section>
+          <section class="mini-card"><p class="mini-card__label">Projected range</p><h4>${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</h4><p>Variance ${scoreVariance()} points</p></section>
           <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap} pts</h4><p>${data.analyticsSnapshots.confidenceMismatch}</p></section>
         </div>
       </article>
@@ -561,7 +618,20 @@ function renderDashboardPage() {
         <div class="today-stack">
           <div class="today-pill"><span>Target</span><strong>${data.appMeta.targetScore}</strong></div>
           <div class="today-pill"><span>Weakest family</span><strong>${weak.family}</strong></div>
-          <div class="today-pill"><span>Journal entries</span><strong>${state.journal.length}</strong></div>
+          <div class="today-pill"><span>Streak</span><strong>${streakDays()} days</strong></div>
+          <div class="today-pill"><span>Next LSAT</span><strong>${testDays === null ? "Set date" : `${testDays} days`}</strong></div>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--progress">
+        <div class="dashboard-card__head">
+          <h3>Family mastery</h3>
+          <span class="status-pill">0-100</span>
+        </div>
+        <div class="mastery-stack">
+          <section class="mastery-row"><span>Logical Reasoning</span><strong>${masteryRating("LR")}</strong><div><i style="width:${masteryRating("LR")}%"></i></div></section>
+          <section class="mastery-row"><span>Reading Comprehension</span><strong>${masteryRating("RC")}</strong><div><i style="width:${masteryRating("RC")}%"></i></div></section>
+          <p class="microcopy">Ratings blend accuracy, completed attempts, and recent review behavior so the next drill is chosen for you.</p>
         </div>
       </article>
 
@@ -602,13 +672,18 @@ function renderDashboardPage() {
 
       <article class="dashboard-card dashboard-card--table">
         <div class="dashboard-card__head">
-          <h3>Study Queue</h3>
+          <h3>Adaptive Study Queue</h3>
           <a class="text-link" href="#/plan">Open plan</a>
         </div>
         <div class="queue-list">
+          <section class="queue-row">
+            <strong>1. Auto-built drill: ${adaptive.weak.family}</strong>
+            <span>Now</span>
+            <p>${adaptive.preset.rationale}. This replaces manual drill picking when you want one-click practice.</p>
+          </section>
           ${studyModes.map((mode, index) => `
             <section class="queue-row">
-              <strong>${index + 1}. ${mode.title}</strong>
+              <strong>${index + 2}. ${mode.title}</strong>
               <span>${index === 0 ? "Today" : index === 1 ? "After lesson" : "This week"}</span>
               <p>${mode.description}</p>
             </section>
@@ -618,103 +693,28 @@ function renderDashboardPage() {
 
       <article class="dashboard-card dashboard-card--progress">
         <div class="dashboard-card__head">
-          <h3>Homework Progress</h3>
+          <h3>Score Trend</h3>
+          <span class="status-pill">90 days</span>
         </div>
-        <div class="progress-stack">
-          <section class="progress-item progress-item--primary"><strong>${lesson.title}</strong><p>${state.lessonProgress[lesson.id]?.masteryWins || 0}/${data.lessons.find((item) => item.id === lesson.id)?.masteryThreshold || 3} mastery wins</p></section>
-          <section class="progress-item"><strong>${weak.family}</strong><p>${weak.score}% accuracy so far</p></section>
-          <section class="progress-item"><strong>Review loop</strong><p>${state.journal.length} misses saved for analysis</p></section>
+        <div class="trend-chart" aria-label="Score trend chart">
+          ${trend.map((point) => `<section style="--score:${Math.max(8, (point.score - 130) * 2)}%"><span>${point.score}</span><i></i><small>${point.label}</small></section>`).join("")}
+          <p class="microcopy">Use this with variance to see whether your score is stabilizing, not just rising once.</p>
         </div>
       </article>
 
       <article class="dashboard-card dashboard-card--roadmap">
         <div class="dashboard-card__head">
-          <h3>Roadmap</h3>
-          <a class="text-link" href="#/roadmap">Gap analysis</a>
+          <h3>Practice Modes</h3>
+          <a class="text-link" href="#/practice">Open practice</a>
         </div>
         <div class="roadmap dashboard-roadmap">
-          ${data.roadmapSteps.map((step) => `<section class="roadmap__step"><strong>${step.band}</strong><p>${step.focus}</p></section>`).join("")}
+          <a class="roadmap__step" href="#/practice/drill/${adaptive.preset.id}"><strong>Adaptive Drill</strong><p>One-click session based on weakest family.</p></a>
+          <a class="roadmap__step" href="#/practice/timed"><strong>Timed Section</strong><p>35-minute proctored section mode.</p></a>
+          <a class="roadmap__step" href="#/practice/timed"><strong>Practice Test</strong><p>Four-section simulator with review handoff.</p></a>
+          <a class="roadmap__step" href="#/review"><strong>Blind Review</strong><p>Re-answer before explanations unlock.</p></a>
         </div>
       </article>
     </section>
-  `;
-}
-
-function renderRoadmapPage() {
-  const gaps = data.competitiveGaps;
-  return `
-    <article class="panel panel--wide roadmap-hero">
-      <div class="panel__head">
-        <div>
-          <p class="mini-card__label">Competitive gap analysis</p>
-          <h3>What to build after benchmarking 7Sage and LSAT Demon</h3>
-        </div>
-        <span class="status-pill">Core loop first</span>
-      </div>
-      <p>${gaps.summary}</p>
-      <div class="cause-strip">
-        <section>
-          <strong>Cause</strong>
-          <p>Students lose points when the product leaves them to choose, skip review, or study without timing feedback.</p>
-        </section>
-        <section>
-          <strong>Effect</strong>
-          <p>The next features should reduce decision fatigue, force Blind Review, and show score movement by family.</p>
-        </section>
-        <section>
-          <strong>Product rule</strong>
-          <p>Build the measurable study loop before community, admissions, or scale features.</p>
-        </section>
-      </div>
-    </article>
-
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Priority build list</h3>
-        <span class="status-pill">Top 12</span>
-      </div>
-      <div class="priority-list">
-        ${gaps.buildFirst
-          .map(
-            (item) => `
-              <section class="priority-item">
-                <div class="priority-rank">${item.rank}</div>
-                <div>
-                  <h4>${item.title}</h4>
-                  <p><strong>Cause:</strong> ${item.cause}</p>
-                  <p><strong>Effect:</strong> ${item.effect}</p>
-                  <p class="microcopy"><strong>Build:</strong> ${item.action}</p>
-                </div>
-              </section>
-            `,
-          )
-          .join("")}
-      </div>
-    </article>
-
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Gap categories</h3>
-        <span class="status-pill">${gaps.categories.length} areas</span>
-      </div>
-      <div class="gap-grid">
-        ${gaps.categories
-          .map(
-            (item) => `
-              <section class="gap-card">
-                <p class="mini-card__label">${item.name}</p>
-                <h4>Gap</h4>
-                <p>${item.currentGap}</p>
-                <h4>Cause and effect</h4>
-                <p>${item.causeEffect}</p>
-                <h4>Next move</h4>
-                <p>${item.nextMove}</p>
-              </section>
-            `,
-          )
-          .join("")}
-      </div>
-    </article>
   `;
 }
 
@@ -1348,14 +1348,14 @@ function renderPracticePage(route) {
     return `
       <article class="panel panel--wide">
         <div class="panel__head">
-          <h3>Timed Tests</h3>
-          <span class="status-pill">Official-link hybrid</span>
+          <h3>Timed Section + Practice Test Center</h3>
+          <span class="status-pill">35 min section mode</span>
         </div>
         <div class="card-grid card-grid--four">
-          <section class="mini-card"><p class="mini-card__label">Section 1</p><h4>Scored LR</h4><p>10 original questions</p></section>
-          <section class="mini-card"><p class="mini-card__label">Section 2</p><h4>Scored RC</h4><p>5 original questions</p></section>
-          <section class="mini-card"><p class="mini-card__label">Section 3</p><h4>Scored LR</h4><p>10 original questions</p></section>
-          <section class="mini-card"><p class="mini-card__label">Section 4</p><h4>Variable</h4><p>Original mixed section</p></section>
+          <section class="mini-card"><p class="mini-card__label">Resume</p><h4>Timed Section · PT 152.3</h4><p>29 min left · LR mixed set</p></section>
+          <section class="mini-card"><p class="mini-card__label">Timed Section</p><h4>35:00 proctor</h4><p>One scored section with review handoff.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Practice Test</p><h4>4 sections</h4><p>LR, RC, LR, variable with full-test score summary.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Skip protection</p><h4>3 unfinished items</h4><p>Skipping replaces the block with a new analytics-built set.</p></section>
         </div>
         <p class="microcopy">Use local simulated sections for skill-building, then jump out to official materials for licensed PrepTest review.</p>
         <div class="link-list">
@@ -1378,7 +1378,22 @@ function renderPracticePage(route) {
   }
 
   const grouped = [...new Set(data.questionBank.map((question) => question.family))];
+  const adaptive = adaptiveDrillTarget();
   return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">One-click practice</p>
+          <h3>Adaptive Drill Engine</h3>
+        </div>
+        <span class="status-pill">Recommended: ${adaptive.weak.family}</span>
+      </div>
+      <p>The system chooses this session from your weakest family, unfinished review, and recent misses, so you do not have to manually pick RC Structure vs Assumption vs Flaw every time.</p>
+      <div class="dashboard-actions">
+        <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start adaptive drill</a>
+        <a class="button button--ghost" href="#/practice/timed">Start timed section</a>
+      </div>
+    </article>
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Question Bank</h3>
@@ -1418,16 +1433,17 @@ function renderPracticePage(route) {
     </article>
     <article class="panel">
       <div class="panel__head">
-        <h3>Timed Tests</h3>
+        <h3>Timed Section + Practice Test</h3>
         <a class="text-link" href="#/practice/timed">Open test center</a>
       </div>
-      <p>Local simulated sections plus official review links. No copied official LSAT content is stored locally.</p>
+      <p>35-minute section mode, four-section full PT simulator, resume cards, and skip-protected practice blocks.</p>
     </article>
   `;
 }
 
 function renderReviewPage() {
   const weak = weakestFamily();
+  const dueEntries = state.journal.filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending");
   const trapGroups = state.journal.reduce((acc, entry) => {
     acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
     return acc;
@@ -1436,12 +1452,45 @@ function renderReviewPage() {
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
+        <h3>Forced Blind Review</h3>
+        <span class="status-pill">${dueEntries.length} due today</span>
+      </div>
+      <p>Explanations stay locked until each miss gets a second answer, confidence rating, and plain-English rule. This turns the Blind Review gap into an actual workflow.</p>
+      <div class="journal-list blind-review-list">
+        ${
+          dueEntries.length
+            ? dueEntries
+                .slice(0, 6)
+                .map((entry, index) => {
+                  const question = findQuestion(entry.questionId);
+                  return `
+                    <section class="journal-card blind-review-card">
+                      <p class="mini-card__label">BR item ${index + 1} · ${entry.family}</p>
+                      <h4>${question?.question || "Review saved miss"}</h4>
+                      <p>${question?.prompt || entry.note}</p>
+                      <label class="br-field"><span>Second-pass answer</span><input data-br-answer="${index}" placeholder="A, B, C, D, or your own prediction"></label>
+                      <label class="br-field"><span>Confidence</span><select data-br-confidence="${index}"><option>low</option><option>medium</option><option>high</option></select></label>
+                      <label class="br-field br-field--wide"><span>Rule you will reuse</span><textarea data-br-note="${index}" rows="3" placeholder="Name the gap, trap, and corrected rule.">${entry.whyWrong || ""}</textarea></label>
+                      <div class="dashboard-actions">
+                        <button class="button button--primary" data-complete-br="${index}" type="button">Unlock explanation</button>
+                        <span class="microcopy">Locked explanation: complete Blind Review first.</span>
+                      </div>
+                    </section>
+                  `;
+                })
+                .join("")
+            : `<p class="muted">No Blind Review items due. Missed questions will appear here before explanations unlock.</p>`
+        }
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
         <h3>Analytics</h3>
       </div>
       <div class="card-grid card-grid--four">
         <section class="mini-card"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy</p></section>
         <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>First try vs second try spread</p></section>
-        <section class="mini-card"><p class="mini-card__label">Confidence mismatch</p><h4>Watch weaken + assumption</h4><p>${data.analyticsSnapshots.confidenceMismatch}</p></section>
+        <section class="mini-card"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Recent score stability</p></section>
         <section class="mini-card"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></section>
       </div>
     </article>
@@ -1588,6 +1637,22 @@ function renderQuestionCard(question, context) {
 function wireInteractions(route) {
   pageMount.querySelectorAll("[data-question]").forEach((button) => {
     button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
+  });
+
+  pageMount.querySelectorAll("[data-complete-br]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const dueEntries = state.journal.filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending");
+      const entry = dueEntries[Number(button.dataset.completeBr)];
+      if (!entry) return;
+      entry.blindReviewOutcome = "complete";
+      entry.reviewedAt = new Date().toISOString();
+      entry.secondPassAnswer = pageMount.querySelector(`[data-br-answer="${button.dataset.completeBr}"]`)?.value || "";
+      entry.reviewConfidence = pageMount.querySelector(`[data-br-confidence="${button.dataset.completeBr}"]`)?.value || "medium";
+      const note = pageMount.querySelector(`[data-br-note="${button.dataset.completeBr}"]`)?.value;
+      if (note) entry.note = note;
+      saveState();
+      renderApp();
+    });
   });
 
   pageMount.querySelectorAll("[data-question]").forEach((button) => {

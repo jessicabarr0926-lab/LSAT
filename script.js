@@ -4499,7 +4499,6 @@ function enhanceNavigation() {
       [
         ["index.html", "Dashboard"],
         ["plan.html", "Study plan"],
-        ["gap-analysis.html", "Gap analysis"],
         ["classes.html", "Classes"],
         ["support.html", "Ask support"],
         ["automations.html", "Automations"],
