@@ -3408,6 +3408,7 @@ function renderLessonPlayer() {
     </div>
     <div class="lesson-flow ${watchComplete ? "unlocked" : "locked"}">
       <section class="watch-panel">
+        <div class="lesson-mp4-slot" data-mp4-slot="${escapeHtml(item.id)}"></div>
         <div class="lesson-video animated-video" style="--scene-duration: ${sceneDuration}; --scene-seconds: ${sceneSeconds}s;" aria-label="Animated lesson video for ${escapeHtml(item.title)}">
           <div class="video-chrome"><span>Animated lesson</span><strong>${escapeHtml(item.title)}</strong></div>
           <div class="video-progress" aria-hidden="true"><span></span></div>
@@ -3539,6 +3540,14 @@ function renderLessonPlayer() {
       </div>
     </div>
   `;
+  // Mount the rendered MP4 above the animated lesson if it exists on disk.
+  // Silent no-op when the file is not present (e.g. video not yet rendered).
+  if (window.JESSI_LESSON_VIDEOS) {
+    const slot = document.querySelector(`#dynamicLesson [data-mp4-slot="${item.id}"]`);
+    if (slot) {
+      window.JESSI_LESSON_VIDEOS.mountLessonVideo(slot, item.id, { prepend: true });
+    }
+  }
 }
 
 function renderLessonLockedPanel(message) {

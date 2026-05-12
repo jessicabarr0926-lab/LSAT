@@ -506,6 +506,27 @@ function renderDashboardPage() {
   const weak = weakestFamily();
   const lesson = nextLesson();
   const studyModes = data.studyModes.slice(0, 3);
+  // SRS-lite: a journal entry is "due" until its blindReviewOutcome is
+  // marked complete. Treats missing/undefined outcomes as still pending
+  // so older entries surface here too.
+  const journalCount = state.journal.length;
+  const dueEntries = state.journal.filter(
+    (entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending"
+  );
+  const dueCount = dueEntries.length;
+  const dueHeadline =
+    dueCount > 0
+      ? `${dueCount} ${dueCount === 1 ? "question" : "questions"} ready for re-attempt`
+      : journalCount === 0
+      ? "Review queue starts after your first miss"
+      : "All caught up. Nice work.";
+  const dueBlurb =
+    dueCount > 0
+      ? "Blind-review misses that haven't been re-attempted. Clearing this queue is the single highest-leverage thing you can do today."
+      : journalCount === 0
+      ? "Answer practice questions and any miss will land here automatically for spaced re-attempt."
+      : "Every recorded miss has been reviewed. New misses will appear here as you drill.";
+  const dueCta = dueCount > 0 ? "Start review session" : "Open review log";
   return `
     <section class="dashboard-grid">
       <article class="dashboard-card dashboard-card--hero">
@@ -540,6 +561,25 @@ function renderDashboardPage() {
           <div class="today-pill"><span>Target</span><strong>${data.appMeta.targetScore}</strong></div>
           <div class="today-pill"><span>Weakest family</span><strong>${weak.family}</strong></div>
           <div class="today-pill"><span>Journal entries</span><strong>${state.journal.length}</strong></div>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--due" style="border-left: 4px solid ${dueCount > 0 ? "#f59e0b" : "#9ca3af"};">
+        <div class="dashboard-card__head">
+          <div>
+            <p class="mini-card__label" style="color:${dueCount > 0 ? "#b45309" : "inherit"};">Due today</p>
+            <h3>${dueHeadline}</h3>
+          </div>
+          <span class="status-pill" aria-label="Pending review items">${dueCount}</span>
+        </div>
+        <p>${dueBlurb}</p>
+        <div class="dashboard-actions">
+          <a class="button button--primary" href="#/review">${dueCta}</a>
+          ${
+            dueCount > 0
+              ? `<span class="microcopy" style="align-self:center;">Cleared queues correlate with the biggest blind-review-gap drops.</span>`
+              : ""
+          }
         </div>
       </article>
 
@@ -733,6 +773,18 @@ function renderLessonPlayer(lesson) {
   const video = buildLessonVideo(lesson);
   const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
   const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
+  // After this HTML is inserted, mount the rendered MP4 (if present) at
+  // the top of the player. If the MP4 isn't on disk yet, this is a silent
+  // no-op and the animated lesson UI below remains the visible state.
+  if (typeof window !== "undefined" && window.JESSI_LESSON_VIDEOS) {
+    const targetId = lesson.id;
+    requestAnimationFrame(() => {
+      const slot = document.querySelector(`[data-mp4-slot="${targetId}"]`);
+      if (slot) {
+        window.JESSI_LESSON_VIDEOS.mountLessonVideo(slot, targetId, { prepend: true });
+      }
+    });
+  }
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -742,6 +794,7 @@ function renderLessonPlayer(lesson) {
       <p>${lesson.summary}</p>
       <section class="lesson-video">
         <div class="lesson-video__player">
+          <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
           <p class="mini-card__label">Video lesson</p>
           <h4>${lesson.title} in ${video.runtime}</h4>
           <p>This lesson is structured like a 5-10 minute walkthrough: concept first, then worked example, then trap-answer coaching, then your practice launch.</p>
