@@ -66,6 +66,7 @@ The static multi-page website now has a large requested-topic lesson expansion i
 | --- | --- |
 | `requestedWebsiteLessonBlueprints` | 127 LR, RC, worked-example, video, and logic-toolbox lesson entries from the user-requested topic list |
 | `requestedLessonDescription()` | Generates original website-ready descriptions by lesson type: quick guide, video lesson, worked example, or full lesson |
+| `buildRequestedQuestionLibrary()` | Generates 127 original LSAT-style practice questions, one per requested lesson, with family, section, linked lesson, answer, explanation, and trap pattern |
 | `contentLibrary.push(...)` | Adds the requested lessons into the Content Hub and Lessons pages |
 | `contentLibrary.forEach(...)` | Routes every lesson through `lesson-player.html?id=...` |
 

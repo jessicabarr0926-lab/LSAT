@@ -150,6 +150,136 @@ function requestedDashboardScenes(title, type, skill, topicLabel) {
   ];
 }
 
+function requestedQuestionFamily(skill, topicLabel, title) {
+  if (topicLabel === 'Reading Comprehension') {
+    if (/main point|primary purpose/i.test(title)) return 'RC Main Point';
+    if (/attitude|views/i.test(title)) return 'RC Attitude';
+    if (/reference|organizing|recognition|meaning/i.test(title)) return 'RC Function';
+    if (/inference|additional evidence|context|analog/i.test(title)) return 'RC Inference';
+    return 'RC Structure';
+  }
+  if (skill === 'Conditional Logic') return 'Conditional Logic';
+  if (skill === 'Flaws' && /match/i.test(title)) return 'Parallel Flaw';
+  if (skill === 'Flaws') return 'Flaw';
+  if (skill === 'Assumptions' && /helpful|sufficient|necessary/i.test(title)) return 'Assumption';
+  if (skill === 'Strengthen or Weaken' && /weaken/i.test(title)) return 'Weaken';
+  if (skill === 'Strengthen or Weaken' && /explain|resolve|conflict/i.test(title)) return 'Resolve / Explain';
+  if (skill === 'Strengthen or Weaken') return 'Strengthen';
+  if (/entailment|supported inference/i.test(title)) return 'Must Be True';
+  if (/dispute/i.test(title)) return 'Point at Issue';
+  if (/principle/i.test(title)) return 'Principle';
+  if (/role|technique|method|structure/i.test(title)) return 'Role / Method / Technique';
+  return 'Main Point';
+}
+
+function requestedTrapPattern(family) {
+  const traps = {
+    'RC Structure': 'Mistakes topic for structure',
+    'RC Inference': 'Chooses a claim stronger than the passage supports',
+    'RC Attitude': 'Reads neutral summary as endorsement',
+    'RC Function': 'Confuses paragraph topic with paragraph job',
+    'RC Main Point': 'Picks a major detail instead of the overall mission',
+    Flaw: 'Spots topic instead of reasoning error',
+    Assumption: 'Picks a helpful fact instead of a necessary bridge',
+    Strengthen: 'Supports the topic instead of the argument',
+    Weaken: 'Attacks the topic instead of the bridge',
+    'Conditional Logic': 'Reverses the conditional arrow',
+    'Main Point': 'Selects evidence instead of conclusion',
+    'Role / Method / Technique': 'Describes content instead of function',
+    'Must Be True': 'Picks plausible but unproven information',
+    'Resolve / Explain': 'Explains only one side of the surprise',
+    Principle: 'Chooses an attractive slogan instead of the exact rule',
+    'Parallel Flaw': 'Matches topic instead of flawed structure',
+    'Point at Issue': 'Chooses a claim only one speaker addressed',
+  };
+  return traps[family] || 'Matches familiar words instead of the task';
+}
+
+function requestedQuestionStem(family) {
+  const stems = {
+    'RC Structure': 'Which answer best describes the passage structure?',
+    'RC Inference': 'Which answer is most strongly supported by the passage?',
+    'RC Attitude': 'The author attitude is best described as',
+    'RC Function': 'The referenced detail primarily functions to',
+    'RC Main Point': 'Which answer best states the passage main point?',
+    Flaw: 'The reasoning is most vulnerable to criticism because it',
+    Assumption: 'Which assumption is required by the argument?',
+    Strengthen: 'Which answer would most strengthen the argument?',
+    Weaken: 'Which answer would most weaken the argument?',
+    'Conditional Logic': 'Which answer must be true?',
+    'Main Point': 'Which answer best states the main conclusion?',
+    'Role / Method / Technique': 'The highlighted claim plays which role?',
+    'Must Be True': 'Which answer must be true based on the statements above?',
+    'Resolve / Explain': 'Which answer best resolves the apparent conflict?',
+    Principle: 'Which principle best justifies the reasoning?',
+    'Parallel Flaw': 'Which answer contains the same flaw?',
+    'Point at Issue': 'The speakers disagree about whether',
+  };
+  return stems[family] || 'Which answer best completes the task?';
+}
+
+function requestedPrompt(family, title, index) {
+  if (family.startsWith('RC')) {
+    return `Passage summary for ${title}: Paragraph 1 introduces a familiar view. Paragraph 2 gives a limitation or rival view. Paragraph 3 states a careful author response with one qualified conclusion.`;
+  }
+  if (family === 'Conditional Logic') {
+    return `If a study plan is adaptive, then it includes review checkpoints. Any plan with review checkpoints requires logged misses. Plan ${index + 1} is adaptive.`;
+  }
+  if (family === 'Point at Issue') {
+    return `Speaker A says the new study schedule should be adopted because it increased accuracy. Speaker B says the schedule should not be adopted unless it also reduces fatigue.`;
+  }
+  if (family === 'Resolve / Explain') {
+    return `Students using a new review method answered fewer questions per hour, yet their timed-section scores rose after two weeks.`;
+  }
+  return `A tutor argues that because students who used a new review routine improved more than students who did not, the routine caused the improvement and should be assigned to everyone.`;
+}
+
+function requestedOptions(family) {
+  const byFamily = {
+    'RC Structure': ['It presents a view, introduces a challenge, and offers a qualified response', 'It lists unrelated facts with no organizing claim', 'It argues only through personal narrative', 'It defines terms without any shift in viewpoint'],
+    'RC Inference': ['The author would reject all versions of the familiar view', 'The author sees the familiar view as useful but incomplete', 'The passage proves the rival view is impossible', 'The passage gives no reason to distinguish the views'],
+    'RC Attitude': ['qualified and analytical', 'openly hostile', 'uncritically enthusiastic', 'confused and indifferent'],
+    'RC Function': ['support a later qualification of the main view', 'state the author final conclusion by itself', 'change the subject to an unrelated issue', 'prove that all rival views are false'],
+    'RC Main Point': ['A familiar view needs qualification in light of a limitation or rival view', 'Every familiar view is completely wrong', 'The passage is only a list of definitions', 'The author refuses to evaluate the issue'],
+    Flaw: ['treats a correlation as enough to prove causation', 'attacks the source instead of the claim', 'uses a word in two unrelated senses', 'states a conclusion that is narrower than the evidence'],
+    Assumption: ['The students using the routine were not already more likely to improve', 'All students prefer routines with more steps', 'The routine is the cheapest possible option', 'No student ever dislikes assigned review'],
+    Strengthen: ['The groups had similar starting scores and study time before the routine began', 'Some students like having a routine', 'The routine has a memorable name', 'The tutor has used other routines before'],
+    Weaken: ['The students who chose the routine already had much higher starting scores', 'The routine can be written on one page', 'Some students completed the assignment at home', 'The tutor explained the routine clearly'],
+    'Conditional Logic': ['Plan 1 includes logged misses', 'Every plan with logged misses is adaptive', 'Plans without review checkpoints are always effective', 'Plan 1 is not adaptive'],
+    'Main Point': ['The routine should be assigned to everyone', 'Some students improved', 'The tutor observed two groups', 'Improvement can be measured'],
+    'Role / Method / Technique': ['It is evidence offered to support the recommendation', 'It is the final recommendation itself', 'It is an opposing view the author rejects', 'It is an unrelated background claim'],
+    'Must Be True': ['At least one adaptive plan includes logged misses', 'Every plan with logged misses is adaptive', 'No nonadaptive plan includes review checkpoints', 'All study plans are adaptive'],
+    'Resolve / Explain': ['The method slowed practice but made review accurate enough to reduce repeated mistakes', 'The students stopped studying after two weeks', 'The questions became impossible to answer', 'The score increase happened before the method began'],
+    Principle: ['A routine should be assigned when it improves performance for comparable students and no relevant downside is shown', 'Any popular routine should be required', 'A routine is good only if every student likes it', 'No routine should ever be assigned'],
+    'Parallel Flaw': ['A group using a tool improved, so the tool alone must have caused the improvement', 'If a rule applies, a result follows; the rule applies, so the result follows', 'A claim is rejected because a critic dislikes it', 'Two speakers disagree about a policy goal'],
+    'Point at Issue': ['accuracy improvement alone is enough to justify adopting the schedule', 'the schedule increased accuracy', 'students need some kind of schedule', 'fatigue can affect performance'],
+  };
+  return byFamily[family] || ['The answer performs the exact requested task', 'The answer changes the topic', 'The answer is too strong', 'The answer describes only background'];
+}
+
+function requestedExplanation(family, title) {
+  return `${title} is testing ${family}. The credited answer does the exact job of the stem; the traps use familiar LSAT words while changing force, role, viewpoint, or support.`;
+}
+
+function buildRequestedQuestionLibrary() {
+  return requestedWebsiteLessonBlueprints.map(([id, title, topic, topicLabel, category, difficulty, minutes, type, skill], index) => {
+    const family = requestedQuestionFamily(skill, topicLabel, title);
+    return {
+      id: `rq-${String(index + 1).padStart(3, '0')}-${id}`,
+      section: topicLabel === 'Reading Comprehension' ? 'RC' : 'LR',
+      family,
+      difficulty: difficulty.toLowerCase(),
+      lessonIds: [id],
+      prompt: requestedPrompt(family, title, index),
+      question: requestedQuestionStem(family),
+      options: requestedOptions(family),
+      answer: 0,
+      explanation: requestedExplanation(family, title),
+      trapPattern: requestedTrapPattern(family),
+    };
+  });
+}
+
 (function addRequestedWebsiteLessons() {
   const data = window.JESSI_PREPS_DATA;
   if (!data || !Array.isArray(data.lessons)) return;
@@ -174,4 +304,9 @@ function requestedDashboardScenes(title, type, skill, topicLabel) {
       trapExplanation: 'The common trap is choosing an answer because it sounds familiar instead of because it performs the exact requested job.',
     }));
   data.lessons.push(...additions);
+  if (Array.isArray(data.questionBank)) {
+    const existingQuestionIds = new Set(data.questionBank.map((question) => question.id));
+    const questions = buildRequestedQuestionLibrary().filter((question) => !existingQuestionIds.has(question.id));
+    data.questionBank.push(...questions);
+  }
 })();
