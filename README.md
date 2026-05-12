@@ -1,6 +1,6 @@
 # JessiPreps LSAT Study Dashboard
 
-Open `index.html` in a browser. The app is now a multi-page local website that shares one `styles.css` file and one `script.js` study engine.
+Open `index.html` for the dashboard app, or open `content.html` for the static multi-page course library. The static website pages share `styles.css` and `script.js`; the dashboard shell uses `content.js` and `app.js`.
 
 ## Pages
 
@@ -68,6 +68,8 @@ The Content Hub works like a mini course library:
 - open dedicated lesson pages
 - start a related drill from a lesson
 - show recommended content on the dashboard
+
+The requested LSAT lesson expansion is now wired into `script.js` as 127 additional website lessons. They cover the supplied Logical Reasoning articles, LR video lessons, LR worked examples, Reading Comprehension articles, RC worked examples, and logic toolbox topics. Each one opens through `lesson-player.html?id=...` as an animated lesson with transcript, lesson kit, mastery practice, and a drill handoff.
 
 `content-system-plan.md` is the source-informed production plan for the first lesson set, animated video scripts, tagging taxonomy, and recommendation rules. It is written as original JessiPreps teaching material rather than copied book text.
 
