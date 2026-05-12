@@ -1,0 +1,891 @@
+[
+  {
+    "number": "001",
+    "id": "ka-about-lsat-lessons",
+    "title": "About LSAT Lessons",
+    "jobJson": "001-ka-about-lsat-lessons.json",
+    "outFile": "output/videos/lessons/001-about-lsat-lessons.mp4"
+  },
+  {
+    "number": "002",
+    "id": "ka-lr-getting-started",
+    "title": "Getting Started with Logical Reasoning",
+    "jobJson": "002-ka-lr-getting-started.json",
+    "outFile": "output/videos/lessons/002-getting-started-with-logical-reasoning.mp4"
+  },
+  {
+    "number": "003",
+    "id": "ka-lr-introduction-arguments",
+    "title": "Introduction to Arguments",
+    "jobJson": "003-ka-lr-introduction-arguments.json",
+    "outFile": "output/videos/lessons/003-introduction-to-arguments.mp4"
+  },
+  {
+    "number": "004",
+    "id": "ka-lr-catalog-question-types",
+    "title": "Logical Reasoning Question Type Catalog",
+    "jobJson": "004-ka-lr-catalog-question-types.json",
+    "outFile": "output/videos/lessons/004-logical-reasoning-question-type-catalog.mp4"
+  },
+  {
+    "number": "005",
+    "id": "ka-lr-types-conclusions",
+    "title": "Types of Conclusions",
+    "jobJson": "005-ka-lr-types-conclusions.json",
+    "outFile": "output/videos/lessons/005-types-of-conclusions.mp4"
+  },
+  {
+    "number": "006",
+    "id": "ka-lr-types-evidence",
+    "title": "Types of Evidence",
+    "jobJson": "006-ka-lr-types-evidence.json",
+    "outFile": "output/videos/lessons/006-types-of-evidence.mp4"
+  },
+  {
+    "number": "007",
+    "id": "ka-lr-types-flaws",
+    "title": "Types of Flaws",
+    "jobJson": "007-ka-lr-types-flaws.json",
+    "outFile": "output/videos/lessons/007-types-of-flaws.mp4"
+  },
+  {
+    "number": "008",
+    "id": "ka-lr-identify-conclusion-quick",
+    "title": "Identify the Conclusion | Quick Guide",
+    "jobJson": "008-ka-lr-identify-conclusion-quick.json",
+    "outFile": "output/videos/lessons/008-identify-the-conclusion-quick-guide.mp4"
+  },
+  {
+    "number": "009",
+    "id": "ka-lr-identify-conclusion-learn",
+    "title": "Identify the Conclusion | Learn More",
+    "jobJson": "009-ka-lr-identify-conclusion-learn.json",
+    "outFile": "output/videos/lessons/009-identify-the-conclusion-learn-more.mp4"
+  },
+  {
+    "number": "010",
+    "id": "ka-lr-identify-conclusion-examples",
+    "title": "Identify the Conclusion | Examples",
+    "jobJson": "010-ka-lr-identify-conclusion-examples.json",
+    "outFile": "output/videos/lessons/010-identify-the-conclusion-examples.mp4"
+  },
+  {
+    "number": "011",
+    "id": "ka-lr-identify-conclusion-video",
+    "title": "Identify the Conclusion | Video Lesson",
+    "jobJson": "011-ka-lr-identify-conclusion-video.json",
+    "outFile": "output/videos/lessons/011-identify-the-conclusion-video-lesson.mp4"
+  },
+  {
+    "number": "012",
+    "id": "ka-lr-identify-conclusion-worked",
+    "title": "Identify the Conclusion | Worked Example",
+    "jobJson": "012-ka-lr-identify-conclusion-worked.json",
+    "outFile": "output/videos/lessons/012-identify-the-conclusion-worked-example.mp4"
+  },
+  {
+    "number": "013",
+    "id": "ka-lr-entailment-quick",
+    "title": "Identify an Entailment | Quick Guide",
+    "jobJson": "013-ka-lr-entailment-quick.json",
+    "outFile": "output/videos/lessons/013-identify-an-entailment-quick-guide.mp4"
+  },
+  {
+    "number": "014",
+    "id": "ka-lr-entailment-learn",
+    "title": "Identify an Entailment | Learn More",
+    "jobJson": "014-ka-lr-entailment-learn.json",
+    "outFile": "output/videos/lessons/014-identify-an-entailment-learn-more.mp4"
+  },
+  {
+    "number": "015",
+    "id": "ka-lr-entailment-video",
+    "title": "Identify an Entailment | Video Lesson",
+    "jobJson": "015-ka-lr-entailment-video.json",
+    "outFile": "output/videos/lessons/015-identify-an-entailment-video-lesson.mp4"
+  },
+  {
+    "number": "016",
+    "id": "ka-lr-entailment-worked",
+    "title": "Identify an Entailment | Worked Example",
+    "jobJson": "016-ka-lr-entailment-worked.json",
+    "outFile": "output/videos/lessons/016-identify-an-entailment-worked-example.mp4"
+  },
+  {
+    "number": "017",
+    "id": "ka-lr-strong-inferences-quick",
+    "title": "Strongly Supported Inferences | Quick Guide",
+    "jobJson": "017-ka-lr-strong-inferences-quick.json",
+    "outFile": "output/videos/lessons/017-strongly-supported-inferences-quick-guide.mp4"
+  },
+  {
+    "number": "018",
+    "id": "ka-lr-strong-inferences-learn",
+    "title": "Strongly Supported Inferences | Learn More",
+    "jobJson": "018-ka-lr-strong-inferences-learn.json",
+    "outFile": "output/videos/lessons/018-strongly-supported-inferences-learn-more.mp4"
+  },
+  {
+    "number": "019",
+    "id": "ka-lr-strong-inferences-video",
+    "title": "Strongly Supported Inferences | Video Lesson",
+    "jobJson": "019-ka-lr-strong-inferences-video.json",
+    "outFile": "output/videos/lessons/019-strongly-supported-inferences-video-lesson.mp4"
+  },
+  {
+    "number": "020",
+    "id": "ka-lr-strong-inferences-worked",
+    "title": "Strongly Supported Inferences | Worked Example",
+    "jobJson": "020-ka-lr-strong-inferences-worked.json",
+    "outFile": "output/videos/lessons/020-strongly-supported-inferences-worked-example.mp4"
+  },
+  {
+    "number": "021",
+    "id": "ka-lr-disputes-quick",
+    "title": "Disputes | Quick Guide",
+    "jobJson": "021-ka-lr-disputes-quick.json",
+    "outFile": "output/videos/lessons/021-disputes-quick-guide.mp4"
+  },
+  {
+    "number": "022",
+    "id": "ka-lr-disputes-learn",
+    "title": "Disputes | Learn More",
+    "jobJson": "022-ka-lr-disputes-learn.json",
+    "outFile": "output/videos/lessons/022-disputes-learn-more.mp4"
+  },
+  {
+    "number": "023",
+    "id": "ka-lr-disputes-video",
+    "title": "Disputes | Video Lesson",
+    "jobJson": "023-ka-lr-disputes-video.json",
+    "outFile": "output/videos/lessons/023-disputes-video-lesson.mp4"
+  },
+  {
+    "number": "024",
+    "id": "ka-lr-disputes-worked",
+    "title": "Working with Disputes | Worked Example",
+    "jobJson": "024-ka-lr-disputes-worked.json",
+    "outFile": "output/videos/lessons/024-working-with-disputes-worked-example.mp4"
+  },
+  {
+    "number": "025",
+    "id": "ka-lr-technique-quick",
+    "title": "Identify the Technique | Quick Guide",
+    "jobJson": "025-ka-lr-technique-quick.json",
+    "outFile": "output/videos/lessons/025-identify-the-technique-quick-guide.mp4"
+  },
+  {
+    "number": "026",
+    "id": "ka-lr-technique-learn",
+    "title": "Identify the Technique | Learn More",
+    "jobJson": "026-ka-lr-technique-learn.json",
+    "outFile": "output/videos/lessons/026-identify-the-technique-learn-more.mp4"
+  },
+  {
+    "number": "027",
+    "id": "ka-lr-technique-video",
+    "title": "Identify the Technique | Video Lesson",
+    "jobJson": "027-ka-lr-technique-video.json",
+    "outFile": "output/videos/lessons/027-identify-the-technique-video-lesson.mp4"
+  },
+  {
+    "number": "028",
+    "id": "ka-lr-technique-worked",
+    "title": "Identify the Technique | Worked Example",
+    "jobJson": "028-ka-lr-technique-worked.json",
+    "outFile": "output/videos/lessons/028-identify-the-technique-worked-example.mp4"
+  },
+  {
+    "number": "029",
+    "id": "ka-lr-role-quick",
+    "title": "Identify the Role | Quick Guide",
+    "jobJson": "029-ka-lr-role-quick.json",
+    "outFile": "output/videos/lessons/029-identify-the-role-quick-guide.mp4"
+  },
+  {
+    "number": "030",
+    "id": "ka-lr-role-learn",
+    "title": "Identify the Role | Learn More",
+    "jobJson": "030-ka-lr-role-learn.json",
+    "outFile": "output/videos/lessons/030-identify-the-role-learn-more.mp4"
+  },
+  {
+    "number": "031",
+    "id": "ka-lr-role-video",
+    "title": "Identify the Role | Video Lesson",
+    "jobJson": "031-ka-lr-role-video.json",
+    "outFile": "output/videos/lessons/031-identify-the-role-video-lesson.mp4"
+  },
+  {
+    "number": "032",
+    "id": "ka-lr-role-worked",
+    "title": "Identify the Role | Worked Example",
+    "jobJson": "032-ka-lr-role-worked.json",
+    "outFile": "output/videos/lessons/032-identify-the-role-worked-example.mp4"
+  },
+  {
+    "number": "033",
+    "id": "ka-lr-principle-quick",
+    "title": "Identify the Principle | Quick Guide",
+    "jobJson": "033-ka-lr-principle-quick.json",
+    "outFile": "output/videos/lessons/033-identify-the-principle-quick-guide.mp4"
+  },
+  {
+    "number": "034",
+    "id": "ka-lr-principle-learn",
+    "title": "Identify the Principle | Learn More",
+    "jobJson": "034-ka-lr-principle-learn.json",
+    "outFile": "output/videos/lessons/034-identify-the-principle-learn-more.mp4"
+  },
+  {
+    "number": "035",
+    "id": "ka-lr-principle-video",
+    "title": "Identify the Principle | Video Lesson",
+    "jobJson": "035-ka-lr-principle-video.json",
+    "outFile": "output/videos/lessons/035-identify-the-principle-video-lesson.mp4"
+  },
+  {
+    "number": "036",
+    "id": "ka-lr-principle-worked",
+    "title": "Identify the Principle | Worked Example",
+    "jobJson": "036-ka-lr-principle-worked.json",
+    "outFile": "output/videos/lessons/036-identify-the-principle-worked-example.mp4"
+  },
+  {
+    "number": "037",
+    "id": "ka-lr-match-structure-quick",
+    "title": "Match Structure | Quick Guide",
+    "jobJson": "037-ka-lr-match-structure-quick.json",
+    "outFile": "output/videos/lessons/037-match-structure-quick-guide.mp4"
+  },
+  {
+    "number": "038",
+    "id": "ka-lr-match-structure-learn",
+    "title": "Match Structure | Learn More",
+    "jobJson": "038-ka-lr-match-structure-learn.json",
+    "outFile": "output/videos/lessons/038-match-structure-learn-more.mp4"
+  },
+  {
+    "number": "039",
+    "id": "ka-lr-match-structure-video",
+    "title": "Match the Structure | Video Lesson",
+    "jobJson": "039-ka-lr-match-structure-video.json",
+    "outFile": "output/videos/lessons/039-match-the-structure-video-lesson.mp4"
+  },
+  {
+    "number": "040",
+    "id": "ka-lr-match-structure-worked",
+    "title": "Match the Structure | Worked Example",
+    "jobJson": "040-ka-lr-match-structure-worked.json",
+    "outFile": "output/videos/lessons/040-match-the-structure-worked-example.mp4"
+  },
+  {
+    "number": "041",
+    "id": "ka-lr-match-principles-quick",
+    "title": "Match Principles | Quick Guide",
+    "jobJson": "041-ka-lr-match-principles-quick.json",
+    "outFile": "output/videos/lessons/041-match-principles-quick-guide.mp4"
+  },
+  {
+    "number": "042",
+    "id": "ka-lr-match-principles-learn",
+    "title": "Match Principles | Learn More",
+    "jobJson": "042-ka-lr-match-principles-learn.json",
+    "outFile": "output/videos/lessons/042-match-principles-learn-more.mp4"
+  },
+  {
+    "number": "043",
+    "id": "ka-lr-match-principles-video",
+    "title": "Match Principles | Video Lesson",
+    "jobJson": "043-ka-lr-match-principles-video.json",
+    "outFile": "output/videos/lessons/043-match-principles-video-lesson.mp4"
+  },
+  {
+    "number": "044",
+    "id": "ka-lr-match-principles-worked",
+    "title": "Match Principles | Worked Example",
+    "jobJson": "044-ka-lr-match-principles-worked.json",
+    "outFile": "output/videos/lessons/044-match-principles-worked-example.mp4"
+  },
+  {
+    "number": "045",
+    "id": "ka-lr-flaw-quick",
+    "title": "Identify a Flaw | Quick Guide",
+    "jobJson": "045-ka-lr-flaw-quick.json",
+    "outFile": "output/videos/lessons/045-identify-a-flaw-quick-guide.mp4"
+  },
+  {
+    "number": "046",
+    "id": "ka-lr-flaw-learn",
+    "title": "Identify a Flaw | Learn More",
+    "jobJson": "046-ka-lr-flaw-learn.json",
+    "outFile": "output/videos/lessons/046-identify-a-flaw-learn-more.mp4"
+  },
+  {
+    "number": "047",
+    "id": "ka-lr-flaw-video",
+    "title": "Identify a Flaw | Video Lesson",
+    "jobJson": "047-ka-lr-flaw-video.json",
+    "outFile": "output/videos/lessons/047-identify-a-flaw-video-lesson.mp4"
+  },
+  {
+    "number": "048",
+    "id": "ka-lr-flaw-worked",
+    "title": "Identify a Flaw | Worked Example",
+    "jobJson": "048-ka-lr-flaw-worked.json",
+    "outFile": "output/videos/lessons/048-identify-a-flaw-worked-example.mp4"
+  },
+  {
+    "number": "049",
+    "id": "ka-lr-match-flaw-quick",
+    "title": "Match a Flaw | Quick Guide",
+    "jobJson": "049-ka-lr-match-flaw-quick.json",
+    "outFile": "output/videos/lessons/049-match-a-flaw-quick-guide.mp4"
+  },
+  {
+    "number": "050",
+    "id": "ka-lr-match-flaw-learn",
+    "title": "Match a Flaw | Learn More",
+    "jobJson": "050-ka-lr-match-flaw-learn.json",
+    "outFile": "output/videos/lessons/050-match-a-flaw-learn-more.mp4"
+  },
+  {
+    "number": "051",
+    "id": "ka-lr-match-flaw-video",
+    "title": "Match Flaws | Video Lesson",
+    "jobJson": "051-ka-lr-match-flaw-video.json",
+    "outFile": "output/videos/lessons/051-match-flaws-video-lesson.mp4"
+  },
+  {
+    "number": "052",
+    "id": "ka-lr-match-flaw-worked",
+    "title": "Match Flaws | Worked Example",
+    "jobJson": "052-ka-lr-match-flaw-worked.json",
+    "outFile": "output/videos/lessons/052-match-flaws-worked-example.mp4"
+  },
+  {
+    "number": "053",
+    "id": "ka-lr-necessary-assumptions-quick",
+    "title": "Necessary Assumptions | Quick Guide",
+    "jobJson": "053-ka-lr-necessary-assumptions-quick.json",
+    "outFile": "output/videos/lessons/053-necessary-assumptions-quick-guide.mp4"
+  },
+  {
+    "number": "054",
+    "id": "ka-lr-necessary-assumptions-learn",
+    "title": "Necessary Assumptions | Learn More",
+    "jobJson": "054-ka-lr-necessary-assumptions-learn.json",
+    "outFile": "output/videos/lessons/054-necessary-assumptions-learn-more.mp4"
+  },
+  {
+    "number": "055",
+    "id": "ka-lr-necessary-assumptions-video",
+    "title": "Necessary Assumptions | Video Lesson",
+    "jobJson": "055-ka-lr-necessary-assumptions-video.json",
+    "outFile": "output/videos/lessons/055-necessary-assumptions-video-lesson.mp4"
+  },
+  {
+    "number": "056",
+    "id": "ka-lr-necessary-assumptions-worked",
+    "title": "Necessary Assumptions | Worked Example",
+    "jobJson": "056-ka-lr-necessary-assumptions-worked.json",
+    "outFile": "output/videos/lessons/056-necessary-assumptions-worked-example.mp4"
+  },
+  {
+    "number": "057",
+    "id": "ka-lr-sufficient-assumptions-quick",
+    "title": "Sufficient Assumptions | Quick Guide",
+    "jobJson": "057-ka-lr-sufficient-assumptions-quick.json",
+    "outFile": "output/videos/lessons/057-sufficient-assumptions-quick-guide.mp4"
+  },
+  {
+    "number": "058",
+    "id": "ka-lr-sufficient-assumptions-learn",
+    "title": "Sufficient Assumptions | Learn More",
+    "jobJson": "058-ka-lr-sufficient-assumptions-learn.json",
+    "outFile": "output/videos/lessons/058-sufficient-assumptions-learn-more.mp4"
+  },
+  {
+    "number": "059",
+    "id": "ka-lr-sufficient-assumptions-video",
+    "title": "Sufficient Assumptions | Video Lesson",
+    "jobJson": "059-ka-lr-sufficient-assumptions-video.json",
+    "outFile": "output/videos/lessons/059-sufficient-assumptions-video-lesson.mp4"
+  },
+  {
+    "number": "060",
+    "id": "ka-lr-sufficient-assumptions-worked",
+    "title": "Sufficient Assumptions | Worked Example",
+    "jobJson": "060-ka-lr-sufficient-assumptions-worked.json",
+    "outFile": "output/videos/lessons/060-sufficient-assumptions-worked-example.mp4"
+  },
+  {
+    "number": "061",
+    "id": "ka-lr-strengthen-weaken-quick",
+    "title": "Strengthen and Weaken | Quick Guide",
+    "jobJson": "061-ka-lr-strengthen-weaken-quick.json",
+    "outFile": "output/videos/lessons/061-strengthen-and-weaken-quick-guide.mp4"
+  },
+  {
+    "number": "062",
+    "id": "ka-lr-strengthen-weaken-learn",
+    "title": "Strengthen and Weaken | Learn More",
+    "jobJson": "062-ka-lr-strengthen-weaken-learn.json",
+    "outFile": "output/videos/lessons/062-strengthen-and-weaken-learn-more.mp4"
+  },
+  {
+    "number": "063",
+    "id": "ka-lr-strengthen-video",
+    "title": "Strengthen | Video Lesson",
+    "jobJson": "063-ka-lr-strengthen-video.json",
+    "outFile": "output/videos/lessons/063-strengthen-video-lesson.mp4"
+  },
+  {
+    "number": "064",
+    "id": "ka-lr-strengthen-worked",
+    "title": "Strengthen | Worked Example",
+    "jobJson": "064-ka-lr-strengthen-worked.json",
+    "outFile": "output/videos/lessons/064-strengthen-worked-example.mp4"
+  },
+  {
+    "number": "065",
+    "id": "ka-lr-weaken-video",
+    "title": "Weaken | Video Lesson",
+    "jobJson": "065-ka-lr-weaken-video.json",
+    "outFile": "output/videos/lessons/065-weaken-video-lesson.mp4"
+  },
+  {
+    "number": "066",
+    "id": "ka-lr-weaken-worked",
+    "title": "Weaken | Worked Example",
+    "jobJson": "066-ka-lr-weaken-worked.json",
+    "outFile": "output/videos/lessons/066-weaken-worked-example.mp4"
+  },
+  {
+    "number": "067",
+    "id": "ka-lr-helpful-quick",
+    "title": "Helpful to Know | Quick Guide",
+    "jobJson": "067-ka-lr-helpful-quick.json",
+    "outFile": "output/videos/lessons/067-helpful-to-know-quick-guide.mp4"
+  },
+  {
+    "number": "068",
+    "id": "ka-lr-helpful-learn",
+    "title": "Helpful to Know | Learn More",
+    "jobJson": "068-ka-lr-helpful-learn.json",
+    "outFile": "output/videos/lessons/068-helpful-to-know-learn-more.mp4"
+  },
+  {
+    "number": "069",
+    "id": "ka-lr-helpful-video",
+    "title": "Helpful to Know | Video Lesson",
+    "jobJson": "069-ka-lr-helpful-video.json",
+    "outFile": "output/videos/lessons/069-helpful-to-know-video-lesson.mp4"
+  },
+  {
+    "number": "070",
+    "id": "ka-lr-helpful-worked",
+    "title": "Helpful to Know | Worked Example",
+    "jobJson": "070-ka-lr-helpful-worked.json",
+    "outFile": "output/videos/lessons/070-helpful-to-know-worked-example.mp4"
+  },
+  {
+    "number": "071",
+    "id": "ka-lr-explain-resolve-quick",
+    "title": "Explain or Resolve | Quick Guide",
+    "jobJson": "071-ka-lr-explain-resolve-quick.json",
+    "outFile": "output/videos/lessons/071-explain-or-resolve-quick-guide.mp4"
+  },
+  {
+    "number": "072",
+    "id": "ka-lr-explain-resolve-learn",
+    "title": "Explain or Resolve | Learn More",
+    "jobJson": "072-ka-lr-explain-resolve-learn.json",
+    "outFile": "output/videos/lessons/072-explain-or-resolve-learn-more.mp4"
+  },
+  {
+    "number": "073",
+    "id": "ka-lr-explain-video",
+    "title": "Explain | Video Lesson",
+    "jobJson": "073-ka-lr-explain-video.json",
+    "outFile": "output/videos/lessons/073-explain-video-lesson.mp4"
+  },
+  {
+    "number": "074",
+    "id": "ka-lr-explain-worked",
+    "title": "Explain | Worked Example",
+    "jobJson": "074-ka-lr-explain-worked.json",
+    "outFile": "output/videos/lessons/074-explain-worked-example.mp4"
+  },
+  {
+    "number": "075",
+    "id": "ka-lr-resolve-video",
+    "title": "Resolve a Conflict | Video Lesson",
+    "jobJson": "075-ka-lr-resolve-video.json",
+    "outFile": "output/videos/lessons/075-resolve-a-conflict-video-lesson.mp4"
+  },
+  {
+    "number": "076",
+    "id": "ka-lr-resolve-worked",
+    "title": "Resolve a Conflict | Worked Example",
+    "jobJson": "076-ka-lr-resolve-worked.json",
+    "outFile": "output/videos/lessons/076-resolve-a-conflict-worked-example.mp4"
+  },
+  {
+    "number": "077",
+    "id": "ka-rc-getting-started",
+    "title": "Getting Started with Reading Comprehension",
+    "jobJson": "077-ka-rc-getting-started.json",
+    "outFile": "output/videos/lessons/077-getting-started-with-reading-comprehension.mp4"
+  },
+  {
+    "number": "078",
+    "id": "ka-rc-catalog-question-types",
+    "title": "Reading Comprehension Question Type Catalog",
+    "jobJson": "078-ka-rc-catalog-question-types.json",
+    "outFile": "output/videos/lessons/078-reading-comprehension-question-type-catalog.mp4"
+  },
+  {
+    "number": "079",
+    "id": "ka-rc-main-point-quick",
+    "title": "Main Point | Quick Guide",
+    "jobJson": "079-ka-rc-main-point-quick.json",
+    "outFile": "output/videos/lessons/079-main-point-quick-guide.mp4"
+  },
+  {
+    "number": "080",
+    "id": "ka-rc-recognition-quick",
+    "title": "Recognition | Quick Guide",
+    "jobJson": "080-ka-rc-recognition-quick.json",
+    "outFile": "output/videos/lessons/080-recognition-quick-guide.mp4"
+  },
+  {
+    "number": "081",
+    "id": "ka-rc-clarifying-meaning-quick",
+    "title": "Clarifying Meaning | Quick Guide",
+    "jobJson": "081-ka-rc-clarifying-meaning-quick.json",
+    "outFile": "output/videos/lessons/081-clarifying-meaning-quick-guide.mp4"
+  },
+  {
+    "number": "082",
+    "id": "ka-rc-purpose-reference-quick",
+    "title": "Purpose of Reference | Quick Guide",
+    "jobJson": "082-ka-rc-purpose-reference-quick.json",
+    "outFile": "output/videos/lessons/082-purpose-of-reference-quick-guide.mp4"
+  },
+  {
+    "number": "083",
+    "id": "ka-rc-organizing-info-quick",
+    "title": "Organizing Information | Quick Guide",
+    "jobJson": "083-ka-rc-organizing-info-quick.json",
+    "outFile": "output/videos/lessons/083-organizing-information-quick-guide.mp4"
+  },
+  {
+    "number": "084",
+    "id": "ka-rc-views-inference-quick",
+    "title": "Inferences About Views | Quick Guide",
+    "jobJson": "084-ka-rc-views-inference-quick.json",
+    "outFile": "output/videos/lessons/084-inferences-about-views-quick-guide.mp4"
+  },
+  {
+    "number": "085",
+    "id": "ka-rc-info-inference-quick",
+    "title": "Inferences About Information | Quick Guide",
+    "jobJson": "085-ka-rc-info-inference-quick.json",
+    "outFile": "output/videos/lessons/085-inferences-about-information-quick-guide.mp4"
+  },
+  {
+    "number": "086",
+    "id": "ka-rc-attitude-inference-quick",
+    "title": "Inferences About Attitudes | Quick Guide",
+    "jobJson": "086-ka-rc-attitude-inference-quick.json",
+    "outFile": "output/videos/lessons/086-inferences-about-attitudes-quick-guide.mp4"
+  },
+  {
+    "number": "087",
+    "id": "ka-rc-new-contexts-quick",
+    "title": "Applying to New Contexts | Quick Guide",
+    "jobJson": "087-ka-rc-new-contexts-quick.json",
+    "outFile": "output/videos/lessons/087-applying-to-new-contexts-quick-guide.mp4"
+  },
+  {
+    "number": "088",
+    "id": "ka-rc-principles-analogies-quick",
+    "title": "Principles and Analogies | Quick Guide",
+    "jobJson": "088-ka-rc-principles-analogies-quick.json",
+    "outFile": "output/videos/lessons/088-principles-and-analogies-quick-guide.mp4"
+  },
+  {
+    "number": "089",
+    "id": "ka-rc-additional-evidence-quick",
+    "title": "Additional Evidence | Quick Guide",
+    "jobJson": "089-ka-rc-additional-evidence-quick.json",
+    "outFile": "output/videos/lessons/089-additional-evidence-quick-guide.mp4"
+  },
+  {
+    "number": "090",
+    "id": "ka-rc-primary-purpose-quick",
+    "title": "Primary Purpose | Quick Guide",
+    "jobJson": "090-ka-rc-primary-purpose-quick.json",
+    "outFile": "output/videos/lessons/090-primary-purpose-quick-guide.mp4"
+  },
+  {
+    "number": "091",
+    "id": "ka-rc-law-cosmic-overview",
+    "title": "Law Passage Overview | Cosmic Justice",
+    "jobJson": "091-ka-rc-law-cosmic-overview.json",
+    "outFile": "output/videos/lessons/091-law-passage-overview-cosmic-justice.mp4"
+  },
+  {
+    "number": "092",
+    "id": "ka-rc-law-cosmic-main-point",
+    "title": "Main Point | Law Passage | Cosmic Justice",
+    "jobJson": "092-ka-rc-law-cosmic-main-point.json",
+    "outFile": "output/videos/lessons/092-main-point-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "093",
+    "id": "ka-rc-law-cosmic-recognition",
+    "title": "Recognition | Law Passage | Cosmic Justice",
+    "jobJson": "093-ka-rc-law-cosmic-recognition.json",
+    "outFile": "output/videos/lessons/093-recognition-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "094",
+    "id": "ka-rc-law-cosmic-views",
+    "title": "Inferences About Views | Law Passage | Cosmic Justice",
+    "jobJson": "094-ka-rc-law-cosmic-views.json",
+    "outFile": "output/videos/lessons/094-inferences-about-views-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "095",
+    "id": "ka-rc-law-cosmic-info",
+    "title": "Inferences About Info | Law Passage | Cosmic Justice",
+    "jobJson": "095-ka-rc-law-cosmic-info.json",
+    "outFile": "output/videos/lessons/095-inferences-about-info-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "096",
+    "id": "ka-rc-law-cosmic-principles",
+    "title": "Principles | Law Passage | Cosmic Justice",
+    "jobJson": "096-ka-rc-law-cosmic-principles.json",
+    "outFile": "output/videos/lessons/096-principles-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "097",
+    "id": "ka-rc-law-cosmic-analogies",
+    "title": "Analogies | Law Passage | Cosmic Justice",
+    "jobJson": "097-ka-rc-law-cosmic-analogies.json",
+    "outFile": "output/videos/lessons/097-analogies-law-passage-cosmic-justice.mp4"
+  },
+  {
+    "number": "098",
+    "id": "ka-rc-law-copyright-overview",
+    "title": "Law Passage Overview | Copyright",
+    "jobJson": "098-ka-rc-law-copyright-overview.json",
+    "outFile": "output/videos/lessons/098-law-passage-overview-copyright.mp4"
+  },
+  {
+    "number": "099",
+    "id": "ka-rc-law-copyright-main-point",
+    "title": "Main Point | Law Passage | Copyright",
+    "jobJson": "099-ka-rc-law-copyright-main-point.json",
+    "outFile": "output/videos/lessons/099-main-point-law-passage-copyright.mp4"
+  },
+  {
+    "number": "100",
+    "id": "ka-rc-law-copyright-reference",
+    "title": "Purpose of Reference | Law Passage | Copyright",
+    "jobJson": "100-ka-rc-law-copyright-reference.json",
+    "outFile": "output/videos/lessons/100-purpose-of-reference-law-passage-copyright.mp4"
+  },
+  {
+    "number": "101",
+    "id": "ka-rc-law-copyright-contexts",
+    "title": "Applying to New Contexts | Law Passage | Copyright",
+    "jobJson": "101-ka-rc-law-copyright-contexts.json",
+    "outFile": "output/videos/lessons/101-applying-to-new-contexts-law-passage-copyright.mp4"
+  },
+  {
+    "number": "102",
+    "id": "ka-rc-humanities-music-overview",
+    "title": "Humanities Passage Overview | Music",
+    "jobJson": "102-ka-rc-humanities-music-overview.json",
+    "outFile": "output/videos/lessons/102-humanities-passage-overview-music.mp4"
+  },
+  {
+    "number": "103",
+    "id": "ka-rc-humanities-music-main-point-1",
+    "title": "Main Point 1 | Humanities Passage | Music",
+    "jobJson": "103-ka-rc-humanities-music-main-point-1.json",
+    "outFile": "output/videos/lessons/103-main-point-1-humanities-passage-music.mp4"
+  },
+  {
+    "number": "104",
+    "id": "ka-rc-humanities-music-main-point-2",
+    "title": "Main Point 2 | Humanities Passage | Music",
+    "jobJson": "104-ka-rc-humanities-music-main-point-2.json",
+    "outFile": "output/videos/lessons/104-main-point-2-humanities-passage-music.mp4"
+  },
+  {
+    "number": "105",
+    "id": "ka-rc-humanities-music-recognition",
+    "title": "Recognition | Humanities Passage | Music",
+    "jobJson": "105-ka-rc-humanities-music-recognition.json",
+    "outFile": "output/videos/lessons/105-recognition-humanities-passage-music.mp4"
+  },
+  {
+    "number": "106",
+    "id": "ka-rc-humanities-music-views",
+    "title": "Inferences About Views | Humanities Passage | Music",
+    "jobJson": "106-ka-rc-humanities-music-views.json",
+    "outFile": "output/videos/lessons/106-inferences-about-views-humanities-passage-music.mp4"
+  },
+  {
+    "number": "107",
+    "id": "ka-rc-humanities-music-principles",
+    "title": "Principles and Analogies | Humanities Passage | Music",
+    "jobJson": "107-ka-rc-humanities-music-principles.json",
+    "outFile": "output/videos/lessons/107-principles-and-analogies-humanities-passage-music.mp4"
+  },
+  {
+    "number": "108",
+    "id": "ka-rc-humanities-music-evidence",
+    "title": "Additional Evidence | Humanities Passage | Music",
+    "jobJson": "108-ka-rc-humanities-music-evidence.json",
+    "outFile": "output/videos/lessons/108-additional-evidence-humanities-passage-music.mp4"
+  },
+  {
+    "number": "109",
+    "id": "ka-rc-humanities-music-purpose",
+    "title": "Primary Purpose | Humanities Passage | Music",
+    "jobJson": "109-ka-rc-humanities-music-purpose.json",
+    "outFile": "output/videos/lessons/109-primary-purpose-humanities-passage-music.mp4"
+  },
+  {
+    "number": "110",
+    "id": "ka-rc-science-sun-overview",
+    "title": "Science Passage Overview | The Sun",
+    "jobJson": "110-ka-rc-science-sun-overview.json",
+    "outFile": "output/videos/lessons/110-science-passage-overview-the-sun.mp4"
+  },
+  {
+    "number": "111",
+    "id": "ka-rc-science-sun-recognition-1",
+    "title": "Recognition 1 | Science Passage | The Sun",
+    "jobJson": "111-ka-rc-science-sun-recognition-1.json",
+    "outFile": "output/videos/lessons/111-recognition-1-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "112",
+    "id": "ka-rc-science-sun-recognition-2",
+    "title": "Recognition 2 | Science Passage | The Sun",
+    "jobJson": "112-ka-rc-science-sun-recognition-2.json",
+    "outFile": "output/videos/lessons/112-recognition-2-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "113",
+    "id": "ka-rc-science-sun-organizing",
+    "title": "Organizing Info | Science Passage | The Sun",
+    "jobJson": "113-ka-rc-science-sun-organizing.json",
+    "outFile": "output/videos/lessons/113-organizing-info-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "114",
+    "id": "ka-rc-science-sun-views-1",
+    "title": "Inferences About Views 1 | Science Passage | The Sun",
+    "jobJson": "114-ka-rc-science-sun-views-1.json",
+    "outFile": "output/videos/lessons/114-inferences-about-views-1-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "115",
+    "id": "ka-rc-science-sun-views-2",
+    "title": "Inferences About Views 2 | Science Passage | The Sun",
+    "jobJson": "115-ka-rc-science-sun-views-2.json",
+    "outFile": "output/videos/lessons/115-inferences-about-views-2-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "116",
+    "id": "ka-rc-science-sun-views-3",
+    "title": "Inferences About Views 3 | Science Passage | The Sun",
+    "jobJson": "116-ka-rc-science-sun-views-3.json",
+    "outFile": "output/videos/lessons/116-inferences-about-views-3-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "117",
+    "id": "ka-rc-science-sun-info",
+    "title": "Inferences About Info | Science Passage | The Sun",
+    "jobJson": "117-ka-rc-science-sun-info.json",
+    "outFile": "output/videos/lessons/117-inferences-about-info-science-passage-the-sun.mp4"
+  },
+  {
+    "number": "118",
+    "id": "ka-rc-social-wool-overview",
+    "title": "Social Science Passage Overview | Wool",
+    "jobJson": "118-ka-rc-social-wool-overview.json",
+    "outFile": "output/videos/lessons/118-social-science-passage-overview-wool.mp4"
+  },
+  {
+    "number": "119",
+    "id": "ka-rc-social-wool-main-point",
+    "title": "Main Point | Social Science Passage | Wool",
+    "jobJson": "119-ka-rc-social-wool-main-point.json",
+    "outFile": "output/videos/lessons/119-main-point-social-science-passage-wool.mp4"
+  },
+  {
+    "number": "120",
+    "id": "ka-rc-social-wool-recognition-1",
+    "title": "Recognition 1 | Social Science Passage | Wool",
+    "jobJson": "120-ka-rc-social-wool-recognition-1.json",
+    "outFile": "output/videos/lessons/120-recognition-1-social-science-passage-wool.mp4"
+  },
+  {
+    "number": "121",
+    "id": "ka-rc-social-wool-recognition-2",
+    "title": "Recognition 2 | Social Science Passage | Wool",
+    "jobJson": "121-ka-rc-social-wool-recognition-2.json",
+    "outFile": "output/videos/lessons/121-recognition-2-social-science-passage-wool.mp4"
+  },
+  {
+    "number": "122",
+    "id": "ka-rc-social-wool-info",
+    "title": "Inferences About Info | Social Science Passage | Wool",
+    "jobJson": "122-ka-rc-social-wool-info.json",
+    "outFile": "output/videos/lessons/122-inferences-about-info-social-science-passage-wool.mp4"
+  },
+  {
+    "number": "123",
+    "id": "ka-rc-social-wool-attitudes",
+    "title": "Inferences About Attitudes | Social Science Passage | Wool",
+    "jobJson": "123-ka-rc-social-wool-attitudes.json",
+    "outFile": "output/videos/lessons/123-inferences-about-attitudes-social-science-passage-wool.mp4"
+  },
+  {
+    "number": "124",
+    "id": "ka-logic-equivalence",
+    "title": "Conditional Reasoning and Logical Equivalence",
+    "jobJson": "124-ka-logic-equivalence.json",
+    "outFile": "output/videos/lessons/124-conditional-reasoning-and-logical-equivalence.mp4"
+  },
+  {
+    "number": "125",
+    "id": "ka-logic-if-then",
+    "title": "If X, Then Y | Sufficiency and Necessity",
+    "jobJson": "125-ka-logic-if-then.json",
+    "outFile": "output/videos/lessons/125-if-x-then-y-sufficiency-and-necessity.mp4"
+  },
+  {
+    "number": "126",
+    "id": "ka-logic-if-only-if",
+    "title": "The Logic of If vs. Only If",
+    "jobJson": "126-ka-logic-if-only-if.json",
+    "outFile": "output/videos/lessons/126-the-logic-of-if-vs-only-if.mp4"
+  },
+  {
+    "number": "127",
+    "id": "ka-logic-conditional-quick",
+    "title": "A Quick Guide to Conditional Logic",
+    "jobJson": "127-ka-logic-conditional-quick.json",
+    "outFile": "output/videos/lessons/127-a-quick-guide-to-conditional-logic.mp4"
+  }
+]

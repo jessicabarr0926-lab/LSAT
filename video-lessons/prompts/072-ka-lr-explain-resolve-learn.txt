@@ -1,0 +1,20 @@
+Use case: JessiPreps website video lesson
+Primary request: Create a concise animated LSAT explainer for "Explain or Resolve | Learn More".
+Scene/background: Clean premium educational dashboard, crisp white workspace, subtle dark sidebar hints, no clutter.
+Subject: animated LSAT Logical Reasoning explainer with evidence, conclusion, gap, and answer-choice cards.
+Action: Show a short title card, then animate the lesson method through four storyboard beats.
+Camera: Locked 16:9 screen-recording style composition with gentle push-ins and smooth card transitions.
+Lighting/mood: Bright, calm, focused, polished, student-friendly.
+Color palette: midnight blue, white, electric mint, warm amber.
+Style/format: Modern 2D motion graphics, readable UI cards, minimal icons, no human presenters.
+Timing/beats:
+1. What this trains: Explain or Resolve | Learn More trains you to name the task before answer choices start borrowing familiar words.
+2. Core method: Find the conclusion or fact set, name the bridge or burden, then choose the answer that performs the exact job.
+3. Trap to reject: Wrong answers often match the topic while changing the force, viewpoint, role, or logical direction.
+4. Next move: After the lesson, run a short strengthen or weaken drill and journal one reusable rule from any miss.
+Audio: Clear friendly educational voiceover summarizing the method; no music lyrics.
+Text (verbatim): "Explain or Resolve | Learn More"
+Dialogue:
+- Narrator: "Original JessiPreps lesson with examples, trap warnings, and a drill handoff for strengthen or weaken."
+Constraints: Keep on-screen text short and legible. Use only generic LSAT-style examples, not official LSAT questions. Avoid real people, faces, copyrighted brands, copyrighted music, and dense paragraphs.
+Avoid: shaky camera, tiny text, fake official logos, legal advice, cluttered slides, unreadable answer choices.
