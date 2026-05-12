@@ -472,6 +472,7 @@ function renderPage(route) {
     practice: renderPracticePage,
     review: renderReviewPage,
     plan: renderPlanPage,
+    roadmap: renderRoadmapPage,
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
@@ -629,12 +630,91 @@ function renderDashboardPage() {
       <article class="dashboard-card dashboard-card--roadmap">
         <div class="dashboard-card__head">
           <h3>Roadmap</h3>
+          <a class="text-link" href="#/roadmap">Gap analysis</a>
         </div>
         <div class="roadmap dashboard-roadmap">
           ${data.roadmapSteps.map((step) => `<section class="roadmap__step"><strong>${step.band}</strong><p>${step.focus}</p></section>`).join("")}
         </div>
       </article>
     </section>
+  `;
+}
+
+function renderRoadmapPage() {
+  const gaps = data.competitiveGaps;
+  return `
+    <article class="panel panel--wide roadmap-hero">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Competitive gap analysis</p>
+          <h3>What to build after benchmarking 7Sage and LSAT Demon</h3>
+        </div>
+        <span class="status-pill">Core loop first</span>
+      </div>
+      <p>${gaps.summary}</p>
+      <div class="cause-strip">
+        <section>
+          <strong>Cause</strong>
+          <p>Students lose points when the product leaves them to choose, skip review, or study without timing feedback.</p>
+        </section>
+        <section>
+          <strong>Effect</strong>
+          <p>The next features should reduce decision fatigue, force Blind Review, and show score movement by family.</p>
+        </section>
+        <section>
+          <strong>Product rule</strong>
+          <p>Build the measurable study loop before community, admissions, or scale features.</p>
+        </section>
+      </div>
+    </article>
+
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Priority build list</h3>
+        <span class="status-pill">Top 12</span>
+      </div>
+      <div class="priority-list">
+        ${gaps.buildFirst
+          .map(
+            (item) => `
+              <section class="priority-item">
+                <div class="priority-rank">${item.rank}</div>
+                <div>
+                  <h4>${item.title}</h4>
+                  <p><strong>Cause:</strong> ${item.cause}</p>
+                  <p><strong>Effect:</strong> ${item.effect}</p>
+                  <p class="microcopy"><strong>Build:</strong> ${item.action}</p>
+                </div>
+              </section>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Gap categories</h3>
+        <span class="status-pill">${gaps.categories.length} areas</span>
+      </div>
+      <div class="gap-grid">
+        ${gaps.categories
+          .map(
+            (item) => `
+              <section class="gap-card">
+                <p class="mini-card__label">${item.name}</p>
+                <h4>Gap</h4>
+                <p>${item.currentGap}</p>
+                <h4>Cause and effect</h4>
+                <p>${item.causeEffect}</p>
+                <h4>Next move</h4>
+                <p>${item.nextMove}</p>
+              </section>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
   `;
 }
 

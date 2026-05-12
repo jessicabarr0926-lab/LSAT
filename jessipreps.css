@@ -738,6 +738,81 @@ body.sidebar-collapsed .main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.roadmap-hero {
+  background:
+    linear-gradient(135deg, rgba(16, 35, 63, 0.92), rgba(47, 47, 59, 0.9)),
+    var(--panel);
+  color: #fff;
+}
+
+.roadmap-hero .mini-card__label,
+.roadmap-hero .microcopy,
+.roadmap-hero .muted {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.cause-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.cause-strip section,
+.priority-item,
+.gap-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.roadmap-hero .cause-strip section {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.priority-list,
+.gap-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.priority-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.priority-item {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.priority-item h4,
+.gap-card h4 {
+  margin: 0 0 8px;
+}
+
+.priority-item p,
+.gap-card p {
+  margin: 0 0 10px;
+}
+
+.priority-rank {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), #af5f87);
+}
+
+.gap-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .command-strip {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -1323,7 +1398,10 @@ body.sidebar-collapsed .main {
   .lesson-video,
   .qt-video,
   .qt-toolbox,
-  .qt-analysis-grid {
+  .qt-analysis-grid,
+  .cause-strip,
+  .priority-list,
+  .gap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1382,7 +1460,10 @@ body.sidebar-collapsed .main {
   .method-enforcer__grid,
   .dashboard-metrics,
   .course-strip,
-  .dashboard-roadmap {
+  .dashboard-roadmap,
+  .cause-strip,
+  .priority-list,
+  .gap-grid {
     grid-template-columns: 1fr;
     display: grid;
   }

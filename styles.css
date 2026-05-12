@@ -518,6 +518,75 @@ h3 {
   padding: 24px;
 }
 
+.gap-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 22px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(37, 42, 48, 0.96), rgba(116, 72, 92, 0.9)),
+    var(--charcoal);
+}
+
+.gap-hero .eyebrow,
+.gap-hero p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.gap-signal-grid,
+.gap-priority-list,
+.gap-category-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.gap-signal-grid {
+  grid-template-columns: 1fr;
+}
+
+.gap-signal-grid article,
+.gap-priority-list article,
+.gap-category-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.gap-signal-grid article {
+  color: var(--ink);
+}
+
+.gap-signal-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.gap-signal-grid strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.45rem;
+}
+
+.gap-priority-list,
+.gap-category-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-priority-list article,
+.gap-category-grid article {
+  box-shadow: none;
+}
+
+.gap-priority-list p,
+.gap-category-grid p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
 .section-heading {
   margin-bottom: 22px;
 }
@@ -3387,6 +3456,7 @@ tbody tr:last-child td {
   .planning-grid,
   .continue-grid,
   .content-hero,
+  .gap-hero,
   .start-path,
   .manual-system,
   .lesson-journey,
@@ -3521,7 +3591,10 @@ tbody tr:last-child td {
   .automation-grid,
   .plugin-grid,
   .question-study-tools,
-  .converter-grid {
+  .converter-grid,
+  .gap-hero,
+  .gap-priority-list,
+  .gap-category-grid {
     grid-template-columns: 1fr;
   }
 
