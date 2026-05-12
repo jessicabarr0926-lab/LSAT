@@ -738,6 +738,35 @@ body.sidebar-collapsed .main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.sprint-cta {
+  font-weight: 800;
+}
+
+.today-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.today-flow-grid a {
+  display: grid;
+  gap: 6px;
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.today-flow-grid strong {
+  color: var(--accent);
+}
+
+.today-flow-grid span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .mastery-stack,
 .trend-chart,
 .blind-review-list {
@@ -1459,6 +1488,7 @@ body.sidebar-collapsed .main {
   .dashboard-metrics,
   .course-strip,
   .dashboard-roadmap,
+  .today-flow-grid,
   .trend-chart {
     grid-template-columns: 1fr;
     display: grid;

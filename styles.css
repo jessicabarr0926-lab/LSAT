@@ -518,6 +518,46 @@ h3 {
   padding: 24px;
 }
 
+.static-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.static-feature-grid article {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.static-feature-grid p {
+  color: var(--muted);
+}
+
+.mini-native-chart {
+  display: flex;
+  min-height: 150px;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.mini-native-chart span {
+  display: grid;
+  min-width: 52px;
+  align-items: end;
+  justify-items: center;
+  padding: 8px 6px;
+  border-radius: 8px 8px 0 0;
+  color: #ffffff;
+  background: linear-gradient(180deg, var(--red), var(--teal));
+  font-weight: 900;
+}
+
 .section-heading {
   margin-bottom: 22px;
 }

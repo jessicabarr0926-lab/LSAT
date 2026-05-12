@@ -19,7 +19,7 @@ const questionRenderTimes = {};
 const state = loadState();
 
 document.querySelector("#quickStart").addEventListener("click", () => {
-  location.hash = `#/learn/${nextLesson().id}`;
+  location.hash = `#/practice/drill/${adaptiveDrillTarget().preset.id}`;
 });
 
 document.querySelector("#openWeakest").addEventListener("click", () => {
@@ -48,6 +48,15 @@ function defaultState() {
     journal: [],
     support: [...data.supportEntries],
     plan: { ...data.studyPlanDefaults },
+    onboarding: {
+      currentScore: data.appMeta.scaledScore,
+      goalScore: data.appMeta.targetScore,
+      testDate: data.studyPlanDefaults.testDate || "",
+      weakestSection: "Logical Reasoning",
+      dailyMinutes: 45,
+    },
+    officialLogs: [],
+    lastSavedAt: "",
   };
 }
 
@@ -68,6 +77,9 @@ function loadState() {
       journal: parsed.journal || [],
       support: parsed.support || base.support,
       plan: { ...base.plan, ...(parsed.plan || {}) },
+      onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
+      officialLogs: parsed.officialLogs || [],
+      lastSavedAt: parsed.lastSavedAt || "",
     };
   } catch {
     return base;
@@ -75,6 +87,7 @@ function loadState() {
 }
 
 function saveState() {
+  state.lastSavedAt = new Date().toISOString();
   localStorage.setItem(APP_KEY, JSON.stringify(state));
 }
 
@@ -149,6 +162,23 @@ function adaptiveDrillTarget() {
     data.drillPresets.find((item) => item.id === "gap-work") ||
     data.drillPresets[0];
   return { weak, preset };
+}
+
+function lastSavedLabel() {
+  if (!state.lastSavedAt) return "Progress saved locally";
+  const saved = new Date(state.lastSavedAt);
+  if (Number.isNaN(saved.getTime())) return "Progress saved locally";
+  return `Last saved ${saved.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function activeProfile() {
+  return {
+    currentScore: Number(state.onboarding.currentScore || data.appMeta.scaledScore),
+    goalScore: Number(state.onboarding.goalScore || data.appMeta.targetScore),
+    testDate: state.onboarding.testDate || state.plan.testDate || "",
+    weakestSection: state.onboarding.weakestSection || "Logical Reasoning",
+    dailyMinutes: Number(state.onboarding.dailyMinutes || 45),
+  };
 }
 
 function nextLesson() {
@@ -534,16 +564,18 @@ function renderPage(route) {
 function renderDashboardHero() {
   const lesson = nextLesson();
   const { weak, preset } = adaptiveDrillTarget();
+  const profile = activeProfile();
   return `
     <section class="hero-card">
       <div class="hero-copy">
-        <p class="eyebrow">${data.appMeta.currentPrepTest}</p>
-        <h3>Your LSAT command center should tell you what to do next, not make you decide from scratch.</h3>
+        <p class="eyebrow">${lastSavedLabel()}</p>
+        <h3>Turn your ${profile.currentScore} into the next score jump with one focused study sprint at a time.</h3>
         <p class="hero-copy">
-          Readiness ${data.appMeta.readinessScore}. Raw ${data.appMeta.rawScore}. Scaled ${data.appMeta.scaledScore}. Target ${data.appMeta.targetScore}.
+          Today: 6 ${weak.family} questions, Blind Review every miss, then journal one reusable rule. Skipped questions are strategy. Accuracy before speed.
         </p>
         <div class="hero-actions">
-          <a class="button button--primary" href="#/learn/${lesson.id}">Start ${lesson.title}</a>
+          <a class="button button--primary sprint-cta" href="#/practice/drill/${preset.id}">Start today's sprint</a>
+          <a class="button button--ghost" href="#/learn/${lesson.id}">Learn first</a>
           <a class="button button--ghost" href="#/practice/drill/${preset.id}">Adaptive drill: ${weak.family}</a>
         </div>
       </div>
@@ -563,6 +595,7 @@ function renderDashboardPage() {
   const studyModes = data.studyModes.slice(0, 3);
   const trend = scoreTrend();
   const testDays = daysUntilTest();
+  const profile = activeProfile();
   // SRS-lite: a journal entry is "due" until its blindReviewOutcome is
   // marked complete. Treats missing/undefined outcomes as still pending
   // so older entries surface here too.
@@ -589,14 +622,14 @@ function renderDashboardPage() {
       <article class="dashboard-card dashboard-card--hero">
         <div class="dashboard-card__head">
           <div>
-            <p class="mini-card__label">Next best move</p>
-            <h3>${lesson.title}</h3>
+            <p class="mini-card__label">Start today</p>
+            <h3>12-minute LSAT sprint</h3>
           </div>
-          <span class="status-pill">Readiness ${data.appMeta.readinessScore}</span>
+          <span class="status-pill">${lastSavedLabel()}</span>
         </div>
-        <p>${lesson.summary}</p>
+        <p>6 ${weak.family} questions -> Blind Review misses -> journal one rule. One rule per miss.</p>
         <div class="dashboard-actions">
-          <a class="button button--primary" href="#/learn/${lesson.id}">Start lesson</a>
+          <a class="button button--primary sprint-cta" href="#/practice/drill/${adaptive.preset.id}">Start today's sprint</a>
           <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build adaptive drill</a>
           <a class="button button--ghost" href="#/practice/timed">Timed section</a>
         </div>
@@ -620,6 +653,21 @@ function renderDashboardPage() {
           <div class="today-pill"><span>Weakest family</span><strong>${weak.family}</strong></div>
           <div class="today-pill"><span>Streak</span><strong>${streakDays()} days</strong></div>
           <div class="today-pill"><span>Next LSAT</span><strong>${testDays === null ? "Set date" : `${testDays} days`}</strong></div>
+          <div class="today-pill"><span>Daily time</span><strong>${profile.dailyMinutes} min</strong></div>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--table">
+        <div class="dashboard-card__head">
+          <h3>Today Flow</h3>
+          <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
+        </div>
+        <div class="today-flow-grid">
+          <a href="#/learn/${lesson.id}"><strong>Learn</strong><span>${lesson.title}</span></a>
+          <a href="#/practice/drill/${adaptive.preset.id}"><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
+          <a href="#/review"><strong>Review</strong><span>Blind Review misses</span></a>
+          <a href="#/review"><strong>Log</strong><span>One reusable rule</span></a>
+          <a href="#/dashboard"><strong>Stop</strong><span>Protect tomorrow's streak</span></a>
         </div>
       </article>
 
@@ -1547,7 +1595,30 @@ function renderReviewPage() {
 }
 
 function renderPlanPage() {
+  const profile = activeProfile();
   return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Onboarding</p>
+          <h3>Personalize the command center</h3>
+        </div>
+        <span class="status-pill">${lastSavedLabel()}</span>
+      </div>
+      <form id="onboardingForm" class="plan-form">
+        <label><span>Current score</span><input name="currentScore" type="number" min="120" max="180" value="${profile.currentScore}" /></label>
+        <label><span>Goal score</span><input name="goalScore" type="number" min="120" max="180" value="${profile.goalScore}" /></label>
+        <label><span>Test date</span><input name="testDate" type="date" value="${profile.testDate}" /></label>
+        <label><span>Weakest section</span>
+          <select name="weakestSection">
+            ${["Logical Reasoning", "Reading Comprehension", "Timing", "Blind Review"].map((value) => `<option value="${value}" ${profile.weakestSection === value ? "selected" : ""}>${value}</option>`).join("")}
+          </select>
+        </label>
+        <label><span>Daily study time</span><input name="dailyMinutes" type="number" min="10" max="240" value="${profile.dailyMinutes}" /></label>
+        <button class="button button--primary" type="submit">Save onboarding</button>
+      </form>
+    </article>
+
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Study Plan Builder</h3>
@@ -1572,6 +1643,37 @@ function renderPlanPage() {
           <li>Take one mixed timed set</li>
         </ol>
       </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">LawHub companion</p>
+          <h3>Use official LawHub here, log results here.</h3>
+        </div>
+        <a class="text-link" href="https://www.lsac.org/lawhub" target="_blank" rel="noreferrer">Open LawHub</a>
+      </div>
+      <p>JessiPreps stores your score, timing, and reflection only. Do not paste official LSAT question text here.</p>
+      <form id="lawhubForm" class="plan-form">
+        <label><span>PrepTest / section</span><input name="ptSection" placeholder="PT 152 · Section 3" /></label>
+        <label><span>Raw score</span><input name="rawScore" type="number" min="0" max="100" /></label>
+        <label><span>Scaled score</span><input name="scaledScore" type="number" min="120" max="180" /></label>
+        <label><span>Timing notes</span><input name="timingNotes" placeholder="Final five rushed; skipped Q18" /></label>
+        <label class="br-field--wide"><span>Reflection</span><textarea name="reflection" rows="3" placeholder="What pattern should tomorrow's sprint target?"></textarea></label>
+        <button class="button button--primary" type="submit">Log official result</button>
+      </form>
+      <div class="journal-list">
+        ${
+          state.officialLogs.length
+            ? state.officialLogs.slice(0, 4).map((log) => `<section class="journal-card"><strong>${log.ptSection}</strong><p>Raw ${log.rawScore || "n/a"} · Scaled ${log.scaledScore || "n/a"}</p><p class="microcopy">${log.timingNotes || "No timing notes"} · ${log.reflection || "No reflection yet"}</p></section>`).join("")
+            : `<p class="muted">No official results logged yet. Complete a LawHub section, then log the score and reflection here.</p>`
+        }
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>LSAT Writing reminder</h3>
+      </div>
+      <p class="microcopy">Lower-priority checklist: confirm whether you already have a valid LSAT Argumentative Writing sample on file before score release.</p>
     </article>
     <article class="panel">
       <div class="panel__head">
@@ -1793,6 +1895,25 @@ function wireInteractions(route) {
   }
 
   if (route.page === "plan") {
+    const onboardingForm = document.querySelector("#onboardingForm");
+    if (onboardingForm) {
+      onboardingForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(onboardingForm);
+        state.onboarding = {
+          currentScore: Number(formData.get("currentScore")),
+          goalScore: Number(formData.get("goalScore")),
+          testDate: String(formData.get("testDate")),
+          weakestSection: String(formData.get("weakestSection")),
+          dailyMinutes: Number(formData.get("dailyMinutes")),
+        };
+        state.plan.testDate = state.onboarding.testDate;
+        state.plan.targetScore = state.onboarding.goalScore;
+        saveState();
+        renderApp();
+      });
+    }
+
     const form = document.querySelector("#planForm");
     if (form) {
       form.addEventListener("submit", (event) => {
@@ -1804,6 +1925,27 @@ function wireInteractions(route) {
           testDate: String(formData.get("testDate")),
           emphasis: String(formData.get("emphasis")),
         };
+        state.onboarding.goalScore = state.plan.targetScore;
+        state.onboarding.testDate = state.plan.testDate;
+        saveState();
+        renderApp();
+      });
+    }
+
+    const lawhubForm = document.querySelector("#lawhubForm");
+    if (lawhubForm) {
+      lawhubForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(lawhubForm);
+        state.officialLogs.unshift({
+          id: `lawhub-${Date.now()}`,
+          loggedAt: new Date().toISOString(),
+          ptSection: String(formData.get("ptSection") || "Official LawHub section"),
+          rawScore: String(formData.get("rawScore") || ""),
+          scaledScore: String(formData.get("scaledScore") || ""),
+          timingNotes: String(formData.get("timingNotes") || ""),
+          reflection: String(formData.get("reflection") || ""),
+        });
         saveState();
         renderApp();
       });

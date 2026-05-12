@@ -1565,6 +1565,15 @@ const defaultState = {
   targetScore: 170,
   weeklyHours: 8,
   dashboardTestDate: "",
+  onboarding: {
+    currentScore: 154,
+    goalScore: 170,
+    testDate: "",
+    weakestSection: "Logical Reasoning",
+    dailyMinutes: 45,
+  },
+  officialLogs: [],
+  lastSavedAt: "",
   accessibility: {
     dyslexia: true,
     focus: true,
@@ -1649,6 +1658,9 @@ function loadState() {
     parsed.confidenceRatings = parsed.confidenceRatings || {};
     parsed.trapTags = parsed.trapTags || {};
     parsed.supportDraftsByQuestion = parsed.supportDraftsByQuestion || {};
+    parsed.onboarding = { ...freshDefaultState().onboarding, ...(parsed.onboarding || {}) };
+    parsed.officialLogs = parsed.officialLogs || [];
+    parsed.lastSavedAt = parsed.lastSavedAt || "";
     parsed.scoreConverter = { ...freshDefaultState().scoreConverter, ...(parsed.scoreConverter || {}) };
     localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
     return parsed;
@@ -1662,6 +1674,7 @@ function freshDefaultState() {
 }
 
 function saveState() {
+  state.lastSavedAt = new Date().toISOString();
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
 }
 
@@ -2232,7 +2245,7 @@ function renderQuestionBank() {
     .join("");
 
   $("#questionRows").innerHTML =
-    rows || `<tr><td colspan="6">No questions match those filters yet.</td></tr>`;
+    rows || `<tr><td colspan="6">No questions match these filters — reset filters or choose Logical Reasoning.</td></tr>`;
 }
 
 function renderJournalQuestionOptions() {
@@ -2294,7 +2307,7 @@ function renderCurrentQuestion() {
       <div class="drill-empty-state">
         <span class="tag">Recommended next</span>
         <h3>${escapeHtml(weakSkill)} mini-drill</h3>
-        <p>Six questions will load with Prediction Mode, answer hiding, question notes, confidence tracking, and video-style explanations.</p>
+        <p>Click Start next drill to generate a 6-question ${escapeHtml(weakSkill)} set with Prediction Mode, answer hiding, question notes, confidence tracking, and video-style explanations.</p>
         <div class="drill-preview-list">
           ${preview.map((question) => `<span>${escapeHtml(question.source)} · ${escapeHtml(question.skill)} · L${question.difficulty}</span>`).join("")}
         </div>
