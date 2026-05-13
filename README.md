@@ -75,7 +75,7 @@ The requested LSAT lesson expansion is now wired into `script.js` as 127 additio
 
 ## Polished V2
 
-The hash app now normalizes all 139 lessons with full script, storyboard beats, concept summary, checkpoint quiz, mastery-drill handoff, and video status metadata. Six sample MP4 recordings are mounted in lesson players and the Live replay library:
+The hash app now normalizes all 139 lessons with full script, storyboard beats, concept summary, checkpoint quiz, mastery-drill handoff, and video status metadata. Every lesson has a playable video path: 127 rendered lesson MP4 paths are mounted where available, and the remaining lessons fall back cleanly to the six sample MP4 recordings in lesson players and the Live replay library:
 
 - LR Flaws
 - Necessary Assumptions
@@ -86,9 +86,13 @@ The hash app now normalizes all 139 lessons with full script, storyboard beats, 
 
 The original question bank is expanded to 1,000 local LSAT-style questions with difficulty, timing target, question type, trap pattern, linked lesson, explanation, and mistake-reason metadata. Reading Comprehension now includes 20 original passages with passage-map prompts and question sets.
 
-V2 keeps the project static and localStorage-based. Backend login, real-time AI classrooms, payment enforcement, and a full admissions CRM remain future milestones.
+V2 keeps the project static and localStorage-based. It includes local/static versions of the features that will later need a backend: tier selection, soft-gated Core/Live/Coach surfaces, a Professor Maya Live classroom simulator, saved coach chat, local admissions CRM, and backup/restore sync. Real login, checkout enforcement, cross-device database sync, and real-time streaming classrooms remain post-V2 milestones.
 
 Coach now works as a local mini-chat assistant. It answers LSAT questions using the lesson library, question bank, RC passages, attempts, wrong-answer journal, and mistake tags. It also tracks answered questions, summarizes common mistake patterns, and gives an on-the-spot fix plus a linked next drill.
+
+Live now includes a soft-gated 30-minute class room with Professor Maya Brooks as a fictional AI teacher persona. Students can step through the class agenda, ask live lesson questions, use voice read-aloud when the browser supports it, reserve future classes, and replay the mounted MP4 samples.
+
+The admissions workspace now functions as a local CRM inside Plan and Coach: target/reach/safety schools, median LSAT, deadlines, status, scholarship notes, task checklist, and submitted counts all persist in localStorage.
 
 The content boost layer adds richer teaching material to every lesson and question: Professor Maya method steps, trap warnings, mini-drill prompts, teaching notes, explanation steps, wrong-answer diagnostics, and immediate correction rules.
 

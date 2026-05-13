@@ -125,6 +125,22 @@ function defaultState() {
       syncCode: "",
       lastBackupAt: "",
     },
+    subscriptionTier: "Core",
+    liveClassroom: {
+      activeSessionId: "live-flaw-30",
+      currentStep: 0,
+      transcript: [],
+      voiceEnabled: false,
+    },
+    admissions: {
+      schools: [],
+      tasks: [
+        { id: "lsat-target", label: "Confirm LSAT target score range", done: false },
+        { id: "school-list", label: "Build target/reach/safety school list", done: false },
+        { id: "personal-statement", label: "Draft personal statement angle", done: false },
+        { id: "scholarship", label: "Track scholarship positioning notes", done: false },
+      ],
+    },
     cookieConsent: "",
     subscriptionIntent: "",
     notificationsOpen: false,
@@ -191,6 +207,14 @@ function loadState() {
       imports: parsed.imports || [],
       bookQuestionLogs: parsed.bookQuestionLogs || [],
       localAccount: { ...base.localAccount, ...(parsed.localAccount || {}) },
+      subscriptionTier: parsed.subscriptionTier || base.subscriptionTier,
+      liveClassroom: { ...base.liveClassroom, ...(parsed.liveClassroom || {}) },
+      admissions: {
+        ...base.admissions,
+        ...(parsed.admissions || {}),
+        tasks: parsed.admissions?.tasks || base.admissions.tasks,
+        schools: parsed.admissions?.schools || [],
+      },
       cookieConsent: parsed.cookieConsent || "",
       subscriptionIntent: parsed.subscriptionIntent || "",
       notificationsOpen: Boolean(parsed.notificationsOpen),
@@ -324,6 +348,34 @@ function localBackupPayload() {
     version: "jessipreps-static-v2",
     state,
   }, null, 2);
+}
+
+function tierRank(tier = state.subscriptionTier) {
+  return { Core: 1, Live: 2, Coach: 3 }[tier] || 1;
+}
+
+function hasTier(required) {
+  return tierRank() >= tierRank(required);
+}
+
+function liveClassroomReply(prompt) {
+  const family = adaptiveDrillTarget().weak.family;
+  const text = String(prompt || "").trim();
+  const fix = coachFixForFamily(family);
+  return text
+    ? `Professor Maya: I hear the question: "${text}". For your current data, I would connect that to ${family}. ${fix} Now try one prediction before you look at choices.`
+    : `Professor Maya: Today we are training ${family}. ${fix}`;
+}
+
+function admissionsStats() {
+  const schools = state.admissions?.schools || [];
+  return {
+    total: schools.length,
+    reach: schools.filter((school) => school.category === "Reach").length,
+    target: schools.filter((school) => school.category === "Target").length,
+    safety: schools.filter((school) => school.category === "Safety").length,
+    submitted: schools.filter((school) => /submitted|accepted|waitlist|rejected/i.test(school.status || "")).length,
+  };
 }
 
 function familyAnalytics() {
@@ -1235,11 +1287,11 @@ function renderNoticeLayer() {
           <button class="icon-button" type="button" data-close-subscribe aria-label="Close subscribe panel">×</button>
         </div>
         <div class="tier-grid">
-          <section><strong>Core</strong><span>Self-study dashboard, lessons, drills, review, and plan.</span><a href="#/dashboard" data-close-subscribe>Open Core</a></section>
-          <section><strong>Live</strong><span>Soft-gated 30-minute AI-teacher classes and recordings.</span><a href="#/live" data-close-subscribe>Preview Live</a></section>
-          <section><strong>Coach</strong><span>Tutor messaging, admissions strategy, and personalized next steps.</span><a href="#/coach" data-close-subscribe>Preview Coach</a></section>
+          <section class="${state.subscriptionTier === "Core" ? "is-active" : ""}"><strong>Core</strong><span>Self-study dashboard, lessons, drills, review, and plan.</span><button type="button" data-select-tier="Core">Use Core</button></section>
+          <section class="${state.subscriptionTier === "Live" ? "is-active" : ""}"><strong>Live</strong><span>Interactive AI-teacher classroom, 30-minute sessions, and recordings.</span><button type="button" data-select-tier="Live">Unlock Live locally</button></section>
+          <section class="${state.subscriptionTier === "Coach" ? "is-active" : ""}"><strong>Coach</strong><span>Coach chat, admissions CRM, and personalized next steps.</span><button type="button" data-select-tier="Coach">Unlock Coach locally</button></section>
         </div>
-        <p class="microcopy">Live and Coach are soft-gated previews: students can see the value, reserve, and request support before paid access is turned on.</p>
+        <p class="microcopy">Static V2 uses local tier gating only. Real checkout and server-side enforcement remain a backend milestone.</p>
       </aside>
     ` : ""}
     ${state.notificationsOpen ? `
@@ -2975,6 +3027,7 @@ function renderPlanPage() {
   const profile = activeProfile();
   const calendar = generatedStudyCalendar();
   const account = state.localAccount || defaultState().localAccount;
+  const admStats = admissionsStats();
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -3110,14 +3163,41 @@ function renderPlanPage() {
     </article>
     <article class="panel panel--wide">
       <div class="panel__head">
-        <h3>Admissions lane</h3>
-        <span class="status-pill">Future module</span>
+        <div>
+          <p class="mini-card__label">Admissions CRM</p>
+          <h3>Applications, school list, decisions, and scholarship strategy.</h3>
+        </div>
+        <span class="status-pill">${admStats.total} schools</span>
       </div>
       <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Applications</p><h4>Tracker</h4><p>School, deadline, status, essay stage.</p></section>
-        <section class="mini-card"><p class="mini-card__label">School data</p><h4>Targets</h4><p>Connect LSAT goal to admissions strategy.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Decisions</p><h4>Cycle view</h4><p>Decision tracker once applications start.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Scholarship</p><h4>Estimator</h4><p>Future merit-aid planning from score range.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Reach</p><h4>${admStats.reach}</h4><p>Schools above current score range.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Target</p><h4>${admStats.target}</h4><p>Schools near your goal profile.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Safety</p><h4>${admStats.safety}</h4><p>Schools where score can support leverage.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Submitted</p><h4>${admStats.submitted}</h4><p>Applications past draft stage.</p></section>
+      </div>
+      <form id="admissionsForm" class="plan-form">
+        <label><span>School</span><input name="school" placeholder="Example: Howard Law" /></label>
+        <label><span>Category</span><select name="category"><option>Target</option><option>Reach</option><option>Safety</option></select></label>
+        <label><span>Median LSAT</span><input name="medianLsat" type="number" min="120" max="180" placeholder="160" /></label>
+        <label><span>Deadline</span><input name="deadline" type="date" /></label>
+        <label><span>Status</span><select name="status"><option>Researching</option><option>Drafting</option><option>Submitted</option><option>Accepted</option><option>Waitlist</option><option>Rejected</option></select></label>
+        <label class="br-field--wide"><span>Scholarship / strategy notes</span><textarea name="notes" rows="3" placeholder="What score would improve leverage? What essay angle fits this school?"></textarea></label>
+        <button class="button button--primary" type="submit">Add school</button>
+      </form>
+      <div class="admissions-list">
+        ${(state.admissions.schools || []).length ? state.admissions.schools.map((school) => `
+          <section class="journal-card admissions-card">
+            <div>
+              <strong>${school.school}</strong>
+              <p>${school.category} · median ${school.medianLsat || "n/a"} · ${school.status}</p>
+              <p class="microcopy">Deadline ${school.deadline || "not set"} · ${school.notes || "No strategy notes yet."}</p>
+            </div>
+            <button class="bookmark-button" type="button" data-remove-school="${school.id}">Remove</button>
+          </section>
+        `).join("") : `<p class="muted">No schools yet. Add your first target/reach/safety school to start the admissions CRM.</p>`}
+      </div>
+      <div class="checklist-panel">
+        ${(state.admissions.tasks || []).map((task) => `<label><input type="checkbox" data-admissions-task="${task.id}" ${task.done ? "checked" : ""}> <span>${task.label}</span></label>`).join("")}
       </div>
     </article>
     <article class="panel">
@@ -3254,16 +3334,19 @@ function renderAnimationUpgradeStrip() {
 function renderLivePage() {
   const sessions = liveClassCatalog();
   const recordings = data.videoSamples || [];
+  const activeSession = sessions.find((session) => session.id === state.liveClassroom.activeSessionId) || sessions[0];
+  const currentStep = Math.min(state.liveClassroom.currentStep || 0, activeSession.agenda.length - 1);
+  const liveUnlocked = hasTier("Live");
   return `
     <section class="tier-page live-page">
       <article class="tier-hero panel panel--wide">
         <div>
-          <p class="mini-card__label">Live tier · soft gated</p>
+          <p class="mini-card__label">Live tier · ${liveUnlocked ? "unlocked locally" : "upgrade preview"}</p>
           <h3>30-minute AI-teacher classes that feel like someone is actually sitting with you.</h3>
           <p>Live is where Professor Maya Brooks breaks down the lesson, asks you to predict, pauses for a You Try, and turns the miss into one journal rule.</p>
           <div class="dashboard-actions">
             <button class="button button--primary" type="button" data-live-reserve="live-flaw-30">Reserve next class</button>
-            <button class="button button--ghost" type="button" data-open-subscribe>View tiers</button>
+            <button class="button button--ghost" type="button" data-select-tier="Live">${liveUnlocked ? "Live unlocked" : "Unlock Live locally"}</button>
           </div>
         </div>
         <div class="teacher-card">
@@ -3273,6 +3356,47 @@ function renderLivePage() {
         </div>
       </article>
       ${renderAnimationUpgradeStrip()}
+      <article class="panel panel--wide live-classroom">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">Interactive classroom</p>
+            <h3>${activeSession.title}</h3>
+          </div>
+          <span class="status-pill">${liveUnlocked ? "Live tools on" : "Preview mode"}</span>
+        </div>
+        <div class="live-classroom-grid">
+          <section class="teacher-stage">
+            <div class="teacher-avatar teacher-avatar--large"><span>MB</span></div>
+            <h4>Professor Maya Brooks</h4>
+            <p>${liveClassroomReply("")}</p>
+            <div class="video-progress"><span style="width:${((currentStep + 1) / activeSession.agenda.length) * 100}%"></span></div>
+          </section>
+          <section>
+            <p class="mini-card__label">30-minute agenda</p>
+            <ol class="live-step-list">
+              ${activeSession.agenda.map((item, index) => `<li class="${index === currentStep ? "is-active" : ""}">${item}</li>`).join("")}
+            </ol>
+            <div class="dashboard-actions">
+              <button class="button button--ghost" type="button" data-live-step="-1">Back</button>
+              <button class="button button--primary" type="button" data-live-step="1">Next class beat</button>
+              <button class="button button--ghost" type="button" data-live-speak>Voice read</button>
+            </div>
+          </section>
+        </div>
+        <form id="liveQuestionForm" class="coach-form">
+          <label class="br-field--wide"><span>Ask Professor Maya during class</span><textarea name="livePrompt" rows="3" placeholder="Example: Can you explain cause and effect flaws in a way that sticks?"></textarea></label>
+          <button class="button button--primary" type="submit">Ask live teacher</button>
+        </form>
+        <div class="coach-chat-log">
+          ${(state.liveClassroom.transcript || []).length ? state.liveClassroom.transcript.map((item) => `
+            <section class="coach-bubble coach-bubble--${item.role}">
+              <strong>${item.role === "assistant" ? "Professor Maya" : "You"}</strong>
+              <p>${escapeHtml(item.text)}</p>
+              <small>${new Date(item.createdAt).toLocaleString()}</small>
+            </section>
+          `).join("") : `<p class="muted">Ask a live question and Professor Maya will answer from the lesson library, your weak family, and the class agenda.</p>`}
+        </div>
+      </article>
       <article class="panel panel--wide">
         <div class="panel__head">
           <h3>Upcoming live classes</h3>
@@ -3324,6 +3448,7 @@ function renderCoachPage() {
   const messages = state.coachMessages || [];
   const target = adaptiveDrillTarget();
   const profile = coachMistakeProfile();
+  const admStats = admissionsStats();
   const checklist = [
     "Confirm current score, goal score, and test date in Plan.",
     `Run one ${target.weak.family} drill before asking for a new plan.`,
@@ -3412,7 +3537,13 @@ function renderCoachPage() {
       <article class="panel panel--wide">
         <div class="panel__head">
           <h3>Admissions strategy workspace</h3>
-          <button class="status-pill status-pill--button" type="button" data-open-subscribe>Upgrade preview</button>
+          <a class="status-pill status-pill--button" href="#/plan">Open CRM</a>
+        </div>
+        <div class="card-grid card-grid--four">
+          <section class="mini-card"><p class="mini-card__label">Schools</p><h4>${admStats.total}</h4><p>Tracked in the local CRM.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Reach</p><h4>${admStats.reach}</h4><p>Stretch list for score upside.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Target</p><h4>${admStats.target}</h4><p>Core fit schools.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Submitted</p><h4>${admStats.submitted}</h4><p>Applications past draft stage.</p></section>
         </div>
         <div class="class-agenda-grid">
           <section><i>1</i><strong>Score target</strong><span>Use current score, goal score, and test date from Plan.</span></section>
@@ -3595,6 +3726,7 @@ function wireInteractions(route) {
       const sessionId = button.dataset.liveReserve;
       const session = liveClassCatalog().find((item) => item.id === sessionId);
       state.liveReservations[sessionId] = true;
+      state.liveClassroom.activeSessionId = sessionId;
       state.notifications.unshift({
         id: `live-${Date.now()}`,
         title: "Live class reserved",
@@ -3603,6 +3735,45 @@ function wireInteractions(route) {
       });
       saveState();
       renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-live-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const session = liveClassCatalog().find((item) => item.id === state.liveClassroom.activeSessionId) || liveClassCatalog()[0];
+      const delta = Number(button.dataset.liveStep || 0);
+      state.liveClassroom.currentStep = Math.max(0, Math.min(session.agenda.length - 1, (state.liveClassroom.currentStep || 0) + delta));
+      saveState();
+      renderApp();
+    });
+  });
+
+  const liveQuestionForm = pageMount.querySelector("#liveQuestionForm");
+  if (liveQuestionForm) {
+    liveQuestionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(liveQuestionForm);
+      const prompt = String(formData.get("livePrompt") || "").trim();
+      if (!prompt) return;
+      state.liveClassroom.transcript.unshift(
+        { role: "assistant", text: liveClassroomReply(prompt), createdAt: new Date().toISOString() },
+        { role: "user", text: prompt, createdAt: new Date().toISOString() },
+      );
+      state.liveClassroom.transcript = state.liveClassroom.transcript.slice(0, 20);
+      saveState();
+      renderApp();
+    });
+  }
+
+  pageMount.querySelectorAll("[data-live-speak]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const message = state.liveClassroom.transcript.find((item) => item.role === "assistant")?.text || liveClassroomReply("");
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));
+      } else {
+        window.alert(message);
+      }
     });
   });
 
@@ -3690,6 +3861,21 @@ function wireInteractions(route) {
   pageMount.querySelectorAll("[data-open-subscribe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.subscriptionIntent = "open";
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-select-tier]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.subscriptionTier = button.dataset.selectTier || "Core";
+      state.subscriptionIntent = "";
+      state.notifications.unshift({
+        id: `tier-${Date.now()}`,
+        title: `${state.subscriptionTier} tier selected`,
+        body: "Static V2 tier access is stored locally in this browser.",
+        read: false,
+      });
       saveState();
       renderApp();
     });
@@ -3923,8 +4109,8 @@ function wireInteractions(route) {
         state.plan.targetScore = state.onboarding.goalScore;
         saveState();
         renderApp();
-  });
-}
+      });
+    }
 
     const form = document.querySelector("#planForm");
     if (form) {
@@ -3962,6 +4148,52 @@ function wireInteractions(route) {
         renderApp();
       });
     }
+
+    const admissionsForm = document.querySelector("#admissionsForm");
+    if (admissionsForm) {
+      admissionsForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(admissionsForm);
+        const school = String(formData.get("school") || "").trim();
+        if (!school) return;
+        state.admissions.schools.unshift({
+          id: `school-${Date.now()}`,
+          school,
+          category: String(formData.get("category") || "Target"),
+          medianLsat: String(formData.get("medianLsat") || ""),
+          deadline: String(formData.get("deadline") || ""),
+          status: String(formData.get("status") || "Researching"),
+          notes: String(formData.get("notes") || ""),
+          createdAt: new Date().toISOString(),
+        });
+        state.notifications.unshift({
+          id: `school-note-${Date.now()}`,
+          title: "School added",
+          body: `${school} was added to the local admissions CRM.`,
+          read: false,
+        });
+        saveState();
+        renderApp();
+      });
+    }
+
+    pageMount.querySelectorAll("[data-remove-school]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.admissions.schools = (state.admissions.schools || []).filter((school) => school.id !== button.dataset.removeSchool);
+        saveState();
+        renderApp();
+      });
+    });
+
+    pageMount.querySelectorAll("[data-admissions-task]").forEach((input) => {
+      input.addEventListener("change", () => {
+        const task = (state.admissions.tasks || []).find((item) => item.id === input.dataset.admissionsTask);
+        if (!task) return;
+        task.done = input.checked;
+        saveState();
+        renderApp();
+      });
+    });
 
     const localAccountForm = document.querySelector("#localAccountForm");
     if (localAccountForm) {

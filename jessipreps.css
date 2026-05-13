@@ -1432,9 +1432,25 @@ body[data-route="dashboard"] #todaySidebarCard {
   gap: 8px;
 }
 
-.tier-grid a {
+.tier-grid section.is-active {
+  border-color: rgba(47, 122, 82, 0.34);
+  background: rgba(230, 247, 236, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(47, 122, 82, 0.1);
+}
+
+.tier-grid a,
+.tier-grid button {
   color: var(--accent);
   font-weight: 800;
+}
+
+.tier-grid button {
+  justify-self: start;
+  border: 1px solid rgba(124, 55, 92, 0.2);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
 }
 
 .analytics-detail-grid {
@@ -2074,6 +2090,75 @@ body[data-route="dashboard"] #todaySidebarCard {
 
 .live-class-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.live-classroom-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.teacher-stage {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  border: 1px solid rgba(124, 55, 92, 0.18);
+  border-radius: 22px;
+  padding: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 246, 212, 0.88), rgba(239, 234, 255, 0.82)),
+    rgba(255, 255, 255, 0.76);
+}
+
+.teacher-stage p {
+  margin: 0;
+}
+
+.live-step-list {
+  display: grid;
+  gap: 10px;
+  counter-reset: live-step;
+  list-style: none;
+  margin: 12px 0 18px;
+  padding: 0;
+}
+
+.live-step-list li {
+  counter-increment: live-step;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.live-step-list li::before {
+  content: counter(live-step);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--line);
+  font-weight: 900;
+}
+
+.live-step-list li.is-active {
+  border-color: rgba(124, 55, 92, 0.28);
+  background: rgba(239, 234, 255, 0.9);
+}
+
+.live-step-list li.is-active::before {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent), #af5f87);
 }
 
 .live-class-card {
@@ -3014,6 +3099,23 @@ body.test-day-active .page-grid {
   background: rgba(255, 255, 255, 0.86);
 }
 
+.admissions-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admissions-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.admissions-card .bookmark-button {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 1200px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -3064,6 +3166,7 @@ body.test-day-active .page-grid {
   .tier-hero,
   .class-agenda-grid,
   .live-class-grid,
+  .live-classroom-grid,
   .coach-form,
   .progress-ring-row,
   .section-card-row,
@@ -3149,6 +3252,7 @@ body.test-day-active .page-grid {
   .animation-stage,
   .class-agenda-grid,
   .live-class-grid,
+  .live-classroom-grid,
   .coach-stack,
   .coach-form,
   .command-strip,
