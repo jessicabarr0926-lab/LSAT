@@ -553,6 +553,13 @@
     "outFile": "output/videos/lessons/079-main-point-quick-guide.mp4"
   },
   {
+    "number": "V2-RC",
+    "id": "rc-structure-map",
+    "title": "RC Passage Mapping",
+    "jobJson": "v2-rc-structure-map.json",
+    "outFile": "output/videos/lessons/079-main-point-quick-guide.mp4"
+  },
+  {
     "number": "080",
     "id": "ka-rc-recognition-quick",
     "title": "Recognition | Quick Guide",

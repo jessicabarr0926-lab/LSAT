@@ -310,3 +310,236 @@ function buildRequestedQuestionLibrary() {
     data.questionBank.push(...questions);
   }
 })();
+
+const v2VideoSamples = {
+  'ka-lr-flaw-video': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/047-identify-a-flaw-video-lesson.mp4',
+    theme: 'LR Flaws',
+  },
+  'ka-lr-necessary-assumptions-video': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/055-necessary-assumptions-video-lesson.mp4',
+    theme: 'Necessary Assumptions',
+  },
+  'ka-lr-strengthen-video': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/063-strengthen-video-lesson.mp4',
+    theme: 'Strengthen / Weaken',
+  },
+  'rc-structure-map': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/079-main-point-quick-guide.mp4',
+    theme: 'RC Passage Mapping',
+  },
+  'ka-logic-if-then': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/125-if-x-then-y-sufficiency-and-necessity.mp4',
+    theme: 'Conditional Logic',
+  },
+  'ka-about-lsat-lessons': {
+    status: 'sample-mp4',
+    path: 'output/videos/lessons/001-about-lsat-lessons.mp4',
+    theme: 'Blind Review Method',
+  },
+};
+
+const v2QuestionFamilies = [
+  { section: 'LR', family: 'Flaw', lesson: 'ka-lr-flaw-video', stem: 'The reasoning is most vulnerable to criticism because it', trap: 'Treats a correlation as causation', target: 84 },
+  { section: 'LR', family: 'Assumption', lesson: 'ka-lr-necessary-assumptions-video', stem: 'Which one of the following is an assumption required by the argument?', trap: 'Chooses a helpful but unnecessary fact', target: 92 },
+  { section: 'LR', family: 'Strengthen', lesson: 'ka-lr-strengthen-video', stem: 'Which one of the following, if true, most strengthens the argument?', trap: 'Supports the topic rather than the bridge', target: 86 },
+  { section: 'LR', family: 'Weaken', lesson: 'ka-lr-weaken-video', stem: 'Which one of the following, if true, most weakens the argument?', trap: 'Attacks a side issue', target: 86 },
+  { section: 'LR', family: 'Conditional Logic', lesson: 'ka-logic-if-then', stem: 'Which one of the following must be true?', trap: 'Reverses the sufficient and necessary terms', target: 95 },
+  { section: 'LR', family: 'Must Be True', lesson: 'ka-lr-entailment-video', stem: 'Which one of the following is most strongly supported?', trap: 'Picks a claim that is plausible but too strong', target: 88 },
+  { section: 'LR', family: 'Role / Method / Technique', lesson: 'ka-lr-role-video', stem: 'The highlighted claim plays which one of the following roles?', trap: 'Describes content instead of function', target: 82 },
+  { section: 'LR', family: 'Resolve / Explain', lesson: 'ka-lr-resolve-video', stem: 'Which one of the following most helps resolve the apparent conflict?', trap: 'Explains only one side of the surprise', target: 88 },
+  { section: 'RC', family: 'RC Structure', lesson: 'rc-structure-map', stem: 'Which one of the following best describes the organization of the passage?', trap: 'Mistakes topic for structure', target: 96 },
+  { section: 'RC', family: 'RC Inference', lesson: 'ka-rc-info-inference-quick', stem: 'Which one of the following is most strongly supported by the passage?', trap: 'Goes beyond the passage', target: 100 },
+  { section: 'RC', family: 'RC Main Point', lesson: 'ka-rc-main-point-quick', stem: 'Which one of the following best states the main point of the passage?', trap: 'Picks a major detail', target: 95 },
+  { section: 'RC', family: 'RC Function', lesson: 'ka-rc-purpose-reference-quick', stem: 'The referenced detail primarily functions to', trap: 'Confuses paragraph topic with paragraph job', target: 98 },
+  { section: 'RC', family: 'RC Attitude', lesson: 'ka-rc-attitude-inference-quick', stem: 'The author attitude is best described as', trap: 'Reads neutral analysis as endorsement', target: 95 },
+];
+
+const v2DifficultyCycle = ['easy', 'medium', 'medium', 'hard'];
+const v2MistakeReasons = ['Misread stimulus', 'Wrong answer trap', 'Timing issue', 'Narrowed to two', 'Careless error', 'Did not understand argument'];
+
+function v2PromptForFamily(family, index) {
+  const topic = ['public transit', 'museum funding', 'school tutoring', 'workplace scheduling', 'city gardens', 'digital archives'][index % 6];
+  if (family.section === 'RC') {
+    return `Passage capsule: Paragraph 1 introduces a debate about ${topic}. Paragraph 2 complicates the familiar account with evidence from a second field. Paragraph 3 argues for a narrower, qualified conclusion.`;
+  }
+  if (family.family === 'Conditional Logic') {
+    return `If a ${topic} policy is adopted, then the committee must publish monthly results. Any policy with monthly results requires reliable baseline data. The committee adopted the ${topic} policy.`;
+  }
+  if (family.family === 'Resolve / Explain') {
+    return `After the city shortened the ${topic} application, fewer residents began the form, yet a larger percentage completed it successfully.`;
+  }
+  return `A consultant argues that a new ${topic} plan caused better outcomes because the group using the plan improved more than a comparison group that did not use it.`;
+}
+
+function v2ChoicesForFamily(family, index) {
+  const variants = {
+    Flaw: ['takes an observed association as sufficient evidence of cause', 'rejects a claim because of who proposed it', 'uses a word in two unrelated senses', 'states a conclusion narrower than the evidence'],
+    Assumption: ['The group using the plan was not already more likely to improve', 'Every participant preferred the new plan', 'The plan was less expensive than all alternatives', 'No participant ever changed study methods'],
+    Strengthen: ['The two groups had similar starting conditions before the plan began', 'Some participants liked the plan name', 'The plan was described in a short memo', 'The consultant has evaluated other plans'],
+    Weaken: ['The group using the plan had a major advantage before the plan started', 'The plan can be taught quickly', 'Some participants discussed the plan afterward', 'The consultant recorded the results'],
+    'Conditional Logic': ['The committee must have reliable baseline data', 'Every policy with baseline data is adopted', 'Policies without monthly results always fail', 'The committee did not adopt the policy'],
+    'Must Be True': ['At least one adopted policy requires reliable baseline data', 'Every policy with baseline data is adopted', 'No policy can publish monthly results without public meetings', 'The committee adopted every proposed policy'],
+    'Role / Method / Technique': ['It is evidence offered to support the recommendation', 'It is the final recommendation itself', 'It is an opposing view the author rejects', 'It is an unrelated definition'],
+    'Resolve / Explain': ['The shorter form screened out casual starts but made completion easier for serious applicants', 'The form was never available online', 'Residents stopped applying altogether', 'The completion rate was measured before the change'],
+    'RC Structure': ['It presents a familiar view, introduces a complication, and defends a qualified conclusion', 'It lists three unrelated examples', 'It offers only a personal narrative', 'It defines terms without any argumentative shift'],
+    'RC Inference': ['The author sees the familiar view as useful but incomplete', 'The author rejects every version of the familiar view', 'The passage proves the rival account impossible', 'The passage gives no reason to distinguish the views'],
+    'RC Main Point': ['A familiar account should be narrowed in light of complicating evidence', 'The passage is only a chronology of events', 'Every rival account is false', 'The author refuses to evaluate the issue'],
+    'RC Function': ['to support a later qualification of the initial view', 'to state the final conclusion by itself', 'to change the topic to an unrelated debate', 'to prove that all rival views are false'],
+    'RC Attitude': ['qualified and analytical', 'openly hostile', 'uncritically enthusiastic', 'confused and indifferent'],
+  };
+  const options = variants[family.family] || ['It performs the exact task requested', 'It changes the topic', 'It is too strong', 'It describes only background'];
+  return options.map((choice, choiceIndex) => choiceIndex === 0 ? choice : `${choice}${index % 5 === 0 ? '' : ''}`);
+}
+
+function buildV2OriginalQuestion(index) {
+  const family = v2QuestionFamilies[index % v2QuestionFamilies.length];
+  const difficulty = v2DifficultyCycle[index % v2DifficultyCycle.length];
+  return {
+    id: `v2-original-${String(index + 1).padStart(3, '0')}`,
+    section: family.section,
+    family: family.family,
+    questionType: family.family,
+    difficulty,
+    timingTarget: family.target + (difficulty === 'hard' ? 18 : difficulty === 'easy' ? -12 : 0),
+    lessonIds: [family.lesson],
+    linkedLessonIds: [family.lesson],
+    prompt: v2PromptForFamily(family, index),
+    question: family.stem,
+    options: v2ChoicesForFamily(family, index),
+    answer: 0,
+    explanation: `The credited answer solves the ${family.family} task by matching the exact logical burden. The traps are attractive because they sound relevant while changing force, role, or proof.`,
+    trapPattern: family.trap,
+    mistakeReason: v2MistakeReasons[index % v2MistakeReasons.length],
+    source: 'JessiPreps original V2',
+  };
+}
+
+const v2AdditionalRcPassages = [
+  ['rc-v2-oral-history', 'Oral History and Legal Memory', 'Law', 'A debate over whether oral histories should be treated as legal evidence, ending with a qualified standard for corroboration.'],
+  ['rc-v2-urban-trees', 'Urban Tree Canopies', 'Natural Science', 'A study of urban heat, tree cover, and the limits of translating ecological models into policy.'],
+  ['rc-v2-jazz-archives', 'Jazz Archives and Improvisation', 'Humanities', 'An argument that preserving jazz requires documenting process, not just finished recordings.'],
+  ['rc-v2-platform-labor', 'Platform Labor Studies', 'Social Science', 'A comparison of flexibility claims and worker-control evidence in app-based labor.'],
+  ['rc-v2-water-rights', 'Indigenous Water Rights', 'Law', 'A passage weighing treaty language, historical practice, and modern environmental enforcement.'],
+  ['rc-v2-solar-flares', 'Solar Flare Forecasting', 'Natural Science', 'A discussion of prediction models, uncertainty, and why accuracy improves unevenly across flare types.'],
+  ['rc-v2-museum-labels', 'Museum Labels and Interpretation', 'Humanities', 'A critique of neutral museum labels that argues interpretation is unavoidable but can be transparent.'],
+  ['rc-v2-food-deserts', 'Food Deserts and Mobility', 'Social Science', 'A passage challenging distance-only models of food access by adding transit and work schedule data.'],
+];
+
+function buildV2RcPassage([id, title, topic, summary], index) {
+  const families = ['RC Structure', 'RC Main Point', 'RC Inference', 'RC Function', 'RC Attitude'];
+  return {
+    id,
+    title,
+    topic,
+    category: topic,
+    difficulty: index % 3 === 0 ? 'Medium' : index % 3 === 1 ? 'Hard' : 'Easy',
+    estimatedReadMinutes: 3,
+    passageMapPrompts: ['Name the old view.', 'Name the complication.', 'Name the author final qualified claim.'],
+    paragraphs: [
+      { label: 'P1', text: `${summary} The opening paragraph introduces the conventional view and explains why it became attractive to researchers or policymakers.` },
+      { label: 'P2', text: `The second paragraph complicates that view with evidence that appears to pull in a different direction. Rather than treating the familiar view as useless, the evidence shows that it works only under narrower conditions.` },
+      { label: 'P3', text: `The author concludes that the strongest position is qualified: the original framework should guide inquiry, but only after students identify the missing conditions, rival explanations, and limits on the evidence.` },
+    ],
+    questions: families.map((family, qIndex) => {
+      const familyConfig = v2QuestionFamilies.find((item) => item.family === family);
+      return {
+        id: `${id}-q${qIndex + 1}`,
+        section: 'RC',
+        family,
+        questionType: family,
+        difficulty: qIndex === 4 ? 'hard' : qIndex === 0 ? 'easy' : 'medium',
+        lessonIds: [familyConfig?.lesson || 'rc-structure-map'],
+        linkedLessonIds: [familyConfig?.lesson || 'rc-structure-map'],
+        prompt: `${title} question ${qIndex + 1}`,
+        question: familyConfig?.stem || 'Which answer is best supported by the passage?',
+        options: v2ChoicesForFamily(familyConfig || { family }, qIndex),
+        answer: 0,
+        explanation: `The credited answer stays inside the passage map for ${title}: old view, complication, qualified conclusion.`,
+        trapPattern: familyConfig?.trap || 'Overstates the passage',
+        timingTarget: familyConfig?.target || 98,
+        mistakeReason: v2MistakeReasons[(index + qIndex) % v2MistakeReasons.length],
+        source: 'JessiPreps original V2 RC passage',
+      };
+    }),
+  };
+}
+
+(function polishV2StaticProductDepth() {
+  const data = window.JESSI_PREPS_DATA;
+  if (!data) return;
+
+  if (Array.isArray(data.lessons)) {
+    data.lessons.forEach((lesson, index) => {
+      const sample = v2VideoSamples[lesson.id];
+      const family = lesson.linkedQuestionFamilies?.[0] || requestedQuestionFamily('', lesson.track || '', lesson.title);
+      lesson.script = lesson.script || `Professor Maya Brooks opens ${lesson.title} by naming the LSAT job in plain English, models the method on a clean original example, then asks the student to predict before evaluating answer choices. The closing rule is: ${lesson.trapExplanation || 'prove the answer with the task, not familiar wording.'}`;
+      lesson.storyboard = lesson.storyboard || (lesson.scenes || []).map((scene, sceneIndex) => ({
+        beat: sceneIndex + 1,
+        title: scene.title,
+        board: scene.storyboard,
+        caption: scene.actionCue,
+      }));
+      lesson.conceptSummary = lesson.conceptSummary || lesson.summary;
+      lesson.quiz = lesson.quiz || {
+        prompt: `What is the safest first move for ${lesson.title}?`,
+        choices: ['Name the task before reading answers', 'Pick the answer with familiar words', 'Choose the strongest-sounding claim', 'Skip the stem and scan choices'],
+        answer: 0,
+        explanation: 'Naming the task first keeps the answer choices from steering the process.',
+      };
+      lesson.masteryDrillId = lesson.masteryDrillId || `mastery-${lesson.id}`;
+      lesson.videoStatus = sample?.status || (index < 127 ? 'mp4-ready-if-file-present' : 'script-ready');
+      lesson.videoPath = sample?.path || lesson.videoPath || '';
+      lesson.videoTheme = sample?.theme || family;
+    });
+  }
+
+  if (Array.isArray(data.questionBank)) {
+    data.questionBank.forEach((question, index) => {
+      question.questionType = question.questionType || question.family;
+      question.timingTarget = question.timingTarget || (question.section === 'RC' ? 98 : 84);
+      question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || [];
+      question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
+      question.source = question.source || 'JessiPreps original';
+    });
+    const existingIds = new Set(data.questionBank.map((question) => question.id));
+    let index = 0;
+    while (data.questionBank.length < 600) {
+      const question = buildV2OriginalQuestion(index);
+      if (!existingIds.has(question.id)) {
+        data.questionBank.push(question);
+        existingIds.add(question.id);
+      }
+      index += 1;
+    }
+  }
+
+  if (Array.isArray(data.rcPassages)) {
+    const existingPassageIds = new Set(data.rcPassages.map((passage) => passage.id));
+    v2AdditionalRcPassages.forEach((item, index) => {
+      if (!existingPassageIds.has(item[0])) data.rcPassages.push(buildV2RcPassage(item, index));
+    });
+    data.rcPassages.forEach((passage) => {
+      passage.passageMapPrompts = passage.passageMapPrompts || ['Main point', 'Viewpoint shift', 'Author attitude'];
+      (passage.questions || []).forEach((question, index) => {
+        question.questionType = question.questionType || question.family;
+        question.timingTarget = question.timingTarget || 98;
+        question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || ['rc-structure-map'];
+        question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
+        question.source = question.source || 'JessiPreps original RC';
+      });
+    });
+  }
+
+  data.videoSamples = Object.entries(v2VideoSamples).map(([lessonId, sample]) => ({
+    lessonId,
+    title: sample.theme,
+    videoPath: sample.path,
+    status: sample.status,
+  }));
+})();

@@ -73,6 +73,21 @@ The requested LSAT lesson expansion is now wired into `script.js` as 127 additio
 
 `content-system-plan.md` is the source-informed production plan for the first lesson set, animated video scripts, tagging taxonomy, and recommendation rules. It is written as original JessiPreps teaching material rather than copied book text.
 
+## Polished V2
+
+The hash app now normalizes all 139 lessons with full script, storyboard beats, concept summary, checkpoint quiz, mastery-drill handoff, and video status metadata. Six sample MP4 recordings are mounted in lesson players and the Live replay library:
+
+- LR Flaws
+- Necessary Assumptions
+- Strengthen / Weaken
+- RC Passage Mapping
+- Conditional Logic
+- Blind Review Method
+
+The original question bank is expanded to 600 local LSAT-style questions with difficulty, timing target, question type, trap pattern, linked lesson, explanation, and mistake-reason metadata. Reading Comprehension now includes 12 original passages with passage-map prompts and question sets.
+
+V2 keeps the project static and localStorage-based. Backend login, real-time AI classrooms, payment enforcement, and a full admissions CRM remain future milestones.
+
 ## Notes
 
 The practice questions are original LSAT-style examples, not copied official question text. Your PrepTest 130 score and review patterns are used as study analytics.

@@ -48,6 +48,10 @@
   }
 
   function probe(src) {
+    if (window.location && window.location.protocol === "file:") {
+      headProbeCache[src] = true;
+      return Promise.resolve(true);
+    }
     if (headProbeCache[src] !== undefined) {
       return Promise.resolve(headProbeCache[src]);
     }

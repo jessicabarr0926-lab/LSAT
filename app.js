@@ -82,6 +82,7 @@ window.addEventListener("keydown", (event) => {
     saveState();
     renderApp();
   }
+  handleTestDayKeyboard(event);
 });
 
 window.addEventListener("hashchange", renderApp);
@@ -137,6 +138,7 @@ function defaultState() {
       flagged: {},
       highlights: {},
       timeSpent: {},
+      questionStartedAt: {},
       reviewFilter: "all",
       prefs: {
         fontSize: "medium",
@@ -1397,10 +1399,11 @@ function renderLessonPlayer(lesson) {
   const linkedQuestions = questionsForLesson(lesson.id);
   const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
   const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
+  const quiz = lesson.quiz;
   // After this HTML is inserted, mount the rendered MP4 (if present) at
   // the top of the player. If the MP4 isn't on disk yet, this is a silent
   // no-op and the animated lesson UI below remains the visible state.
-  if (typeof window !== "undefined" && window.JESSI_LESSON_VIDEOS) {
+  if (!lesson.videoPath && typeof window !== "undefined" && window.JESSI_LESSON_VIDEOS) {
     const targetId = lesson.id;
     requestAnimationFrame(() => {
       const slot = document.querySelector(`[data-mp4-slot="${targetId}"]`);
@@ -1437,10 +1440,15 @@ function renderLessonPlayer(lesson) {
             <span class="status-pill" title="Auto-saved lesson progress and local practice data.">${lastSavedLabel()}</span>
           </div>
         </div>
+        ${lesson.videoPath ? `<video class="lesson-mp4" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>` : ""}
         <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
         <details id="intro" class="lesson-accordion" open>
           <summary>Intro and video</summary>
           <p>${lesson.summary}</p>
+          <div class="video-status-strip">
+            <span class="status-pill">${lesson.videoStatus || "script-ready"}</span>
+            <span class="muted">${lesson.videoPath ? "MP4 sample mounts above when available." : "Video-ready script and storyboard are prepared."}</span>
+          </div>
           <div class="video-stage">
             <p class="mini-card__label">Now playing</p>
             <h4>${activeScene.title}</h4>
@@ -1458,6 +1466,7 @@ function renderLessonPlayer(lesson) {
         <details id="concept" class="lesson-accordion" open>
           <summary>Concept</summary>
           <div class="scene-stack">${lesson.scenes.slice(0, 2).map((scene) => `<section class="scene-card"><h4>${scene.title}</h4><p>${scene.explanation}</p><div class="scene-card__cue">${scene.actionCue}</div></section>`).join("")}</div>
+          ${lesson.conceptSummary ? `<div class="recommendation-box"><strong>Concept summary:</strong> ${lesson.conceptSummary}</div>` : ""}
         </details>
         <details id="example" class="lesson-accordion">
           <summary>Worked Example</summary>
@@ -1470,8 +1479,24 @@ function renderLessonPlayer(lesson) {
         </details>
         <details id="mastery" class="lesson-accordion" open>
           <summary>Knowledge check + mastery drill</summary>
+          ${quiz ? `
+            <section class="quiz-card">
+              <p class="mini-card__label">Checkpoint</p>
+              <h4>${quiz.prompt}</h4>
+              <div class="choice-stack">
+                ${quiz.choices.map((choice, index) => `<button class="choice-button ${index === quiz.answer ? "is-correct-preview" : ""}" type="button" title="${index === quiz.answer ? quiz.explanation : "Trap answer: this does not protect the method."}">${String.fromCharCode(65 + index)}. ${choice}</button>`).join("")}
+              </div>
+            </section>
+          ` : ""}
           ${linkedQuestions[0] ? renderQuestionCard(linkedQuestions[0], "lesson-check") : `<p class="muted">Knowledge check will appear after the linked question bank loads.</p>`}
           <a class="button button--primary" href="#/practice/drill/${adaptiveDrillTarget().preset.id}">Open 3-5 question mastery drill</a>
+        </details>
+        <details class="lesson-accordion">
+          <summary>Script and storyboard</summary>
+          <p>${lesson.script || "Video script is being prepared."}</p>
+          <div class="scene-stack">
+            ${(lesson.storyboard || []).map((beat) => `<section class="scene-card"><h4>Beat ${beat.beat}: ${beat.title}</h4><p>${beat.board}</p><div class="scene-card__cue">${beat.caption}</div></section>`).join("")}
+          </div>
         </details>
         <details id="reflection" class="lesson-accordion">
           <summary>Reflection</summary>
@@ -1960,6 +1985,84 @@ function testAnswerKey(question) {
   return `${currentTestSection().id}:${question.id}`;
 }
 
+function currentSectionUnansweredCount() {
+  const section = currentTestSection();
+  if (!section || section.type === "BREAK") return 0;
+  return section.questions.filter((question) => state.testDay.answers[`${section.id}:${question.id}`] === undefined).length;
+}
+
+function recordTestQuestionTime(question = currentTestQuestion()) {
+  if (!question) return;
+  const key = testAnswerKey(question);
+  state.testDay.questionStartedAt = state.testDay.questionStartedAt || {};
+  const started = new Date(state.testDay.questionStartedAt[key] || state.testDay.sectionStartedAt).getTime();
+  const delta = Math.max(0, Math.round((Date.now() - started) / 1000));
+  state.testDay.timeSpent[key] = Math.max(0, Number(state.testDay.timeSpent[key] || 0) + delta);
+  state.testDay.questionStartedAt[key] = new Date().toISOString();
+}
+
+function selectTestAnswer(choice) {
+  const question = currentTestQuestion();
+  if (!question) return;
+  const key = testAnswerKey(question);
+  if (state.testDay.answers[key] === choice && state.testDay.prefs.allowClear) {
+    delete state.testDay.answers[key];
+  } else {
+    state.testDay.answers[key] = choice;
+  }
+  recordTestQuestionTime(question);
+  saveState();
+  renderApp();
+}
+
+function moveTestQuestion(delta) {
+  const section = currentTestSection();
+  if (!section || !section.questions?.length) return;
+  recordTestQuestionTime(currentTestQuestion());
+  state.testDay.questionIndex = Math.max(0, Math.min(section.questions.length - 1, state.testDay.questionIndex + delta));
+  saveState();
+  renderApp();
+}
+
+function toggleTestFlag() {
+  const key = testAnswerKey(currentTestQuestion());
+  state.testDay.flagged[key] = !state.testDay.flagged[key];
+  saveState();
+  renderApp();
+}
+
+function maybeSubmitCurrentTestSection() {
+  const unanswered = currentSectionUnansweredCount();
+  if (unanswered > 0 && currentTestSection().type !== "BREAK") {
+    const proceed = window.confirm(`${unanswered} question${unanswered === 1 ? "" : "s"} unanswered. Submit this section anyway?`);
+    if (!proceed) return;
+  }
+  submitCurrentTestSection();
+}
+
+function handleTestDayKeyboard(event) {
+  const active = document.activeElement;
+  if (!state.testDay?.active || !document.body.classList.contains("test-day-active")) return;
+  if (active && /input|textarea|select/i.test(active.tagName)) return;
+  const key = event.key.toLowerCase();
+  if (/^[abcde]$/.test(key)) {
+    event.preventDefault();
+    selectTestAnswer(key.charCodeAt(0) - 97);
+  } else if (key === "arrowright" || key === "n") {
+    event.preventDefault();
+    moveTestQuestion(1);
+  } else if (key === "arrowleft" || key === "p") {
+    event.preventDefault();
+    moveTestQuestion(-1);
+  } else if (key === "f") {
+    event.preventDefault();
+    toggleTestFlag();
+  } else if (key === "r") {
+    event.preventDefault();
+    location.hash = "#/practice/test-day/review";
+  }
+}
+
 function escapedRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -2030,6 +2133,11 @@ function renderTestDayPage(route) {
   const section = currentTestSection();
   const question = currentTestQuestion();
   const key = testAnswerKey(question);
+  state.testDay.questionStartedAt = state.testDay.questionStartedAt || {};
+  if (!state.testDay.questionStartedAt[key]) {
+    state.testDay.questionStartedAt[key] = new Date().toISOString();
+    saveState();
+  }
   const selected = state.testDay.answers[key];
   const eliminated = state.testDay.eliminated[key] || [];
   const flagged = Boolean(state.testDay.flagged[key]);
@@ -2199,8 +2307,15 @@ function renderTestResults() {
   const missed = all.filter((item) => state.testDay.answers[item.key] !== item.question.correctAnswer);
   const flagged = all.filter((item) => state.testDay.flagged[item.key]);
   const unanswered = all.filter((item) => state.testDay.answers[item.key] === undefined);
+  const timed = all.map((item) => Number(state.testDay.timeSpent[item.key] || 0)).filter(Boolean);
+  const avgTime = timed.length ? Math.round(timed.reduce((sum, value) => sum + value, 0) / timed.length) : 0;
   const byType = missed.reduce((acc, item) => {
     acc[item.question.questionType] = (acc[item.question.questionType] || 0) + 1;
+    return acc;
+  }, {});
+  const missedReasons = missed.reduce((acc, item) => {
+    const reason = item.question.mistakeReason || "Wrong answer trap";
+    acc[reason] = (acc[reason] || 0) + 1;
     return acc;
   }, {});
   return `
@@ -2217,7 +2332,7 @@ function renderTestResults() {
           <section class="mini-card"><p class="mini-card__label">Raw score</p><h4>${correct.length}/${all.length}</h4><p>Scored sections only.</p></section>
           <section class="mini-card"><p class="mini-card__label">Accuracy</p><h4>${all.length ? Math.round((correct.length / all.length) * 100) : 0}%</h4><p>Original local questions.</p></section>
           <section class="mini-card"><p class="mini-card__label">Flagged accuracy</p><h4>${flagged.length ? Math.round((flagged.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length / flagged.length) * 100) : 0}%</h4><p>${flagged.length} flagged.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Unanswered</p><h4>${unanswered.length}</h4><p>Questions left blank.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Avg time / question</p><h4>${avgTime || 0}s</h4><p>${unanswered.length} unanswered.</p></section>
         </div>
       </article>
       <article class="panel panel--wide">
@@ -2227,13 +2342,14 @@ function renderTestResults() {
             <section class="question-card">
               <p class="mini-card__label">${item.section.label} · ${item.question.questionType}</p>
               <h4>${item.question.questionStem}</h4>
-              <p><strong>Your answer:</strong> ${state.testDay.answers[item.key] === undefined ? "Unanswered" : String.fromCharCode(65 + state.testDay.answers[item.key])} · <strong>Correct:</strong> ${String.fromCharCode(65 + item.question.correctAnswer)}</p>
+              <p><strong>Your answer:</strong> ${state.testDay.answers[item.key] === undefined ? "Unanswered" : String.fromCharCode(65 + state.testDay.answers[item.key])} · <strong>Correct:</strong> ${String.fromCharCode(65 + item.question.correctAnswer)} · <strong>Time:</strong> ${state.testDay.timeSpent[item.key] || 0}s</p>
               <p>${item.question.explanation}</p>
-              <p class="microcopy">Trap pattern: ${item.question.trapPattern}</p>
+              <p class="microcopy">Trap pattern: ${item.question.trapPattern} · Mistake tag: ${item.question.mistakeReason || "Wrong answer trap"}</p>
             </section>
           `).join("")}
         </div>
         <div class="recommendation-box"><strong>Missed question types:</strong> ${Object.entries(byType).map(([type, count]) => `${type} (${count})`).join(", ") || "None yet."}</div>
+        <div class="recommendation-box"><strong>Missed reasons:</strong> ${Object.entries(missedReasons).map(([reason, count]) => `${reason} (${count})`).join(", ") || "None yet."}</div>
       </article>
     </section>
   `;
@@ -2910,7 +3026,7 @@ function renderAnimationUpgradeStrip() {
         <section>
           <h4>Professor Maya Brooks</h4>
           <p>A warm African American AI teacher persona for JessiPreps: direct, relatable, calm under pressure, and focused on making each question feel less mysterious.</p>
-          <p class="microcopy">Use Sora/HeyGen/Canva later to export the storyboard frames into MP4s. The website now has the class structure ready.</p>
+          <p class="microcopy">Six MP4 samples are wired now; the remaining lessons stay script-ready until the next rendering batch.</p>
         </section>
       </div>
       <div class="class-agenda-grid">
@@ -2922,11 +3038,7 @@ function renderAnimationUpgradeStrip() {
 
 function renderLivePage() {
   const sessions = liveClassCatalog();
-  const recordings = [
-    "Review Is Key: Blind Review without spiraling",
-    "Weaken vs Necessary Assumption",
-    "Reading Structure: Paragraph jobs in 30 minutes",
-  ];
+  const recordings = data.videoSamples || [];
   return `
     <section class="tier-page live-page">
       <article class="tier-hero panel panel--wide">
@@ -2976,7 +3088,17 @@ function renderLivePage() {
           <span class="status-pill">Live replay library</span>
         </div>
         <div class="recording-list">
-          ${recordings.map((title) => `<a href="#/live" class="question-jump"><span class="lesson-row__status">▶</span><strong>${title}</strong><small>Replay · transcript · linked drill</small></a>`).join("")}
+          ${recordings.map((recording) => `
+            <section class="recording-card">
+              <video class="lesson-mp4" controls preload="metadata" playsinline src="${recording.videoPath}"></video>
+              <div>
+                <p class="mini-card__label">Sample replay · ${recording.status}</p>
+                <h4>${recording.title}</h4>
+                <p>Professor Maya Brooks class sample with board animation, captions, reasoning map, and linked drill handoff.</p>
+                <a class="button button--ghost" href="#/learn/${recording.lessonId}">Open linked lesson</a>
+              </div>
+            </section>
+          `).join("")}
         </div>
       </article>
     </section>
@@ -2985,6 +3107,13 @@ function renderLivePage() {
 
 function renderCoachPage() {
   const messages = state.coachMessages || [];
+  const target = adaptiveDrillTarget();
+  const checklist = [
+    "Confirm current score, goal score, and test date in Plan.",
+    `Run one ${target.weak.family} drill before asking for a new plan.`,
+    "Log one Blind Review rule from the most recent miss.",
+    "Draft a target/reach/safety school list before admissions advising.",
+  ];
   return `
     <section class="tier-page coach-page">
       <article class="tier-hero panel panel--wide">
@@ -3002,6 +3131,10 @@ function renderCoachPage() {
         <div class="panel__head">
           <h3>Message your AI LSAT coach</h3>
           <span class="status-pill">Soft gated preview</span>
+        </div>
+        <div class="recommendation-box">
+          <strong>Coach recommendation:</strong> Start with ${target.weak.family}. This was selected from your local misses, timing, and current adaptive mode.
+          <a class="button button--ghost" href="#/practice/drill/${target.preset.id}">Open suggested drill</a>
         </div>
         <form id="coachForm" class="coach-form">
           <label><span>Support type</span>
@@ -3030,6 +3163,9 @@ function renderCoachPage() {
           <section><i>3</i><strong>Scholarship angle</strong><span>Connect score jumps to admissions positioning.</span></section>
           <section><i>4</i><strong>Personal statement</strong><span>Future review queue for essays and resume strategy.</span></section>
         </div>
+        <div class="checklist-panel">
+          ${checklist.map((item, index) => `<label><input type="checkbox"> <span>${item}</span></label>`).join("")}
+        </div>
       </article>
     </section>
   `;
@@ -3045,17 +3181,7 @@ function wireInteractions(route) {
 
   pageMount.querySelectorAll("[data-test-answer]").forEach((button) => {
     button.addEventListener("click", () => {
-      const question = currentTestQuestion();
-      const key = testAnswerKey(question);
-      const choice = Number(button.dataset.testAnswer);
-      if (state.testDay.answers[key] === choice && state.testDay.prefs.allowClear) {
-        delete state.testDay.answers[key];
-      } else {
-        state.testDay.answers[key] = choice;
-      }
-      state.testDay.timeSpent[key] = Math.max(0, Math.round((Date.now() - new Date(state.testDay.sectionStartedAt).getTime()) / 1000));
-      saveState();
-      renderApp();
+      selectTestAnswer(Number(button.dataset.testAnswer));
     });
   });
 
@@ -3074,27 +3200,19 @@ function wireInteractions(route) {
 
   pageMount.querySelectorAll("[data-test-prev]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.testDay.questionIndex = Math.max(0, state.testDay.questionIndex - 1);
-      saveState();
-      renderApp();
+      moveTestQuestion(-1);
     });
   });
 
   pageMount.querySelectorAll("[data-test-next]").forEach((button) => {
     button.addEventListener("click", () => {
-      const section = currentTestSection();
-      state.testDay.questionIndex = Math.min(section.questions.length - 1, state.testDay.questionIndex + 1);
-      saveState();
-      renderApp();
+      moveTestQuestion(1);
     });
   });
 
   pageMount.querySelectorAll("[data-test-flag]").forEach((button) => {
     button.addEventListener("click", () => {
-      const key = testAnswerKey(currentTestQuestion());
-      state.testDay.flagged[key] = !state.testDay.flagged[key];
-      saveState();
-      renderApp();
+      toggleTestFlag();
     });
   });
 
@@ -3115,7 +3233,7 @@ function wireInteractions(route) {
   });
 
   pageMount.querySelectorAll("[data-test-submit-section]").forEach((button) => {
-    button.addEventListener("click", () => submitCurrentTestSection());
+    button.addEventListener("click", () => maybeSubmitCurrentTestSection());
   });
 
   pageMount.querySelectorAll("[data-test-settings]").forEach((button) => {
