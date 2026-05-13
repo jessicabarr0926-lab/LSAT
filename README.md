@@ -94,6 +94,8 @@ Live now includes a soft-gated 30-minute class room with Professor Maya Brooks a
 
 The admissions workspace now functions as a local CRM inside Plan and Coach: target/reach/safety schools, median LSAT, deadlines, status, scholarship notes, task checklist, and submitted counts all persist in localStorage.
 
+The test-day simulator now includes keyboard shortcuts, unanswered warnings on section review, strict-mode submit protection, after-test analytics, and a one-click save-to-mistake-bank flow that queues misses for Blind Review.
+
 The content boost layer adds richer teaching material to every lesson and question: Professor Maya method steps, trap warnings, mini-drill prompts, teaching notes, explanation steps, wrong-answer diagnostics, and immediate correction rules.
 
 The static V2 keeps copyrighted materials out of the app and trains the same LSAT skills with original questions, original RC passages, boosted explanations, and a Local Account + Sync panel that saves profile data and supports backup/restore JSON across browsers.

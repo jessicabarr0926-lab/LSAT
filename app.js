@@ -395,6 +395,26 @@ function familyAnalytics() {
   }).sort((a, b) => a.accuracy - b.accuracy);
 }
 
+function difficultyAnalytics() {
+  const levels = ["Easy", "Medium", "Hard", "Advanced"];
+  return levels.map((level) => {
+    const questions = allQuestions().filter((question) => question.difficulty === level);
+    const attempts = questions.filter((question) => state.attempts[question.id]);
+    const correct = attempts.filter((question) => state.attempts[question.id]?.correct).length;
+    return {
+      level,
+      attempts: attempts.length,
+      accuracy: attempts.length ? Math.round((correct / attempts.length) * 100) : Math.max(42, 78 - levels.indexOf(level) * 8),
+    };
+  });
+}
+
+function timeByTypeAnalytics() {
+  return familyAnalytics()
+    .filter((item) => item.avgTime)
+    .slice(0, 6);
+}
+
 function timeSummary() {
   const attempts = allQuestions().filter((question) => state.attempts[question.id]);
   const bucket = (predicate) => {
@@ -2294,6 +2314,11 @@ function handleTestDayKeyboard(event) {
   } else if (key === "r") {
     event.preventDefault();
     location.hash = "#/practice/test-day/review";
+  } else if (key === "s") {
+    event.preventDefault();
+    state.testDay.settingsOpen = !state.testDay.settingsOpen;
+    saveState();
+    renderApp();
   }
 }
 
@@ -2383,6 +2408,13 @@ function renderTestDayPage(route) {
       ${renderTestTopBar(section, question, remaining, overtime)}
       <main class="test-workspace">
         ${section.type === "RC" ? renderTestRC(question, selected, eliminated) : renderTestLR(question, selected, eliminated)}
+        <aside class="test-shortcuts" aria-label="Keyboard shortcuts">
+          <strong>Shortcuts</strong>
+          <span>A-E select</span>
+          <span>F flag</span>
+          <span>← / → move</span>
+          <span>R review</span>
+        </aside>
       </main>
       ${renderTestBottomBar(section, flagged)}
     </section>
@@ -2485,6 +2517,8 @@ function renderTestBottomBar(section, flagged) {
 function renderTestReview() {
   const section = currentTestSection();
   const filter = state.testDay.reviewFilter || "all";
+  const unansweredTotal = unansweredInCurrentSection();
+  const flaggedTotal = section.questions.filter((question) => state.testDay.flagged[`${section.id}:${question.id}`]).length;
   const rows = section.questions.map((question, index) => {
     const key = `${section.id}:${question.id}`;
     const answered = state.testDay.answers[key] !== undefined;
@@ -2497,8 +2531,9 @@ function renderTestReview() {
       <main class="test-review-screen">
         <div class="panel__head">
           <h2>Section Review</h2>
-          <span class="status-pill">${rows.length} shown</span>
+          <span class="status-pill">${unansweredTotal} unanswered · ${flaggedTotal} flagged</span>
         </div>
+        ${unansweredTotal ? `<div class="recommendation-box"><strong>Unanswered warning:</strong> ${unansweredTotal} question${unansweredTotal === 1 ? "" : "s"} are blank. Return to them before submitting if time allows.</div>` : `<div class="recommendation-box"><strong>Ready check:</strong> Every question has an answer. Review only flagged items unless you have extra time.</div>`}
         <div class="segmented-control test-filter-row">
           ${["all", "unanswered", "flagged", "answered"].map((item) => `<button class="${filter === item ? "is-active" : ""}" type="button" data-test-review-filter="${item}">${item}</button>`).join("")}
         </div>
@@ -2552,6 +2587,7 @@ function renderTestResults() {
     acc[reason] = (acc[reason] || 0) + 1;
     return acc;
   }, {});
+  const topMissType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]?.[0] || adaptiveDrillTarget().weak.family;
   return `
     <section class="test-results">
       <article class="panel panel--wide">
@@ -2562,6 +2598,9 @@ function renderTestResults() {
           </div>
           <button class="button button--primary" type="button" data-test-start="strict">Retake simulator</button>
         </div>
+        <div class="recommendation-box">
+          <strong>Next fix:</strong> Save misses to the mistake bank, Blind Review ${topMissType}, then run a short adaptive drill before another timed section.
+        </div>
         <div class="card-grid card-grid--four">
           <section class="mini-card"><p class="mini-card__label">Raw score</p><h4>${correct.length}/${all.length}</h4><p>Scored sections only.</p></section>
           <section class="mini-card"><p class="mini-card__label">Accuracy</p><h4>${all.length ? Math.round((correct.length / all.length) * 100) : 0}%</h4><p>Original local questions.</p></section>
@@ -2571,6 +2610,10 @@ function renderTestResults() {
       </article>
       <article class="panel panel--wide">
         <div class="panel__head"><h3>Mistake bank</h3><span class="status-pill">${missed.length} review items</span></div>
+        <div class="dashboard-actions">
+          <button class="button button--primary" type="button" data-save-test-misses>Save all misses to mistake bank</button>
+          <a class="button button--ghost" href="#/review">Open Blind Review</a>
+        </div>
         <div class="practice-list">
           ${missed.slice(0, 18).map((item) => `
             <section class="question-card">
@@ -2845,6 +2888,8 @@ function renderReviewPage(route = {}) {
   const time = timeSummary();
   const split = rcPassageSplit();
   const changed = changedAnswerStats();
+  const difficulty = difficultyAnalytics();
+  const typeTimes = timeByTypeAnalytics();
   const trapGroups = state.journal.reduce((acc, entry) => {
     acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
     return acc;
@@ -2933,6 +2978,27 @@ function renderReviewPage(route = {}) {
           <h4>${finalFiveAccuracy() || 60}% final-five accuracy</h4>
           <p>RC target split: ${Math.round(split.read / 60)}:${String(split.read % 60).padStart(2, "0")} read/map · ${Math.round(split.questions / 60)}:${String(split.questions % 60).padStart(2, "0")} questions · ${Math.round(split.check / 60)}:${String(split.check % 60).padStart(2, "0")} final check.</p>
         </section>
+      </div>
+      <div class="analytics-detail-grid analytics-detail-grid--extra">
+        <section class="transcript-block">
+          <p class="mini-card__label">Accuracy by difficulty</p>
+          ${difficulty.map((item) => `
+            <div class="mastery-row compact-row">
+              <span>${item.level}${item.attempts ? ` · ${item.attempts} attempts` : ""}</span><strong>${item.accuracy}%</strong><div><i style="width:${Math.max(8, item.accuracy)}%"></i></div>
+            </div>
+          `).join("")}
+        </section>
+        <section class="transcript-block">
+          <p class="mini-card__label">Average time by type</p>
+          ${typeTimes.length ? typeTimes.map((item) => `
+            <div class="mastery-row compact-row">
+              <span>${item.family}</span><strong>${item.avgTime}s</strong><div><i style="width:${Math.max(8, Math.min(100, 140 - item.avgTime / 2))}%"></i></div>
+            </div>
+          `).join("") : `<p class="muted">Timed attempts will appear here after drills or test-day sections.</p>`}
+        </section>
+      </div>
+      <div class="recommendation-box">
+        <strong>What to do now:</strong> ${weak.family} is the current priority. If misses repeat after Blind Review, study the linked lesson; if Blind Review fixes them, run speed work instead.
       </div>
     </article>
     <article class="panel">
@@ -3219,8 +3285,8 @@ function renderPlanPage() {
       </div>
       <div class="card-grid card-grid--three">
         <section class="mini-card"><p class="mini-card__label">Core</p><h4>Self-study</h4><p>Dashboard, lessons, drills, review, plan.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Live</p><h4>Future classes</h4><p>Soft-gated live sessions and recordings.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Future support</h4><p>Tutor messaging and admissions strategy.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Live</p><h4>Local classes</h4><p>Soft-gated AI-teacher sessions, agenda chat, and recordings.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Local support</h4><p>Coach chat, mistake analysis, and admissions CRM.</p></section>
       </div>
     </article>
   `;
@@ -3459,7 +3525,7 @@ function renderCoachPage() {
     <section class="tier-page coach-page">
       <article class="tier-hero panel panel--wide">
         <div>
-          <p class="mini-card__label">Coach tier · future support</p>
+          <p class="mini-card__label">Coach tier · local support</p>
           <h3>AI tutor messaging plus admissions strategy, built around your actual LSAT work.</h3>
           <p>Coach is the place to ask, "why did I miss this?" and get a direct explanation, a next drill, and an admissions-aware plan.</p>
         </div>
@@ -3549,7 +3615,7 @@ function renderCoachPage() {
           <section><i>1</i><strong>Score target</strong><span>Use current score, goal score, and test date from Plan.</span></section>
           <section><i>2</i><strong>School list</strong><span>Track target/reach/safety schools and median LSAT gaps.</span></section>
           <section><i>3</i><strong>Scholarship angle</strong><span>Connect score jumps to admissions positioning.</span></section>
-          <section><i>4</i><strong>Personal statement</strong><span>Future review queue for essays and resume strategy.</span></section>
+          <section><i>4</i><strong>Personal statement</strong><span>Track essay angle and resume strategy notes locally.</span></section>
         </div>
         <div class="checklist-panel">
           ${checklist.map((item, index) => `<label><input type="checkbox"> <span>${item}</span></label>`).join("")}
@@ -3622,6 +3688,37 @@ function wireInteractions(route) {
 
   pageMount.querySelectorAll("[data-test-submit-section]").forEach((button) => {
     button.addEventListener("click", () => maybeSubmitCurrentTestSection());
+  });
+
+  pageMount.querySelectorAll("[data-save-test-misses]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const scored = testSections().filter((section) => section.scored);
+      const missed = scored.flatMap((section) => section.questions.map((question) => ({ section, question, key: `${section.id}:${question.id}` })))
+        .filter((item) => state.testDay.answers[item.key] !== item.question.correctAnswer);
+      missed.forEach((item) => {
+        const questionId = item.question.id;
+        if (state.journal.some((entry) => entry.questionId === questionId)) return;
+        state.journal.unshift({
+          questionId,
+          family: item.question.family || item.question.questionType,
+          trapPattern: item.question.trapPattern || "Wrong answer trap",
+          confidence: state.testDay.flagged[item.key] ? "low" : "medium",
+          blindReviewOutcome: "pending",
+          wrongChoiceText: state.testDay.answers[item.key] === undefined ? "Unanswered" : item.question.choices[state.testDay.answers[item.key]],
+          whyWrong: item.question.explanation,
+          note: `Timed test miss from ${item.section.label}. Save a second-pass answer before unlocking the explanation.`,
+          createdAt: new Date().toISOString(),
+        });
+      });
+      state.notifications.unshift({
+        id: `test-misses-${Date.now()}`,
+        title: "Mistakes saved",
+        body: `${missed.length} timed-test miss${missed.length === 1 ? "" : "es"} are now queued for Blind Review.`,
+        read: false,
+      });
+      saveState();
+      location.hash = "#/review";
+    });
   });
 
   pageMount.querySelectorAll("[data-test-settings]").forEach((button) => {

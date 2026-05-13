@@ -2740,6 +2740,25 @@ body.test-day-active .page-grid {
   overflow: auto;
 }
 
+.test-shortcuts {
+  max-width: 920px;
+  margin: 14px auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.test-shortcuts span,
+.test-shortcuts strong {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
 .test-question-panel,
 .test-passage,
 .test-review-screen {
