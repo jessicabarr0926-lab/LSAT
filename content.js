@@ -1802,6 +1802,8 @@ window.JESSI_PREPS_DATA = {
     { route: "practice", label: "Practice", eyebrow: "Question Bank + Drills" },
     { route: "review", label: "Review", eyebrow: "Journal + Analytics" },
     { route: "plan", label: "Plan", eyebrow: "Study System" },
+    { route: "live", label: "Live", eyebrow: "Classes + Recordings" },
+    { route: "coach", label: "Coach", eyebrow: "AI Support + Strategy" },
   ],
   settings: [
     { id: "dyslexiaFont", label: "Dyslexia font", type: "toggle" },

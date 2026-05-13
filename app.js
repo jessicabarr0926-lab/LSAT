@@ -116,6 +116,8 @@ function defaultState() {
     notificationsOpen: false,
     commandPaletteOpen: false,
     profileMenuOpen: false,
+    liveReservations: {},
+    coachMessages: [],
     currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
     lastSavedAt: "",
   };
@@ -148,6 +150,8 @@ function loadState() {
       notificationsOpen: Boolean(parsed.notificationsOpen),
       commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
+      liveReservations: parsed.liveReservations || {},
+      coachMessages: parsed.coachMessages || [],
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
@@ -757,6 +761,8 @@ function renderNav() {
     practice: ["Adaptive", "Timed", "Full PT"],
     review: ["Blind Review", "SRS", "Explanations"],
     plan: ["Onboarding", "LawHub", "Import"],
+    live: ["30-min classes", "AI teacher", "Recordings"],
+    coach: ["Tutor chat", "Admissions", "Strategy"],
   };
   navRail.innerHTML = data.navigation
     .map(
@@ -906,6 +912,8 @@ function renderPage(route) {
     practice: renderPracticePage,
     review: renderReviewPage,
     plan: renderPlanPage,
+    live: renderLivePage,
+    coach: renderCoachPage,
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
@@ -922,11 +930,11 @@ function renderNoticeLayer() {
           <button class="icon-button" type="button" data-close-subscribe aria-label="Close subscribe panel">×</button>
         </div>
         <div class="tier-grid">
-          <section><strong>Core</strong><span>Self-study, lessons, drills, journal</span></section>
-          <section><strong>Live</strong><span>Future classes, office hours, recorded sessions</span></section>
-          <section><strong>Coach</strong><span>Future admissions and one-on-one review</span></section>
+          <section><strong>Core</strong><span>Self-study dashboard, lessons, drills, review, and plan.</span><a href="#/dashboard" data-close-subscribe>Open Core</a></section>
+          <section><strong>Live</strong><span>Soft-gated 30-minute AI-teacher classes and recordings.</span><a href="#/live" data-close-subscribe>Preview Live</a></section>
+          <section><strong>Coach</strong><span>Tutor messaging, admissions strategy, and personalized next steps.</span><a href="#/coach" data-close-subscribe>Preview Coach</a></section>
         </div>
-        <p class="microcopy">Premium surfaces are product placeholders until the course is ready to sell.</p>
+        <p class="microcopy">Live and Coach are soft-gated previews: students can see the value, reserve, and request support before paid access is turned on.</p>
       </aside>
     ` : ""}
     ${state.notificationsOpen ? `
@@ -2232,7 +2240,223 @@ function renderQuestionCard(question, context) {
   `;
 }
 
+function liveClassCatalog() {
+  return [
+    {
+      id: "live-flaw-30",
+      title: "Flaws: Cause, Effect, and Trap Answers",
+      time: "Today · 6:00 PM ET",
+      level: "Core",
+      focus: "Causal reasoning",
+      agenda: ["5m warmup", "10m teacher breakdown", "10m You Try", "5m journal rule"],
+    },
+    {
+      id: "live-rc-map-30",
+      title: "RC Passage Maps Without Over-reading",
+      time: "Tomorrow · 12:30 PM ET",
+      level: "Core",
+      focus: "Reading structure",
+      agenda: ["3m reset", "12m map demo", "10m passage lab", "5m next drill"],
+    },
+    {
+      id: "live-assumption-30",
+      title: "Assumptions: The Missing Bridge",
+      time: "Thu · 8:00 PM ET",
+      level: "Advanced",
+      focus: "Necessary vs sufficient",
+      agenda: ["5m bridge drill", "10m examples", "10m student Q&A", "5m review queue"],
+    },
+  ];
+}
+
+function renderAnimationUpgradeStrip() {
+  const steps = [
+    ["Hook", "A 60-second story problem that makes the LSAT pattern feel real."],
+    ["Teach", "Animated argument map: conclusion, evidence, missing bridge, trap."],
+    ["Worked example", "Wrong answer vs right answer with visible elimination logic."],
+    ["You try", "Pause point with prediction box before choices appear."],
+    ["Recap", "One reusable rule saved to the journal and linked to a drill."],
+  ];
+  return `
+    <article class="panel panel--wide animation-upgrade">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Better video lesson format</p>
+          <h3>Turn every lesson into an animated 30-minute class clip.</h3>
+        </div>
+        <a class="button button--ghost" href="#/learn/${nextLesson().id}">Open lesson player</a>
+      </div>
+      <div class="animation-stage">
+        <div class="teacher-avatar" aria-label="Professor Maya Brooks, AI LSAT teacher"><span>MB</span></div>
+        <section>
+          <h4>Professor Maya Brooks</h4>
+          <p>A warm African American AI teacher persona for JessiPreps: direct, relatable, calm under pressure, and focused on making each question feel less mysterious.</p>
+          <p class="microcopy">Use Sora/HeyGen/Canva later to export the storyboard frames into MP4s. The website now has the class structure ready.</p>
+        </section>
+      </div>
+      <div class="class-agenda-grid">
+        ${steps.map(([title, body], index) => `<section><i>${index + 1}</i><strong>${title}</strong><span>${body}</span></section>`).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderLivePage() {
+  const sessions = liveClassCatalog();
+  const recordings = [
+    "Review Is Key: Blind Review without spiraling",
+    "Weaken vs Necessary Assumption",
+    "Reading Structure: Paragraph jobs in 30 minutes",
+  ];
+  return `
+    <section class="tier-page live-page">
+      <article class="tier-hero panel panel--wide">
+        <div>
+          <p class="mini-card__label">Live tier · soft gated</p>
+          <h3>30-minute AI-teacher classes that feel like someone is actually sitting with you.</h3>
+          <p>Live is where Professor Maya Brooks breaks down the lesson, asks you to predict, pauses for a You Try, and turns the miss into one journal rule.</p>
+          <div class="dashboard-actions">
+            <button class="button button--primary" type="button" data-live-reserve="live-flaw-30">Reserve next class</button>
+            <button class="button button--ghost" type="button" data-open-subscribe>View tiers</button>
+          </div>
+        </div>
+        <div class="teacher-card">
+          <div class="teacher-avatar teacher-avatar--large"><span>MB</span></div>
+          <strong>Professor Maya Brooks</strong>
+          <span>AI LSAT teacher · 30-minute class host</span>
+        </div>
+      </article>
+      ${renderAnimationUpgradeStrip()}
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Upcoming live classes</h3>
+          <span class="status-pill">30 min each</span>
+        </div>
+        <div class="live-class-grid">
+          ${sessions.map((session) => `
+            <section class="live-class-card interactive-card">
+              <div class="panel__head">
+                <div>
+                  <p class="mini-card__label">${session.time}</p>
+                  <h4>${session.title}</h4>
+                </div>
+                <span class="status-pill">${session.level}</span>
+              </div>
+              <p>${session.focus}</p>
+              <ol>${session.agenda.map((item) => `<li>${item}</li>`).join("")}</ol>
+              <button class="button ${state.liveReservations[session.id] ? "button--ghost" : "button--primary"}" type="button" data-live-reserve="${session.id}">
+                ${state.liveReservations[session.id] ? "Reserved" : "Reserve seat"}
+              </button>
+            </section>
+          `).join("")}
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Recorded sessions</h3>
+          <span class="status-pill">Live replay library</span>
+        </div>
+        <div class="recording-list">
+          ${recordings.map((title) => `<a href="#/live" class="question-jump"><span class="lesson-row__status">▶</span><strong>${title}</strong><small>Replay · transcript · linked drill</small></a>`).join("")}
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderCoachPage() {
+  const messages = state.coachMessages || [];
+  return `
+    <section class="tier-page coach-page">
+      <article class="tier-hero panel panel--wide">
+        <div>
+          <p class="mini-card__label">Coach tier · future support</p>
+          <h3>AI tutor messaging plus admissions strategy, built around your actual LSAT work.</h3>
+          <p>Coach is the place to ask, "why did I miss this?" and get a direct explanation, a next drill, and an admissions-aware plan.</p>
+        </div>
+        <div class="coach-stack">
+          <section><strong>Tutor messaging</strong><span>Question help, lesson clarification, pacing decisions.</span></section>
+          <section><strong>Admissions strategy</strong><span>Score goals, school list thinking, scholarship positioning.</span></section>
+        </div>
+      </article>
+      <article class="panel panel--wide coach-console">
+        <div class="panel__head">
+          <h3>Message your AI LSAT coach</h3>
+          <span class="status-pill">Soft gated preview</span>
+        </div>
+        <form id="coachForm" class="coach-form">
+          <label><span>Support type</span>
+            <select name="supportType">
+              <option>Break down a lesson</option>
+              <option>Explain a missed question</option>
+              <option>Build my next week</option>
+              <option>Admissions strategy</option>
+            </select>
+          </label>
+          <label class="br-field--wide"><span>What do you want help with?</span><textarea name="coachPrompt" rows="5" placeholder="Example: Explain necessary assumptions like I am stuck at the bridge step."></textarea></label>
+          <button class="button button--primary" type="submit">Send to coach queue</button>
+        </form>
+        <div class="coach-message-list">
+          ${messages.length ? messages.map((item) => `<section class="notice-item"><strong>${item.type}</strong><p>${item.prompt}</p><small>${new Date(item.createdAt).toLocaleString()}</small></section>`).join("") : `<p class="muted">No coach messages yet. Send one question and it will appear here with your support type.</p>`}
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Admissions strategy workspace</h3>
+          <button class="status-pill status-pill--button" type="button" data-open-subscribe>Upgrade preview</button>
+        </div>
+        <div class="class-agenda-grid">
+          <section><i>1</i><strong>Score target</strong><span>Use current score, goal score, and test date from Plan.</span></section>
+          <section><i>2</i><strong>School list</strong><span>Track target/reach/safety schools and median LSAT gaps.</span></section>
+          <section><i>3</i><strong>Scholarship angle</strong><span>Connect score jumps to admissions positioning.</span></section>
+          <section><i>4</i><strong>Personal statement</strong><span>Future review queue for essays and resume strategy.</span></section>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
 function wireInteractions(route) {
+  pageMount.querySelectorAll("[data-live-reserve]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sessionId = button.dataset.liveReserve;
+      const session = liveClassCatalog().find((item) => item.id === sessionId);
+      state.liveReservations[sessionId] = true;
+      state.notifications.unshift({
+        id: `live-${Date.now()}`,
+        title: "Live class reserved",
+        body: `${session?.title || "Live class"} was added to your JessiPreps Live queue.`,
+        read: false,
+      });
+      saveState();
+      renderApp();
+    });
+  });
+
+  const coachForm = pageMount.querySelector("#coachForm");
+  if (coachForm) {
+    coachForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(coachForm);
+      const prompt = String(formData.get("coachPrompt") || "").trim();
+      if (!prompt) return;
+      state.coachMessages.unshift({
+        id: `coach-${Date.now()}`,
+        type: String(formData.get("supportType") || "Coach support"),
+        prompt,
+        createdAt: new Date().toISOString(),
+      });
+      state.notifications.unshift({
+        id: `coach-note-${Date.now()}`,
+        title: "Coach message queued",
+        body: "Your support request is saved locally in Coach.",
+        read: false,
+      });
+      saveState();
+      renderApp();
+    });
+  }
+
   pageMount.querySelectorAll("[data-bookmark]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.bookmark;
@@ -2502,23 +2726,6 @@ function wireInteractions(route) {
   });
 }
 
-function animateCountups() {
-  if (state.settings.reducedMotion) return;
-  pageMount.querySelectorAll("[data-countup-value]").forEach((node) => {
-    const target = Number(node.dataset.countupValue || 0);
-    const suffix = node.dataset.countupSuffix || "";
-    const start = performance.now();
-    const duration = 650;
-    const tick = (now) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      node.textContent = `${Math.round(target * eased)}${suffix}`;
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
-}
-
     const form = document.querySelector("#planForm");
     if (form) {
       form.addEventListener("submit", (event) => {
@@ -2568,6 +2775,23 @@ function animateCountups() {
       });
     });
   }
+}
+
+function animateCountups() {
+  if (state.settings.reducedMotion) return;
+  pageMount.querySelectorAll("[data-countup-value]").forEach((node) => {
+    const target = Number(node.dataset.countupValue || 0);
+    const suffix = node.dataset.countupSuffix || "";
+    const start = performance.now();
+    const duration = 650;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      node.textContent = `${Math.round(target * eased)}${suffix}`;
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 function findQuestion(questionId) {

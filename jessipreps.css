@@ -1406,6 +1406,16 @@ body[data-route="dashboard"] #todaySidebarCard {
   padding: 16px;
 }
 
+.tier-grid section {
+  display: grid;
+  gap: 8px;
+}
+
+.tier-grid a {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .analytics-detail-grid {
   grid-template-columns: 1.1fr 0.9fr;
 }
@@ -1921,6 +1931,170 @@ body[data-route="dashboard"] #todaySidebarCard {
   color: inherit;
 }
 
+.tier-page {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 20px;
+}
+
+.tier-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.35fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.teacher-card,
+.coach-stack,
+.animation-stage,
+.live-class-card,
+.coach-form {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.teacher-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px;
+  text-align: center;
+}
+
+.teacher-avatar {
+  width: 82px;
+  height: 82px;
+  border-radius: 30px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 34%, #5b3529 0 26%, transparent 27%),
+    radial-gradient(circle at 50% 48%, #7a4738 0 38%, transparent 39%),
+    linear-gradient(135deg, #8a74e8, #af5f87);
+  box-shadow: inset 0 -16px 0 rgba(47, 47, 59, 0.12), var(--shadow);
+}
+
+.teacher-avatar--large {
+  width: 132px;
+  height: 132px;
+  border-radius: 42px;
+}
+
+.teacher-avatar span {
+  transform: translateY(28px);
+  color: #fff;
+  font-weight: 900;
+}
+
+.animation-upgrade {
+  display: grid;
+  gap: 18px;
+}
+
+.animation-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+}
+
+.class-agenda-grid,
+.live-class-grid,
+.coach-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.class-agenda-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coach-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.class-agenda-grid section,
+.coach-stack section {
+  display: grid;
+  gap: 8px;
+  min-height: 132px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.class-agenda-grid i {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #af5f87);
+}
+
+.class-agenda-grid span,
+.coach-stack span,
+.teacher-card span {
+  color: var(--muted);
+}
+
+.live-class-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.live-class-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.live-class-card ol {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.recording-list,
+.coach-message-list {
+  display: grid;
+  gap: 10px;
+}
+
+.coach-console {
+  display: grid;
+  gap: 16px;
+}
+
+.coach-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.coach-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.coach-form textarea,
+.coach-form select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font: inherit;
+  padding: 12px;
+}
+
 .tag-stack {
   display: flex;
   flex-wrap: wrap;
@@ -2290,6 +2464,10 @@ body[data-route="dashboard"] #todaySidebarCard {
   .dashboard-overview,
   .command-strip,
   .card-grid--four,
+  .tier-hero,
+  .class-agenda-grid,
+  .live-class-grid,
+  .coach-form,
   .progress-ring-row,
   .section-card-row,
   .syllabus-layout,
@@ -2355,6 +2533,12 @@ body[data-route="dashboard"] #todaySidebarCard {
   .hero-card,
   .dashboard-grid,
   .dashboard-overview,
+  .tier-hero,
+  .animation-stage,
+  .class-agenda-grid,
+  .live-class-grid,
+  .coach-stack,
+  .coach-form,
   .command-strip,
   .card-grid--three,
   .card-grid--two,
