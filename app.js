@@ -20,6 +20,7 @@ let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
 let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
+let testDayTimer = null;
 const questionRenderTimes = {};
 
 const state = loadState();
@@ -118,6 +119,30 @@ function defaultState() {
     profileMenuOpen: false,
     liveReservations: {},
     coachMessages: [],
+    testDay: {
+      mode: "strict",
+      active: false,
+      sectionIndex: 0,
+      questionIndex: 0,
+      sectionStartedAt: "",
+      sectionEndsAt: "",
+      sectionSubmitted: {},
+      fullTestSubmitted: false,
+      answers: {},
+      eliminated: {},
+      flagged: {},
+      highlights: {},
+      timeSpent: {},
+      reviewFilter: "all",
+      prefs: {
+        fontSize: "medium",
+        lineSpacing: "normal",
+        theme: "light",
+        passageWidth: "normal",
+        allowClear: true,
+        showTimer: true,
+      },
+    },
     currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
     lastSavedAt: "",
   };
@@ -152,6 +177,7 @@ function loadState() {
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
       liveReservations: parsed.liveReservations || {},
       coachMessages: parsed.coachMessages || [],
+      testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
@@ -723,6 +749,7 @@ function renderApp() {
   renderNoticeLayer();
   const route = routeInfo();
   document.body.dataset.route = route.page;
+  document.body.classList.toggle("test-day-active", route.page === "practice" && route.subtype === "test-day");
   if (notificationBell) {
     const unread = unreadNotifications();
     notificationBell.textContent = String(unread);
@@ -883,6 +910,11 @@ function renderToday() {
 }
 
 function renderRouteMeta(route) {
+  if (route.page === "practice" && route.subtype === "test-day") {
+    routeEyebrow.textContent = "Test-Day Mode";
+    routeTitle.textContent = "LSAT Practice Test";
+    return;
+  }
   if (route.page === "review" && route.subtype === "preptest") {
     routeEyebrow.textContent = "PrepTest Results";
     routeTitle.textContent = "PrepTest 130 Review";
@@ -905,6 +937,7 @@ function renderRouteMeta(route) {
 
 function renderPage(route) {
   stopLessonPlayback();
+  stopTestDayTimer();
   heroMount.innerHTML = "";
   const pageRenderers = {
     dashboard: renderDashboardPage,
@@ -917,6 +950,9 @@ function renderPage(route) {
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
+  if (route.page === "practice" && route.subtype === "test-day") {
+    startTestDayTimer();
+  }
 }
 
 function renderNoticeLayer() {
@@ -957,6 +993,7 @@ function renderNoticeLayer() {
           <button class="icon-button" type="button" data-close-command aria-label="Close command palette">×</button>
         </div>
         <a href="#/practice/drill/${adaptiveDrillTarget().preset.id}" data-command-link><strong>Start adaptive drill</strong><span>${adaptiveDrillTarget().weak.family}</span></a>
+        <a href="#/practice/test-day" data-command-link><strong>Open test-day simulator</strong><span>35-minute sections, flags, review, and settings</span></a>
         <a href="#/learn/${nextLesson().id}" data-command-link><strong>Open last lesson</strong><span>${nextLesson().title}</span></a>
         <a href="#/review/preptest/pt130" data-command-link><strong>Review PrepTest 130</strong><span>Results, timing, Blind Review</span></a>
         <a href="#/plan" data-command-link><strong>Log LawHub result</strong><span>Official score companion</span></a>
@@ -1712,7 +1749,398 @@ function renderRCPassage(passage) {
   `;
 }
 
+function testQuestionPool(sectionType, count, seed = 0) {
+  const bank = sectionType === "RC"
+    ? (data.rcPassages || []).flatMap((passage) => passage.questions.map((question) => ({ ...question, passage })))
+    : data.questionBank.filter((question) => question.section === "LR");
+  return Array.from({ length: count }, (_, index) => {
+    const source = bank[(index + seed) % bank.length];
+    const choices = [...source.options];
+    while (choices.length < 5) {
+      choices.push("The stimulus provides too little support for this stronger claim.");
+    }
+    return {
+      id: `test-${sectionType.toLowerCase()}-${seed}-${index + 1}`,
+      sourceId: source.id,
+      sectionType,
+      family: source.family,
+      questionType: source.family,
+      difficulty: source.difficulty || "Medium",
+      stimulus: sectionType === "LR" ? source.prompt : "",
+      passage: sectionType === "RC" ? source.passage : null,
+      questionStem: source.question,
+      choices,
+      correctAnswer: source.answer,
+      explanation: source.explanation,
+      trapPattern: source.trapPattern || source.family,
+    };
+  });
+}
+
+function testSections() {
+  return [
+    { id: "s1", label: "Section 1", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 0) },
+    { id: "s2", label: "Section 2", type: "RC", name: "Reading Comprehension", scored: true, seconds: 35 * 60, questions: testQuestionPool("RC", 24, 3) },
+    { id: "break", label: "10-minute break", type: "BREAK", name: "Break", seconds: 10 * 60, questions: [] },
+    { id: "s3", label: "Section 3", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 8) },
+    { id: "s4", label: "Section 4", type: "LR", name: "Variable Section", scored: false, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 16) },
+  ];
+}
+
+function currentTestSection() {
+  return testSections()[state.testDay.sectionIndex] || testSections()[0];
+}
+
+function currentTestQuestion() {
+  const section = currentTestSection();
+  return section.questions[state.testDay.questionIndex] || section.questions[0];
+}
+
+function ensureTestSession() {
+  if (state.testDay.active && state.testDay.sectionEndsAt) return;
+  const section = currentTestSection();
+  const now = Date.now();
+  state.testDay.active = true;
+  state.testDay.fullTestSubmitted = false;
+  state.testDay.sectionStartedAt = new Date(now).toISOString();
+  state.testDay.sectionEndsAt = new Date(now + (section.seconds || 2100) * 1000).toISOString();
+  saveState();
+}
+
+function resetTestSession(mode = state.testDay.mode || "strict") {
+  const prefs = { ...state.testDay.prefs };
+  state.testDay = {
+    ...defaultState().testDay,
+    mode,
+    active: true,
+    prefs,
+    sectionStartedAt: new Date().toISOString(),
+    sectionEndsAt: new Date(Date.now() + 35 * 60 * 1000).toISOString(),
+  };
+  saveState();
+}
+
+function stopTestDayTimer() {
+  if (testDayTimer) {
+    clearInterval(testDayTimer);
+    testDayTimer = null;
+  }
+}
+
+function startTestDayTimer() {
+  stopTestDayTimer();
+  if (!state.testDay.active || state.testDay.fullTestSubmitted) return;
+  testDayTimer = setInterval(() => {
+    const remaining = testSecondsRemaining();
+    if (remaining <= 0 && state.testDay.mode === "strict") {
+      submitCurrentTestSection();
+    } else {
+      renderApp();
+    }
+  }, 1000);
+}
+
+function testSecondsRemaining() {
+  const end = new Date(state.testDay.sectionEndsAt || 0).getTime();
+  if (!end) return 35 * 60;
+  return Math.ceil((end - Date.now()) / 1000);
+}
+
+function formatClock(seconds) {
+  const safe = Math.max(0, seconds);
+  const mins = Math.floor(safe / 60);
+  const secs = safe % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function testAnswerKey(question) {
+  return `${currentTestSection().id}:${question.id}`;
+}
+
+function escapedRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightTextForQuestion(text, question) {
+  const highlights = state.testDay.highlights[testAnswerKey(question)] || [];
+  return highlights.reduce((html, markText) => {
+    if (!markText.trim()) return html;
+    return html.replace(new RegExp(escapedRegex(markText), "g"), `<mark>${markText}</mark>`);
+  }, text);
+}
+
+function submitCurrentTestSection() {
+  const section = currentTestSection();
+  state.testDay.sectionSubmitted[section.id] = {
+    submittedAt: new Date().toISOString(),
+    overtime: Math.max(0, Math.abs(Math.min(0, testSecondsRemaining()))),
+  };
+  const nextIndex = state.testDay.sectionIndex + 1;
+  const sections = testSections();
+  if (nextIndex >= sections.length) {
+    state.testDay.fullTestSubmitted = true;
+    state.testDay.active = false;
+    saveState();
+    location.hash = "#/practice/test-day/results";
+    return;
+  }
+  state.testDay.sectionIndex = nextIndex;
+  state.testDay.questionIndex = 0;
+  const nextSection = sections[nextIndex];
+  const now = Date.now();
+  state.testDay.sectionStartedAt = new Date(now).toISOString();
+  state.testDay.sectionEndsAt = new Date(now + (nextSection.seconds || 2100) * 1000).toISOString();
+  saveState();
+  location.hash = nextSection.type === "BREAK" ? "#/practice/test-day/break" : "#/practice/test-day";
+}
+
+function renderTestDirections() {
+  return `
+    <section class="test-shell test-shell--directions">
+      <article class="test-directions-card">
+        <p class="mini-card__label">Original JessiPreps simulator</p>
+        <h2>Test-Day Mode</h2>
+        <p>This simulates the workflow and tools you need for test-day practice without copying LSAC branding, protected design, or official question text.</p>
+        <div class="test-flow-strip">
+          <span>Directions</span><span>Section 1 · 35m</span><span>Section 2 · 35m</span><span>Break · 10m</span><span>Section 3 · 35m</span><span>Section 4 · 35m</span><span>Review</span>
+        </div>
+        <div class="card-grid card-grid--two">
+          <section class="mini-card"><p class="mini-card__label">Practice Mode</p><h4>Untimed learning</h4><p>Use drills when you want immediate explanations and coaching.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Test-Day Mode</p><h4>No explanations during the section</h4><p>Timer, flags, review screen, answer elimination, and after-section analytics.</p></section>
+        </div>
+        <div class="dashboard-actions">
+          <button class="button button--primary" type="button" data-test-start="strict">Start strict test</button>
+          <button class="button button--ghost" type="button" data-test-start="study">Start study mode</button>
+          <a class="button button--ghost" href="#/practice">Back to practice</a>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderTestDayPage(route) {
+  if (route.id === "results") return renderTestResults();
+  if (route.id === "break" || currentTestSection().type === "BREAK") return renderTestBreak();
+  if (!state.testDay.active) return renderTestDirections();
+  ensureTestSession();
+  if (route.id === "review") return renderTestReview();
+  const section = currentTestSection();
+  const question = currentTestQuestion();
+  const key = testAnswerKey(question);
+  const selected = state.testDay.answers[key];
+  const eliminated = state.testDay.eliminated[key] || [];
+  const flagged = Boolean(state.testDay.flagged[key]);
+  const prefs = state.testDay.prefs;
+  const remaining = testSecondsRemaining();
+  const overtime = remaining < 0;
+  return `
+    <section class="test-shell test-shell--${section.type.toLowerCase()} test-font-${prefs.fontSize} test-lines-${prefs.lineSpacing} test-theme-${prefs.theme} test-width-${prefs.passageWidth}">
+      ${renderTestTopBar(section, question, remaining, overtime)}
+      <main class="test-workspace">
+        ${section.type === "RC" ? renderTestRC(question, selected, eliminated) : renderTestLR(question, selected, eliminated)}
+      </main>
+      ${renderTestBottomBar(section, flagged)}
+    </section>
+  `;
+}
+
+function renderTestTopBar(section, question, remaining, overtime) {
+  const prefs = state.testDay.prefs;
+  return `
+    <header class="test-topbar">
+      <div>
+        <strong>LSAT Practice Test</strong>
+        <span>${section.label} · ${section.name}</span>
+      </div>
+      <div class="test-topbar__center">
+        <span>Question ${state.testDay.questionIndex + 1} of ${section.questions.length}</span>
+        <strong class="${overtime ? "is-danger" : ""}">${prefs.showTimer ? formatClock(remaining) : "Timer hidden"}</strong>
+      </div>
+      <div class="test-topbar__actions">
+        <button class="button button--ghost" type="button" data-test-directions>Directions</button>
+        <button class="button button--ghost" type="button" data-test-highlight>Highlight</button>
+        <button class="button button--ghost" type="button" data-test-remove-highlight>Remove highlight</button>
+        <button class="button button--ghost" type="button" data-test-settings>Settings</button>
+      </div>
+      ${state.testDay.settingsOpen ? renderTestSettingsPanel() : ""}
+    </header>
+  `;
+}
+
+function renderTestSettingsPanel() {
+  const prefs = state.testDay.prefs;
+  return `
+    <aside class="test-settings-panel">
+      <label>Font size<select data-test-pref="fontSize"><option ${prefs.fontSize === "small" ? "selected" : ""}>small</option><option ${prefs.fontSize === "medium" ? "selected" : ""}>medium</option><option ${prefs.fontSize === "large" ? "selected" : ""}>large</option><option ${prefs.fontSize === "extra" ? "selected" : ""}>extra</option></select></label>
+      <label>Line spacing<select data-test-pref="lineSpacing"><option ${prefs.lineSpacing === "normal" ? "selected" : ""}>normal</option><option ${prefs.lineSpacing === "wide" ? "selected" : ""}>wide</option></select></label>
+      <label>Theme<select data-test-pref="theme"><option ${prefs.theme === "light" ? "selected" : ""}>light</option><option ${prefs.theme === "dark" ? "selected" : ""}>dark</option><option ${prefs.theme === "contrast" ? "selected" : ""}>contrast</option></select></label>
+      <label>Passage width<select data-test-pref="passageWidth"><option ${prefs.passageWidth === "normal" ? "selected" : ""}>normal</option><option ${prefs.passageWidth === "wide" ? "selected" : ""}>wide</option></select></label>
+      <label class="test-check"><input type="checkbox" data-test-pref-check="allowClear" ${prefs.allowClear ? "checked" : ""}> Allow clear answer</label>
+      <label class="test-check"><input type="checkbox" data-test-pref-check="showTimer" ${prefs.showTimer ? "checked" : ""}> Show timer</label>
+    </aside>
+  `;
+}
+
+function renderTestLR(question, selected, eliminated) {
+  return `
+    <article class="test-question-panel">
+      <section class="test-readable" data-readable="stimulus"><p>${highlightTextForQuestion(question.stimulus, question)}</p></section>
+      <h3 class="test-readable" data-readable="stem">${highlightTextForQuestion(question.questionStem, question)}</h3>
+      ${renderTestChoices(question, selected, eliminated)}
+    </article>
+  `;
+}
+
+function renderTestRC(question, selected, eliminated) {
+  const passage = question.passage;
+  return `
+    <article class="test-rc-layout">
+      <section class="test-passage test-readable" data-readable="passage">
+        <p class="mini-card__label">${passage?.category || "Reading Comprehension"} passage</p>
+        <h3>${passage?.title || "Passage set"}</h3>
+        ${(passage?.paragraphs || [question.stimulus || ""]).map((para) => `<p>${highlightTextForQuestion(para.text || para, question)}</p>`).join("")}
+      </section>
+      <section class="test-question-panel">
+        <h3 class="test-readable" data-readable="stem">${highlightTextForQuestion(question.questionStem, question)}</h3>
+        ${renderTestChoices(question, selected, eliminated)}
+      </section>
+    </article>
+  `;
+}
+
+function renderTestChoices(question, selected, eliminated) {
+  return `
+    <div class="test-choices">
+      ${question.choices.map((choice, index) => {
+        const letter = String.fromCharCode(65 + index);
+        const isSelected = selected === index;
+        const isEliminated = eliminated.includes(index);
+        return `
+          <div class="test-choice ${isSelected ? "is-selected" : ""} ${isEliminated ? "is-eliminated" : ""}">
+            <button type="button" data-test-answer="${index}" aria-label="Select answer ${letter}"><span>${isSelected ? "●" : "○"}</span><strong>${letter}.</strong> ${choice}</button>
+            <button class="test-eliminate" type="button" data-test-eliminate="${index}">${isEliminated ? "Undo" : "Eliminate"}</button>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderTestBottomBar(section, flagged) {
+  return `
+    <footer class="test-bottombar">
+      <button class="button button--ghost" type="button" data-test-prev ${state.testDay.questionIndex === 0 ? "disabled" : ""}>Previous</button>
+      <button class="button ${flagged ? "button--primary" : "button--ghost"}" type="button" data-test-flag>${flagged ? "Flagged" : "Flag"}</button>
+      <a class="button button--ghost" href="#/practice/test-day/review">Review</a>
+      ${state.testDay.questionIndex === section.questions.length - 1 ? `<button class="button button--primary" type="button" data-test-submit-section>Submit Section</button>` : `<button class="button button--primary" type="button" data-test-next>Next</button>`}
+    </footer>
+  `;
+}
+
+function renderTestReview() {
+  const section = currentTestSection();
+  const filter = state.testDay.reviewFilter || "all";
+  const rows = section.questions.map((question, index) => {
+    const key = `${section.id}:${question.id}`;
+    const answered = state.testDay.answers[key] !== undefined;
+    const flagged = Boolean(state.testDay.flagged[key]);
+    return { question, index, answered, flagged };
+  }).filter((row) => filter === "all" || (filter === "unanswered" && !row.answered) || (filter === "flagged" && row.flagged) || (filter === "answered" && row.answered));
+  return `
+    <section class="test-shell">
+      ${renderTestTopBar(section, section.questions[state.testDay.questionIndex], testSecondsRemaining(), testSecondsRemaining() < 0)}
+      <main class="test-review-screen">
+        <div class="panel__head">
+          <h2>Section Review</h2>
+          <span class="status-pill">${rows.length} shown</span>
+        </div>
+        <div class="segmented-control test-filter-row">
+          ${["all", "unanswered", "flagged", "answered"].map((item) => `<button class="${filter === item ? "is-active" : ""}" type="button" data-test-review-filter="${item}">${item}</button>`).join("")}
+        </div>
+        <div class="test-review-grid">
+          ${rows.map((row) => `
+            <button class="test-review-tile ${row.answered ? "is-answered" : "is-unanswered"} ${row.flagged ? "is-flagged" : ""}" type="button" data-test-jump="${row.index}">
+              <strong>Q${row.index + 1}</strong>
+              <span>${row.answered ? "Answered" : "Unanswered"}${row.flagged ? " · Flagged" : ""}</span>
+            </button>
+          `).join("")}
+        </div>
+      </main>
+      <footer class="test-bottombar">
+        <a class="button button--ghost" href="#/practice/test-day">Return to Question</a>
+        <button class="button button--primary" type="button" data-test-submit-section>Submit Section</button>
+      </footer>
+    </section>
+  `;
+}
+
+function renderTestBreak() {
+  return `
+    <section class="test-shell test-shell--directions">
+      <article class="test-directions-card">
+        <p class="mini-card__label">Break</p>
+        <h2>10-minute break</h2>
+        <p>Take the break as seriously as the sections: step away, reset, and come back ready for Section 3.</p>
+        <button class="button button--primary" type="button" data-test-submit-section>Continue to next section</button>
+      </article>
+    </section>
+  `;
+}
+
+function renderTestResults() {
+  const sections = testSections().filter((section) => section.type !== "BREAK");
+  const scored = sections.filter((section) => section.scored);
+  const all = scored.flatMap((section) => section.questions.map((question) => ({ section, question, key: `${section.id}:${question.id}` })));
+  const answered = all.filter((item) => state.testDay.answers[item.key] !== undefined);
+  const correct = answered.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer);
+  const missed = all.filter((item) => state.testDay.answers[item.key] !== item.question.correctAnswer);
+  const flagged = all.filter((item) => state.testDay.flagged[item.key]);
+  const unanswered = all.filter((item) => state.testDay.answers[item.key] === undefined);
+  const byType = missed.reduce((acc, item) => {
+    acc[item.question.questionType] = (acc[item.question.questionType] || 0) + 1;
+    return acc;
+  }, {});
+  return `
+    <section class="test-results">
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">After-section analytics</p>
+            <h2>Score / Review</h2>
+          </div>
+          <button class="button button--primary" type="button" data-test-start="strict">Retake simulator</button>
+        </div>
+        <div class="card-grid card-grid--four">
+          <section class="mini-card"><p class="mini-card__label">Raw score</p><h4>${correct.length}/${all.length}</h4><p>Scored sections only.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Accuracy</p><h4>${all.length ? Math.round((correct.length / all.length) * 100) : 0}%</h4><p>Original local questions.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Flagged accuracy</p><h4>${flagged.length ? Math.round((flagged.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length / flagged.length) * 100) : 0}%</h4><p>${flagged.length} flagged.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Unanswered</p><h4>${unanswered.length}</h4><p>Questions left blank.</p></section>
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head"><h3>Mistake bank</h3><span class="status-pill">${missed.length} review items</span></div>
+        <div class="practice-list">
+          ${missed.slice(0, 18).map((item) => `
+            <section class="question-card">
+              <p class="mini-card__label">${item.section.label} · ${item.question.questionType}</p>
+              <h4>${item.question.questionStem}</h4>
+              <p><strong>Your answer:</strong> ${state.testDay.answers[item.key] === undefined ? "Unanswered" : String.fromCharCode(65 + state.testDay.answers[item.key])} · <strong>Correct:</strong> ${String.fromCharCode(65 + item.question.correctAnswer)}</p>
+              <p>${item.question.explanation}</p>
+              <p class="microcopy">Trap pattern: ${item.question.trapPattern}</p>
+            </section>
+          `).join("")}
+        </div>
+        <div class="recommendation-box"><strong>Missed question types:</strong> ${Object.entries(byType).map(([type, count]) => `${type} (${count})`).join(", ") || "None yet."}</div>
+      </article>
+    </section>
+  `;
+}
+
 function renderPracticePage(route) {
+  if (route.subtype === "test-day") {
+    return renderTestDayPage(route);
+  }
+
   if (route.subtype === "rc") {
     if (!route.id || route.id === "rc") {
       return renderRCPassageList();
@@ -1742,37 +2170,28 @@ function renderPracticePage(route) {
   }
 
   if (route.subtype === "timed") {
-    const lrQuestions = data.questionBank.filter((question) => question.section === "LR").slice(0, 10);
-    const rcQuestions = data.questionBank.filter((question) => question.section === "RC").slice(0, 5);
     return `
       <article class="panel panel--wide">
         <div class="panel__head">
-          <h3>Timed Section + Practice Test Center</h3>
-          <span class="status-pill">35 min section mode</span>
+          <h3>Test-Day Practice Center</h3>
+          <span class="status-pill">LawHub-style workflow</span>
         </div>
+        <p>Practice the actual testing rhythm: directions, four 35-minute sections, a 10-minute break after Section 2, flags, elimination, highlighting, review, then score analysis.</p>
         <div class="card-grid card-grid--four">
-          <section class="mini-card"><p class="mini-card__label">Resume</p><h4>Timed Section · PT 152.3</h4><p>29 min left · LR mixed set</p></section>
-          <section class="mini-card"><p class="mini-card__label">Timed Section</p><h4>35:00 proctor</h4><p>One scored section with review handoff.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Practice Test</p><h4>4 sections</h4><p>LR, RC, LR, variable with full-test score summary.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Skip protection</p><h4>3 unfinished items</h4><p>Skipping replaces the block with a new analytics-built set.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Strict mode</p><h4>35:00 auto-submit</h4><p>No explanations during the section. Review after submit.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Study mode</p><h4>Overtime marked</h4><p>Continue after time expires, but the result is tagged overtime.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Tools</p><h4>Highlight · Flag · Eliminate</h4><p>Practice screen preferences, review grid, and answer control.</p></section>
+          <section class="mini-card"><p class="mini-card__label">After test</p><h4>Mistake bank</h4><p>Raw score, accuracy, missed types, flagged accuracy, and explanations.</p></section>
         </div>
         <p class="microcopy">Use local simulated sections for skill-building, then jump out to official materials for licensed PrepTest review.</p>
+        <div class="dashboard-actions">
+          <a class="button button--primary" href="#/practice/test-day">Open test-day simulator</a>
+          <button class="button button--ghost" type="button" data-test-start="strict">Start strict test</button>
+          <button class="button button--ghost" type="button" data-test-start="study">Start study mode</button>
+        </div>
         <div class="link-list">
           ${data.officialLinks.map((link) => `<a class="chip-link" href="${link.href}" target="_blank" rel="noreferrer">${link.label}</a>`).join("")}
         </div>
-      </article>
-      <article class="panel">
-        <div class="panel__head">
-          <h3>35-minute LR Section</h3>
-          <button class="status-pill status-pill--button" type="button" data-bookmark="timed:lr-section" data-bookmark-type="section">${isBookmarked("timed:lr-section") ? "Saved" : "Save section"}</button>
-        </div>
-        <div class="practice-list">${lrQuestions.slice(0, 3).map((question) => renderQuestionCard(question, "timed")).join("")}</div>
-      </article>
-      <article class="panel">
-        <div class="panel__head">
-          <h3>Sample RC Block</h3>
-        </div>
-        <div class="practice-list">${rcQuestions.slice(0, 2).map((question) => renderQuestionCard(question, "timed")).join("")}</div>
       </article>
     `;
   }
@@ -1792,7 +2211,7 @@ function renderPracticePage(route) {
       <p>The system chooses this session from your weakest family, unfinished review, and recent misses, so you do not have to manually pick RC Structure vs Assumption vs Flaw every time.</p>
       <div class="dashboard-actions">
         <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start adaptive drill</a>
-        <a class="button button--ghost" href="#/practice/timed">Start timed section</a>
+        <a class="button button--ghost" href="#/practice/timed">Open test center</a>
         <button class="button button--ghost" type="button" data-import-demo>Import outside score</button>
       </div>
     </article>
@@ -2420,6 +2839,139 @@ function renderCoachPage() {
 }
 
 function wireInteractions(route) {
+  pageMount.querySelectorAll("[data-test-start]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetTestSession(button.dataset.testStart || "strict");
+      location.hash = "#/practice/test-day";
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-answer]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const question = currentTestQuestion();
+      const key = testAnswerKey(question);
+      const choice = Number(button.dataset.testAnswer);
+      if (state.testDay.answers[key] === choice && state.testDay.prefs.allowClear) {
+        delete state.testDay.answers[key];
+      } else {
+        state.testDay.answers[key] = choice;
+      }
+      state.testDay.timeSpent[key] = Math.max(0, Math.round((Date.now() - new Date(state.testDay.sectionStartedAt).getTime()) / 1000));
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-eliminate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = testAnswerKey(currentTestQuestion());
+      const choice = Number(button.dataset.testEliminate);
+      const eliminated = new Set(state.testDay.eliminated[key] || []);
+      if (eliminated.has(choice)) eliminated.delete(choice);
+      else eliminated.add(choice);
+      state.testDay.eliminated[key] = [...eliminated];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-prev]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.testDay.questionIndex = Math.max(0, state.testDay.questionIndex - 1);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-next]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const section = currentTestSection();
+      state.testDay.questionIndex = Math.min(section.questions.length - 1, state.testDay.questionIndex + 1);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-flag]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = testAnswerKey(currentTestQuestion());
+      state.testDay.flagged[key] = !state.testDay.flagged[key];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-jump]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.testDay.questionIndex = Number(button.dataset.testJump);
+      saveState();
+      location.hash = "#/practice/test-day";
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-review-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.testDay.reviewFilter = button.dataset.testReviewFilter;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-submit-section]").forEach((button) => {
+    button.addEventListener("click", () => submitCurrentTestSection());
+  });
+
+  pageMount.querySelectorAll("[data-test-settings]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.testDay.settingsOpen = !state.testDay.settingsOpen;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-pref]").forEach((input) => {
+    input.addEventListener("change", () => {
+      state.testDay.prefs[input.dataset.testPref] = input.value;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-pref-check]").forEach((input) => {
+    input.addEventListener("change", () => {
+      state.testDay.prefs[input.dataset.testPrefCheck] = input.checked;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-highlight]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = String(window.getSelection?.().toString() || "").trim();
+      if (!selected) return;
+      const key = testAnswerKey(currentTestQuestion());
+      state.testDay.highlights[key] = [...new Set([...(state.testDay.highlights[key] || []), selected])].slice(0, 12);
+      saveState();
+      window.getSelection?.().removeAllRanges();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-remove-highlight]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = testAnswerKey(currentTestQuestion());
+      state.testDay.highlights[key] = [];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-directions]").forEach((button) => {
+    button.addEventListener("click", () => {
+      window.alert("Section directions: choose the best answer for each question. Use flags and review to manage unanswered or uncertain questions. Explanations unlock after submission.");
+    });
+  });
+
   pageMount.querySelectorAll("[data-live-reserve]").forEach((button) => {
     button.addEventListener("click", () => {
       const sessionId = button.dataset.liveReserve;
