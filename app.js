@@ -1059,7 +1059,7 @@ function renderDashboardPage() {
         ${renderDonut(Math.max(8, 100 - data.analyticsSnapshots.blindReviewGap * 3), "recovered", `${Math.max(0, 100 - data.analyticsSnapshots.blindReviewGap * 3)}%`)}
       </article>
 
-      <article class="dashboard-card interactive-card">
+      <article class="dashboard-card dashboard-card--flow interactive-card">
         <div class="dashboard-card__head">
           <h3>Today Flow</h3>
           <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
@@ -1073,7 +1073,7 @@ function renderDashboardPage() {
         </div>
       </article>
 
-      <article class="dashboard-card interactive-card">
+      <article class="dashboard-card dashboard-card--mix interactive-card">
         <div class="dashboard-card__head">
           <h3>Question mix</h3>
           <a class="text-link" href="#/practice">Practice</a>
@@ -1086,7 +1086,7 @@ function renderDashboardPage() {
         <p class="microcopy">Original practice only. Official LSAT question text stays in LawHub.</p>
       </article>
 
-      <article class="dashboard-card interactive-card">
+      <article class="dashboard-card dashboard-card--activity interactive-card">
         <div class="dashboard-card__head">
           <h3>Learning Activity</h3>
           <span class="status-pill">This week</span>
@@ -1095,7 +1095,7 @@ function renderDashboardPage() {
         <p class="microcopy">Daily target: ${profile.dailyMinutes} min. Next LSAT: ${testDays === null ? "set a date" : `${testDays} days`}.</p>
       </article>
 
-      <article class="dashboard-card interactive-card">
+      <article class="dashboard-card dashboard-card--accuracy interactive-card">
         <div class="dashboard-card__head">
           <h3>Accuracy grids</h3>
           <span class="status-pill">7Sage-style</span>
@@ -1106,7 +1106,7 @@ function renderDashboardPage() {
         </div>
       </article>
 
-      <article class="dashboard-card interactive-card">
+      <article class="dashboard-card dashboard-card--recent interactive-card">
         <div class="dashboard-card__head">
           <h3>Recent activity</h3>
           <a class="text-link" href="#/review/preptest/pt130">PrepTest results</a>
@@ -1292,7 +1292,10 @@ function renderLessonPlayer(lesson) {
             <p class="mini-card__label">${lesson.track}</p>
             <h3>${lesson.title}</h3>
           </div>
-          <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
+          <div class="lesson-save-stack">
+            <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
+            <span class="status-pill" title="Auto-saved lesson progress and local practice data.">${lastSavedLabel()}</span>
+          </div>
         </div>
         <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
         <details id="intro" class="lesson-accordion" open>
@@ -2548,6 +2551,27 @@ function wireInteractions(route) {
       target?.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "start" });
     });
   });
+
+  const lessonTocButtons = [...pageMount.querySelectorAll("[data-scroll-target]")];
+  if (lessonTocButtons.length && "IntersectionObserver" in window) {
+    const sectionMap = new Map(lessonTocButtons.map((button) => [button.dataset.scrollTarget, button]));
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible?.target?.id || !sectionMap.has(visible.target.id)) return;
+      lessonTocButtons.forEach((button) => button.classList.remove("is-active"));
+      sectionMap.get(visible.target.id).classList.add("is-active");
+    }, {
+      root: null,
+      rootMargin: "-18% 0px -62% 0px",
+      threshold: [0.1, 0.35, 0.6],
+    });
+    sectionMap.forEach((_, id) => {
+      const section = pageMount.querySelector(`#${id}`);
+      if (section) observer.observe(section);
+    });
+  }
 
   pageMount.querySelectorAll("[data-question]").forEach((button) => {
     button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
