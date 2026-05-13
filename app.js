@@ -117,6 +117,14 @@ function defaultState() {
       { id: "writing", title: "LSAT Writing reminder", body: "Confirm whether a valid argumentative writing sample is already on file.", read: false },
     ],
     imports: [],
+    bookQuestionLogs: [],
+    localAccount: {
+      displayName: "Jessica",
+      email: "",
+      deviceLabel: "My browser",
+      syncCode: "",
+      lastBackupAt: "",
+    },
     cookieConsent: "",
     subscriptionIntent: "",
     notificationsOpen: false,
@@ -181,6 +189,8 @@ function loadState() {
       mistakeRetries: parsed.mistakeRetries || {},
       notifications: parsed.notifications || base.notifications,
       imports: parsed.imports || [],
+      bookQuestionLogs: parsed.bookQuestionLogs || [],
+      localAccount: { ...base.localAccount, ...(parsed.localAccount || {}) },
       cookieConsent: parsed.cookieConsent || "",
       subscriptionIntent: parsed.subscriptionIntent || "",
       notificationsOpen: Boolean(parsed.notificationsOpen),
@@ -288,6 +298,32 @@ function studyQualityScore() {
 
 function officialTestCount() {
   return state.officialLogs.length;
+}
+
+function bookCompanionStats() {
+  const logs = state.bookQuestionLogs || [];
+  const missed = logs.filter((log) => log.result === "missed").length;
+  const byFamily = logs.reduce((acc, log) => {
+    if (log.family) acc[log.family] = (acc[log.family] || 0) + 1;
+    return acc;
+  }, {});
+  const topFamily = Object.entries(byFamily).sort((a, b) => b[1] - a[1])[0]?.[0] || adaptiveDrillTarget().weak.family;
+  return {
+    total: logs.length,
+    missed,
+    reviewed: logs.filter((log) => log.reviewed).length,
+    topFamily,
+    recent: logs.slice(0, 5),
+  };
+}
+
+function localBackupPayload() {
+  return JSON.stringify({
+    exportedAt: new Date().toISOString(),
+    appKey: APP_KEY,
+    version: "jessipreps-static-v2",
+    state,
+  }, null, 2);
 }
 
 function familyAnalytics() {
@@ -1239,7 +1275,9 @@ function renderNoticeLayer() {
           <button class="icon-button" type="button" data-close-profile aria-label="Close profile menu">×</button>
         </div>
         <section class="notice-item"><strong>Goal</strong><p>${activeProfile().currentScore} -> ${activeProfile().goalScore} · ${activeProfile().dailyMinutes} min/day</p></section>
+        <section class="notice-item"><strong>Local account</strong><p>${state.localAccount?.displayName || "Jessica"} · ${state.localAccount?.deviceLabel || "This browser"}</p></section>
         <a class="button button--ghost" href="#/plan" data-profile-link>Update plan</a>
+        <a class="button button--ghost" href="#/plan" data-profile-link>Backup / restore</a>
         <a class="button button--ghost" href="#/review" data-profile-link>Open journal</a>
       </aside>
     ` : ""}
@@ -2574,6 +2612,7 @@ function renderPracticePage(route) {
   const grouped = [...new Set(data.questionBank.map((question) => question.family))];
   const adaptive = adaptiveDrillTarget();
   const time = timeSummary();
+  const bookStats = bookCompanionStats();
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -2630,6 +2669,43 @@ function renderPracticePage(route) {
             `;
           })
           .join("")}
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Book / official companion</p>
+          <h3>Track outside questions without copying protected text.</h3>
+        </div>
+        <span class="status-pill">${bookStats.total} logged</span>
+      </div>
+      <p>Use this for PowerScore, Loophole, Trainer, LawHub, or any other source. Store only source, page/test reference, family, result, and your notes. Do not paste copyrighted question text.</p>
+      <form id="bookCompanionForm" class="plan-form">
+        <label><span>Source</span><input name="source" placeholder="PowerScore LR Bible, LawHub PT, The Loophole" /></label>
+        <label><span>Reference</span><input name="reference" placeholder="Chapter 6, p. 142, PT 152 S3 Q17" /></label>
+        <label><span>Family</span>
+          <select name="family">${grouped.map((family) => `<option>${family}</option>`).join("")}</select>
+        </label>
+        <label><span>Difficulty</span><select name="difficulty"><option>easy</option><option>medium</option><option>hard</option></select></label>
+        <label><span>Result</span><select name="result"><option>correct</option><option>missed</option><option>skipped</option><option>blind review fix</option></select></label>
+        <label><span>Mistake reason</span><select name="mistakeReason">${mistakeReasonOptions().map((reason) => `<option>${reason}</option>`).join("")}</select></label>
+        <label class="br-field--wide"><span>Reflection, not question text</span><textarea name="note" rows="3" placeholder="Example: I confused sufficient and necessary. Redrill conditional logic."></textarea></label>
+        <button class="button button--primary" type="submit">Log outside question</button>
+      </form>
+      <div class="card-grid card-grid--four">
+        <section class="mini-card"><p class="mini-card__label">Outside questions</p><h4>${bookStats.total}</h4><p>Source references tracked.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Missed</p><h4>${bookStats.missed}</h4><p>Added to analysis.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Top family</p><h4>${bookStats.topFamily}</h4><p>Use original drills to practice safely.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Reviewed</p><h4>${bookStats.reviewed}</h4><p>Marked as cleaned up.</p></section>
+      </div>
+      <div class="journal-list">
+        ${bookStats.recent.length ? bookStats.recent.map((log) => `
+          <section class="journal-card">
+            <strong>${log.source} · ${log.reference}</strong>
+            <p>${log.family} · ${log.result} · ${log.mistakeReason}</p>
+            <p class="microcopy">${log.note || "No reflection yet."}</p>
+          </section>
+        `).join("") : `<p class="muted">No outside questions logged yet. Add source references here, then drill original JessiPreps questions for the same family.</p>`}
       </div>
     </article>
     <article class="panel">
@@ -2936,6 +3012,7 @@ function renderReviewPage(route = {}) {
 function renderPlanPage() {
   const profile = activeProfile();
   const calendar = generatedStudyCalendar();
+  const account = state.localAccount || defaultState().localAccount;
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -2983,6 +3060,33 @@ function renderPlanPage() {
           <li>Take one mixed timed set</li>
         </ol>
         <button class="button button--ghost" type="button" data-regenerate-plan>Regenerate plan based on weaknesses</button>
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Local account + sync</p>
+          <h3>Portable profile without a backend yet.</h3>
+        </div>
+        <span class="status-pill">${account.lastBackupAt ? `Backup ${new Date(account.lastBackupAt).toLocaleDateString()}` : "Local only"}</span>
+      </div>
+      <p>This is the static-site version of accounts: your profile, progress, attempts, chat, book logs, and plans stay in localStorage, and you can export/restore them across devices.</p>
+      <form id="localAccountForm" class="plan-form">
+        <label><span>Display name</span><input name="displayName" value="${account.displayName || ""}" /></label>
+        <label><span>Email label</span><input name="email" type="email" value="${account.email || ""}" placeholder="Optional; stored only in this browser" /></label>
+        <label><span>Device label</span><input name="deviceLabel" value="${account.deviceLabel || ""}" /></label>
+        <label><span>Sync code</span><input name="syncCode" value="${account.syncCode || ""}" placeholder="Personal code to identify your backup" /></label>
+        <button class="button button--primary" type="submit">Save local profile</button>
+      </form>
+      <div class="backup-grid">
+        <section>
+          <div class="panel__head"><h4>Export backup</h4><button class="button button--ghost" type="button" data-generate-backup>Generate backup text</button></div>
+          <textarea id="backupOutput" rows="8" readonly placeholder="Generate a backup to copy into a file or another browser."></textarea>
+        </section>
+        <section>
+          <div class="panel__head"><h4>Restore backup</h4><button class="button button--ghost" type="button" data-restore-backup>Restore</button></div>
+          <textarea id="backupInput" rows="8" placeholder="Paste a JessiPreps backup JSON here."></textarea>
+        </section>
       </div>
     </article>
     <article class="panel panel--wide">
@@ -3840,6 +3944,44 @@ function wireInteractions(route) {
     }
   }
 
+  const bookCompanionForm = pageMount.querySelector("#bookCompanionForm");
+  if (bookCompanionForm) {
+    bookCompanionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(bookCompanionForm);
+      const family = String(formData.get("family") || adaptiveDrillTarget().weak.family);
+      const result = String(formData.get("result") || "missed");
+      const log = {
+        id: `book-log-${Date.now()}`,
+        source: String(formData.get("source") || "Outside source"),
+        reference: String(formData.get("reference") || "Reference only"),
+        family,
+        difficulty: String(formData.get("difficulty") || "medium"),
+        result,
+        mistakeReason: String(formData.get("mistakeReason") || "Wrong answer trap"),
+        note: String(formData.get("note") || ""),
+        reviewed: result === "blind review fix",
+        loggedAt: new Date().toISOString(),
+      };
+      state.bookQuestionLogs.unshift(log);
+      if (result === "missed" || result === "skipped") {
+        state.journal.unshift({
+          questionId: log.id,
+          family,
+          trapPattern: "Outside source reference",
+          confidence: "medium",
+          mistakeReason: log.mistakeReason,
+          blindReviewOutcome: "pending",
+          wrongChoiceText: "",
+          whyWrong: log.note || `Review ${family} from ${log.source} ${log.reference}.`,
+          note: log.note || `Outside reference only: ${log.source} ${log.reference}. Do not store protected question text.`,
+        });
+      }
+      saveState();
+      renderApp();
+    });
+  }
+
   if (route.page === "plan") {
     const onboardingForm = document.querySelector("#onboardingForm");
     if (onboardingForm) {
@@ -3896,6 +4038,51 @@ function wireInteractions(route) {
         renderApp();
       });
     }
+
+    const localAccountForm = document.querySelector("#localAccountForm");
+    if (localAccountForm) {
+      localAccountForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(localAccountForm);
+        state.localAccount = {
+          ...(state.localAccount || {}),
+          displayName: String(formData.get("displayName") || "Jessica"),
+          email: String(formData.get("email") || ""),
+          deviceLabel: String(formData.get("deviceLabel") || "My browser"),
+          syncCode: String(formData.get("syncCode") || ""),
+        };
+        saveState();
+        renderApp();
+      });
+    }
+
+    pageMount.querySelectorAll("[data-generate-backup]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.localAccount = {
+          ...(state.localAccount || {}),
+          lastBackupAt: new Date().toISOString(),
+        };
+        saveState();
+        const output = pageMount.querySelector("#backupOutput");
+        if (output) output.value = localBackupPayload();
+      });
+    });
+
+    pageMount.querySelectorAll("[data-restore-backup]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const input = pageMount.querySelector("#backupInput");
+        if (!input?.value.trim()) return;
+        try {
+          const parsed = JSON.parse(input.value);
+          const restored = parsed.state || parsed;
+          localStorage.setItem(APP_KEY, JSON.stringify({ ...restored, lastSavedAt: new Date().toISOString() }));
+          window.alert("Backup restored. JessiPreps will reload with restored local data.");
+          window.location.reload();
+        } catch {
+          window.alert("That backup JSON could not be read. Check that you pasted the full JessiPreps backup.");
+        }
+      });
+    });
 
     pageMount.querySelectorAll("[data-support-fill]").forEach((button) => {
       button.addEventListener("click", () => {
