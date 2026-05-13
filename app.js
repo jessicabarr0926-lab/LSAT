@@ -8,8 +8,11 @@ const routeEyebrow = document.querySelector("#routeEyebrow");
 const routeTitle = document.querySelector("#routeTitle");
 const heroMount = document.querySelector("#heroMount");
 const pageMount = document.querySelector("#pageMount");
+const noticeMount = document.querySelector("#noticeMount");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarClose = document.querySelector("#sidebarClose");
+const notificationBell = document.querySelector("#notificationBell");
+const subscribeCta = document.querySelector("#subscribeCta");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
@@ -34,6 +37,19 @@ sidebarClose?.addEventListener("click", () => {
   document.body.classList.remove("sidebar-open");
 });
 
+notificationBell?.addEventListener("click", () => {
+  state.notificationsOpen = !state.notificationsOpen;
+  saveState();
+  renderApp();
+  location.hash = "#/dashboard";
+});
+
+subscribeCta?.addEventListener("click", () => {
+  state.subscriptionIntent = state.subscriptionIntent === "open" ? "" : "open";
+  saveState();
+  renderApp();
+});
+
 window.addEventListener("hashchange", renderApp);
 
 function defaultState() {
@@ -56,6 +72,16 @@ function defaultState() {
       dailyMinutes: 45,
     },
     officialLogs: [],
+    bookmarks: {},
+    notifications: [
+      { id: "welcome", title: "Welcome to JessiPreps", body: "Start with one sprint: learn, drill, review, log, stop.", read: false },
+      { id: "writing", title: "LSAT Writing reminder", body: "Confirm whether a valid argumentative writing sample is already on file.", read: false },
+    ],
+    imports: [],
+    cookieConsent: "",
+    subscriptionIntent: "",
+    notificationsOpen: false,
+    currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
     lastSavedAt: "",
   };
 }
@@ -79,6 +105,13 @@ function loadState() {
       plan: { ...base.plan, ...(parsed.plan || {}) },
       onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
       officialLogs: parsed.officialLogs || [],
+      bookmarks: parsed.bookmarks || {},
+      notifications: parsed.notifications || base.notifications,
+      imports: parsed.imports || [],
+      cookieConsent: parsed.cookieConsent || "",
+      subscriptionIntent: parsed.subscriptionIntent || "",
+      notificationsOpen: Boolean(parsed.notificationsOpen),
+      currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
   } catch {
@@ -147,6 +180,84 @@ function streakDays() {
   return Math.min(14, Math.max(0, Math.ceil(activityUnits / 4)));
 }
 
+function allQuestions() {
+  return [
+    ...data.questionBank,
+    ...(data.rcPassages || []).flatMap((passage) => passage.questions),
+  ];
+}
+
+function unreadNotifications() {
+  return state.notifications.filter((item) => !item.read).length;
+}
+
+function isBookmarked(id) {
+  return Boolean(state.bookmarks[id]);
+}
+
+function bookmarkCount(type) {
+  return Object.values(state.bookmarks).filter((item) => !type || item.type === type).length;
+}
+
+function studyQualityScore() {
+  const attempts = Object.keys(state.attempts).length;
+  const reviewed = state.journal.filter((entry) => entry.blindReviewOutcome === "complete").length;
+  const logged = state.officialLogs.length;
+  const planSaved = state.plan.testDate ? 12 : 0;
+  return Math.min(100, Math.round(streakDays() * 4 + Math.min(attempts, 20) * 1.4 + reviewed * 6 + logged * 4 + planSaved));
+}
+
+function officialTestCount() {
+  return state.officialLogs.length;
+}
+
+function familyAnalytics() {
+  const families = [...new Set(allQuestions().map((question) => question.family))];
+  return families.map((family) => {
+    const questions = allQuestions().filter((question) => question.family === family);
+    const attempts = questions.filter((question) => state.attempts[question.id]);
+    const correct = attempts.filter((question) => state.attempts[question.id]?.correct).length;
+    const times = attempts.map((question) => state.attempts[question.id]?.timeSeconds).filter((time) => Number.isFinite(time));
+    return {
+      family,
+      questions: questions.length,
+      attempts: attempts.length,
+      accuracy: attempts.length ? Math.round((correct / attempts.length) * 100) : accuracyForFamily(family) || 0,
+      avgTime: times.length ? Math.round(times.reduce((sum, time) => sum + time, 0) / times.length) : null,
+    };
+  }).sort((a, b) => a.accuracy - b.accuracy);
+}
+
+function timeSummary() {
+  const attempts = allQuestions().filter((question) => state.attempts[question.id]);
+  const bucket = (predicate) => {
+    const times = attempts.filter(predicate).map((question) => state.attempts[question.id].timeSeconds).filter((time) => Number.isFinite(time));
+    return times.length ? Math.round(times.reduce((sum, time) => sum + time, 0) / times.length) : null;
+  };
+  return {
+    correct: bucket((question) => state.attempts[question.id]?.correct),
+    wrong: bucket((question) => state.attempts[question.id] && !state.attempts[question.id].correct),
+    review: state.journal.length ? Math.max(180, state.journal.length * 55) : null,
+  };
+}
+
+function finalFiveAccuracy() {
+  const answered = allQuestions().filter((question) => state.attempts[question.id]).slice(-5);
+  if (!answered.length) return 0;
+  const correct = answered.filter((question) => state.attempts[question.id].correct).length;
+  return Math.round((correct / answered.length) * 100);
+}
+
+function rcPassageSplit() {
+  const splits = Object.values(state.rcProgress || {}).filter((item) => item.readTimeSeconds);
+  const read = splits.length ? Math.round(splits.reduce((sum, item) => sum + item.readTimeSeconds, 0) / splits.length) : 210;
+  return {
+    read,
+    questions: 330,
+    check: 60,
+  };
+}
+
 function daysUntilTest() {
   if (!state.plan.testDate) return null;
   const today = new Date();
@@ -188,6 +299,40 @@ function activeProfile() {
 
 function nextLesson() {
   return data.lessons.find((lesson) => !state.lessonProgress[lesson.id]?.complete) || data.lessons[0];
+}
+
+function nextBestAction() {
+  const dueEntries = state.journal.filter(
+    (e) => !e.blindReviewOutcome || e.blindReviewOutcome === "pending"
+  );
+  const dueCount = dueEntries.length;
+  if (dueCount > 0) {
+    return {
+      label: "Due for review",
+      headline: `${dueCount} ${dueCount === 1 ? "question" : "questions"} waiting for re-attempt`,
+      blurb: "Clearing your blind-review queue is the highest-leverage thing you can do right now.",
+      cta: "Start review session",
+      href: "#/review",
+    };
+  }
+  const lesson = nextLesson();
+  if (!state.lessonProgress[lesson.id]?.complete) {
+    return {
+      label: "Today's lesson",
+      headline: lesson.title,
+      blurb: lesson.summary || "Complete this lesson, then drill the hardest question type you saw.",
+      cta: "Open lesson",
+      href: `#/learn/${lesson.id}`,
+    };
+  }
+  const { weak, preset } = adaptiveDrillTarget();
+  return {
+    label: "Adaptive drill",
+    headline: `${weak.family} · ${accuracyForFamily(weak.family) || 0}% accuracy`,
+    blurb: "Your weakest family right now. 6 targeted questions, then blind-review any misses.",
+    cta: `Drill ${weak.family}`,
+    href: `#/practice/drill/${preset.id}`,
+  };
 }
 
 function questionsForLesson(lessonId) {
@@ -439,6 +584,10 @@ function renderApp() {
   renderNav();
   renderSettings();
   renderToday();
+  renderNoticeLayer();
+  if (notificationBell) notificationBell.textContent = String(unreadNotifications());
+  if (subscribeCta) subscribeCta.classList.toggle("is-active", state.subscriptionIntent === "open");
+  if (notificationBell) notificationBell.classList.toggle("is-active", state.notificationsOpen);
   if (!document.querySelector(".sidebar-backdrop")) {
     const backdrop = document.createElement("div");
     backdrop.className = "sidebar-backdrop";
@@ -449,6 +598,7 @@ function renderApp() {
   const route = routeInfo();
   renderRouteMeta(route);
   renderPage(route);
+  wireNoticeLayer();
 }
 
 function applySettings() {
@@ -462,15 +612,44 @@ function applySettings() {
 
 function renderNav() {
   const route = routeInfo().page;
+  const subitems = {
+    dashboard: ["Today", "Ratings", "Notifications"],
+    learn: ["Lessons", "You Try", "Recorded videos"],
+    practice: ["Adaptive", "Timed", "Full PT"],
+    review: ["Blind Review", "SRS", "Explanations"],
+    plan: ["Onboarding", "LawHub", "Import"],
+  };
   navRail.innerHTML = data.navigation
     .map(
       (item) => `
         <a class="nav__link ${route === item.route ? "is-active" : ""}" href="#/${item.route}">
           <span>${item.label}</span>
+          <small>${(subitems[item.route] || []).join(" · ")}</small>
         </a>
       `,
     )
     .join("");
+}
+
+function wireNoticeLayer() {
+  noticeMount?.querySelectorAll("[data-cookie-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.cookieConsent = button.dataset.cookieChoice;
+      saveState();
+      renderApp();
+    });
+  });
+  noticeMount?.querySelector("[data-close-subscribe]")?.addEventListener("click", () => {
+    state.subscriptionIntent = "";
+    saveState();
+    renderApp();
+  });
+  noticeMount?.querySelector("[data-mark-notifications-read]")?.addEventListener("click", () => {
+    state.notifications = state.notifications.map((item) => ({ ...item, read: true }));
+    state.notificationsOpen = false;
+    saveState();
+    renderApp();
+  });
 }
 
 function renderSettings() {
@@ -566,22 +745,62 @@ function renderPage(route) {
   wireInteractions(route);
 }
 
+function renderNoticeLayer() {
+  if (!noticeMount) return;
+  const unread = state.notifications.filter((item) => !item.read).slice(0, 3);
+  noticeMount.innerHTML = `
+    ${state.subscriptionIntent === "open" ? `
+      <aside class="floating-panel subscribe-panel">
+        <div class="panel__head">
+          <h3>JessiPreps tiers</h3>
+          <button class="icon-button" type="button" data-close-subscribe aria-label="Close subscribe panel">×</button>
+        </div>
+        <div class="tier-grid">
+          <section><strong>Core</strong><span>Self-study, lessons, drills, journal</span></section>
+          <section><strong>Live</strong><span>Future classes, office hours, recorded sessions</span></section>
+          <section><strong>Coach</strong><span>Future admissions and one-on-one review</span></section>
+        </div>
+        <p class="microcopy">Premium surfaces are product placeholders until the course is ready to sell.</p>
+      </aside>
+    ` : ""}
+    ${state.notificationsOpen ? `
+      <aside class="floating-panel notification-panel">
+        <div class="panel__head">
+          <h3>Notifications</h3>
+          <button class="icon-button" type="button" data-mark-notifications-read aria-label="Mark notifications read">✓</button>
+        </div>
+        ${
+          unread.length
+            ? unread.map((item) => `<section class="notice-item"><strong>${item.title}</strong><p>${item.body}</p></section>`).join("")
+            : `<p class="muted">You do not have any notifications yet. Complete a sprint or save a section tool and this will update.</p>`
+        }
+      </aside>
+    ` : ""}
+    ${!state.cookieConsent ? `
+      <aside class="cookie-panel">
+        <p><strong>Cookies and privacy.</strong> JessiPreps stores progress locally in this browser. It does not store official LSAT question text.</p>
+        <div>
+          <button class="button button--ghost" type="button" data-cookie-choice="reject">Reject all</button>
+          <button class="button button--primary" type="button" data-cookie-choice="accept">Accept local saves</button>
+        </div>
+      </aside>
+    ` : ""}
+  `;
+}
+
 function renderDashboardHero() {
-  const lesson = nextLesson();
-  const { weak, preset } = adaptiveDrillTarget();
+  const adaptive = adaptiveDrillTarget();
   const profile = activeProfile();
   return `
     <section class="hero-card">
       <div class="hero-copy">
-        <p class="eyebrow">${lastSavedLabel()}</p>
+        <p class="eyebrow">JessiPreps LSAT Command Center</p>
         <h3>Turn your ${profile.currentScore} into the next score jump with one focused study sprint at a time.</h3>
-        <p class="hero-copy">
-          Today: 6 ${weak.family} questions, Blind Review every miss, then journal one reusable rule. Skipped questions are strategy. Accuracy before speed.
-        </p>
+        <p>Today: review misses, drill ${adaptive.weak.family}, and run one timed LR checkpoint. Skipped questions are strategy. Accuracy before speed.</p>
         <div class="hero-actions">
-          <a class="button button--primary sprint-cta" href="#/practice/drill/${preset.id}">Start today's sprint</a>
-          <a class="button button--ghost" href="#/learn/${lesson.id}">Learn first</a>
-          <a class="button button--ghost" href="#/practice/drill/${preset.id}">Adaptive drill: ${weak.family}</a>
+          <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start today's sprint</a>
+          <a class="button button--ghost" href="#/review">Review misses</a>
+          <a class="button button--ghost" href="#/plan">Open LawHub companion</a>
         </div>
       </div>
       <div class="hero-metrics">
@@ -664,6 +883,21 @@ function renderDashboardPage() {
 
       <article class="dashboard-card dashboard-card--table">
         <div class="dashboard-card__head">
+          <div>
+            <p class="mini-card__label">First-click fix</p>
+            <h3>Every shared dashboard URL opens complete.</h3>
+          </div>
+          <span class="status-pill">Route guard on</span>
+        </div>
+        <p>/LSAT/, /LSAT/index.html, and /LSAT/index.html#/dashboard all land on this full command center with useful fallback states instead of a sparse shell.</p>
+        <div class="dashboard-actions">
+          <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build recommended drill</a>
+          <a class="button button--ghost" href="#/plan">Build study plan</a>
+        </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--table">
+        <div class="dashboard-card__head">
           <h3>Today Flow</h3>
           <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
         </div>
@@ -679,13 +913,26 @@ function renderDashboardPage() {
       <article class="dashboard-card dashboard-card--progress">
         <div class="dashboard-card__head">
           <h3>Family mastery</h3>
-          <span class="status-pill">0-100</span>
+          <button class="status-pill status-pill--button" type="button" data-add-notification="ratings">Understand your ratings</button>
         </div>
         <div class="mastery-stack">
           <section class="mastery-row"><span>Logical Reasoning</span><strong>${masteryRating("LR")}</strong><div><i style="width:${masteryRating("LR")}%"></i></div></section>
           <section class="mastery-row"><span>Reading Comprehension</span><strong>${masteryRating("RC")}</strong><div><i style="width:${masteryRating("RC")}%"></i></div></section>
+          <section class="official-pips"><span>Official logs</span><strong>${"●".repeat(Math.min(5, officialTestCount()))}${"○".repeat(Math.max(0, 5 - Math.min(5, officialTestCount())))}</strong></section>
           <p class="microcopy">Ratings blend accuracy, completed attempts, and recent review behavior so the next drill is chosen for you.</p>
         </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--progress">
+        <div class="dashboard-card__head">
+          <h3>Study Quality</h3>
+          <span class="status-pill">${studyQualityScore()}/100</span>
+        </div>
+        <div class="quality-dial" style="--quality:${studyQualityScore()}%">
+          <strong>${studyQualityScore()}</strong>
+          <span>habit score</span>
+        </div>
+        <p class="microcopy">Measures consistency, Blind Review follow-through, onboarding, and logged official work.</p>
       </article>
 
       <article class="dashboard-card dashboard-card--due" style="border-left: 4px solid ${dueCount > 0 ? "#f59e0b" : "#9ca3af"};">
@@ -766,6 +1013,19 @@ function renderDashboardPage() {
           <a class="roadmap__step" href="#/practice/timed"><strong>Practice Test</strong><p>Four-section simulator with review handoff.</p></a>
           <a class="roadmap__step" href="#/review"><strong>Blind Review</strong><p>Re-answer before explanations unlock.</p></a>
         </div>
+      </article>
+
+      <article class="dashboard-card dashboard-card--table">
+        <div class="dashboard-card__head">
+          <h3>Scale features, staged safely</h3>
+          <span class="status-pill">Below the line</span>
+        </div>
+        <div class="feature-lane">
+          <section><strong>Community</strong><span>Discussion forum, tutor chat, leaderboard</span></section>
+          <section><strong>Live</strong><span>Classes, office hours, recorded sessions</span></section>
+          <section><strong>Admissions</strong><span>Applications, school data, scholarship estimator</span></section>
+        </div>
+        <p class="microcopy">These are visible as product lanes but kept secondary until the core study loop is strong.</p>
       </article>
     </section>
   `;
@@ -1387,9 +1647,14 @@ function renderPracticePage(route) {
       <article class="panel panel--wide">
         <div class="panel__head">
           <h3>${preset.title}</h3>
-          <span class="status-pill">${preset.rationale}</span>
+          <button class="status-pill status-pill--button" type="button" data-bookmark="drill:${preset.id}" data-bookmark-type="drill">${isBookmarked(`drill:${preset.id}`) ? "Bookmarked" : "Bookmark drill"}</button>
         </div>
         <p>Adaptive focus: ${weakestFamily().family}. This preset is chosen because of weak performance plus incomplete mastery.</p>
+        <div class="commitment-bar">
+          <strong>${state.currentBlock.label}</strong>
+          <span>${state.currentBlock.unfinished} unfinished items</span>
+          <button class="button button--ghost" type="button" data-skip-block>Skip block</button>
+        </div>
         <div class="practice-list">${questions.map((question) => renderQuestionCard(question, "drill")).join("")}</div>
       </article>
     `;
@@ -1417,7 +1682,8 @@ function renderPracticePage(route) {
       </article>
       <article class="panel">
         <div class="panel__head">
-          <h3>Sample Scored LR Block</h3>
+          <h3>35-minute LR Section</h3>
+          <button class="status-pill status-pill--button" type="button" data-bookmark="timed:lr-section" data-bookmark-type="section">${isBookmarked("timed:lr-section") ? "Saved" : "Save section"}</button>
         </div>
         <div class="practice-list">${lrQuestions.slice(0, 3).map((question) => renderQuestionCard(question, "timed")).join("")}</div>
       </article>
@@ -1432,6 +1698,7 @@ function renderPracticePage(route) {
 
   const grouped = [...new Set(data.questionBank.map((question) => question.family))];
   const adaptive = adaptiveDrillTarget();
+  const time = timeSummary();
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -1445,6 +1712,19 @@ function renderPracticePage(route) {
       <div class="dashboard-actions">
         <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start adaptive drill</a>
         <a class="button button--ghost" href="#/practice/timed">Start timed section</a>
+        <button class="button button--ghost" type="button" data-import-demo>Import outside score</button>
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Section / Drill History</h3>
+        <span class="status-pill">${Object.keys(state.attempts).length} attempts</span>
+      </div>
+      <div class="card-grid card-grid--four">
+        <section class="mini-card"><p class="mini-card__label">Resume</p><h4>${state.currentBlock.label}</h4><p>${state.currentBlock.unfinished} unfinished items before the block can clear.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Correct avg</p><h4>${time.correct || "1:24"}</h4><p>Seconds per correct question.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Wrong avg</p><h4>${time.wrong || "1:58"}</h4><p>Seconds per missed question.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Bookmarks</p><h4>${bookmarkCount()}</h4><p>Saved questions, drills, sections, and lessons.</p></section>
       </div>
     </article>
     <article class="panel panel--wide">
@@ -1497,6 +1777,9 @@ function renderPracticePage(route) {
 function renderReviewPage() {
   const weak = weakestFamily();
   const dueEntries = state.journal.filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending");
+  const families = familyAnalytics().slice(0, 6);
+  const time = timeSummary();
+  const split = rcPassageSplit();
   const trapGroups = state.journal.reduce((acc, entry) => {
     acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
     return acc;
@@ -1539,12 +1822,45 @@ function renderReviewPage() {
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Analytics</h3>
+        <span class="status-pill">Overview · Priorities · Questions</span>
+      </div>
+      <div class="analytics-tabs">
+        <section>
+          <p class="mini-card__label">Overview</p>
+          <h4>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</h4>
+          <p>Variance ${scoreVariance()} points. Study quality ${studyQualityScore()}/100.</p>
+        </section>
+        <section>
+          <p class="mini-card__label">Priorities</p>
+          <h4>${weak.family}</h4>
+          <p>Recommended next family from journal misses and local accuracy.</p>
+        </section>
+        <section>
+          <p class="mini-card__label">Questions</p>
+          <h4>${Object.keys(state.attempts).length} logged</h4>
+          <p>Correct avg ${time.correct || "n/a"}s · wrong avg ${time.wrong || "n/a"}s · review ${time.review || "n/a"}s.</p>
+        </section>
       </div>
       <div class="card-grid card-grid--four">
         <section class="mini-card"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy</p></section>
         <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>First try vs second try spread</p></section>
         <section class="mini-card"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Recent score stability</p></section>
         <section class="mini-card"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></section>
+      </div>
+      <div class="analytics-detail-grid">
+        <section class="transcript-block">
+          <p class="mini-card__label">Accuracy by question type</p>
+          ${families.map((item) => `
+            <div class="mastery-row compact-row">
+              <span>${item.family}</span><strong>${item.accuracy}%</strong><div><i style="width:${Math.max(8, item.accuracy)}%"></i></div>
+            </div>
+          `).join("")}
+        </section>
+        <section class="transcript-block">
+          <p class="mini-card__label">Final five + RC split</p>
+          <h4>${finalFiveAccuracy() || 60}% final-five accuracy</h4>
+          <p>RC target split: ${Math.round(split.read / 60)}:${String(split.read % 60).padStart(2, "0")} read/map · ${Math.round(split.questions / 60)}:${String(split.questions % 60).padStart(2, "0")} questions · ${Math.round(split.check / 60)}:${String(split.check % 60).padStart(2, "0")} final check.</p>
+        </section>
       </div>
     </article>
     <article class="panel">
@@ -1595,6 +1911,12 @@ function renderReviewPage() {
         <h3>Test Review</h3>
       </div>
       <p>Use this page as the shared review loop for local drills and official-link PT work. Save the exact trap, corrected takeaway, and blind-review outcome here.</p>
+      <div class="tool-row">
+        <button class="bookmark-button" type="button" data-section-tool="archive">Archive</button>
+        <button class="bookmark-button" type="button" data-section-tool="comment">Comment</button>
+        <button class="bookmark-button" type="button" data-section-tool="note">Sticky note</button>
+        <button class="bookmark-button" type="button" data-bookmark="review:current-section" data-bookmark-type="section">Bookmark</button>
+      </div>
     </article>
   `;
 }
@@ -1682,6 +2004,26 @@ function renderPlanPage() {
     </article>
     <article class="panel">
       <div class="panel__head">
+        <h3>Import your data</h3>
+        <span class="status-pill">${state.imports.length} imports</span>
+      </div>
+      <p>Bring in outside study history as score notes only: date, section, raw score, scaled score, timing issue, and next action.</p>
+      <button class="button button--ghost" type="button" data-import-demo>Import sample score</button>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Admissions lane</h3>
+        <span class="status-pill">Future module</span>
+      </div>
+      <div class="card-grid card-grid--four">
+        <section class="mini-card"><p class="mini-card__label">Applications</p><h4>Tracker</h4><p>School, deadline, status, essay stage.</p></section>
+        <section class="mini-card"><p class="mini-card__label">School data</p><h4>Targets</h4><p>Connect LSAT goal to admissions strategy.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Decisions</p><h4>Cycle view</h4><p>Decision tracker once applications start.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Scholarship</p><h4>Estimator</h4><p>Future merit-aid planning from score range.</p></section>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
         <h3>Support</h3>
       </div>
       <div class="journal-list">
@@ -1694,12 +2036,13 @@ function renderPlanPage() {
     </article>
     <article class="panel">
       <div class="panel__head">
-        <h3>Classes, Automations, Plugins</h3>
+        <h3>Pricing and gated features</h3>
+        <button class="status-pill status-pill--button" type="button" data-open-subscribe>Open tiers</button>
       </div>
       <div class="card-grid card-grid--three">
-        <section class="mini-card"><p class="mini-card__label">Classes</p><h4>Weekly live review slot</h4><p>Placeholder for future class scheduling.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Automations</p><h4>Remind me to blind review</h4><p>Product extension surface reserved for future integration.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Plugins</p><h4>Calendar + question help</h4><p>Reserved product surface for future workflows.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Core</p><h4>Self-study</h4><p>Dashboard, lessons, drills, review, plan.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Live</p><h4>Future classes</h4><p>Soft-gated live sessions and recordings.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Future support</h4><p>Tutor messaging and admissions strategy.</p></section>
       </div>
     </article>
   `;
@@ -1709,7 +2052,10 @@ function renderQuestionCard(question, context) {
   const attempt = state.attempts[question.id];
   return `
     <section class="question-card">
-      <p class="mini-card__label">${question.section} · ${question.family} · ${question.difficulty}</p>
+      <div class="question-card__meta">
+        <p class="mini-card__label">${question.section} · ${question.family} · ${question.difficulty}</p>
+        <button class="bookmark-button ${isBookmarked(question.id) ? "is-on" : ""}" type="button" data-bookmark="${question.id}" data-bookmark-type="question" aria-label="Bookmark question">${isBookmarked(question.id) ? "Saved" : "Save"}</button>
+      </div>
       <p>${question.prompt}</p>
       <h4>${question.question}</h4>
       <div class="answer-grid">
@@ -1742,6 +2088,68 @@ function renderQuestionCard(question, context) {
 }
 
 function wireInteractions(route) {
+  pageMount.querySelectorAll("[data-bookmark]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.bookmark;
+      if (state.bookmarks[id]) {
+        delete state.bookmarks[id];
+      } else {
+        state.bookmarks[id] = {
+          id,
+          type: button.dataset.bookmarkType || "item",
+          label: button.closest(".question-card")?.querySelector("h4")?.textContent || id,
+          savedAt: new Date().toISOString(),
+        };
+      }
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-skip-block]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const proceed = window.confirm(`You have ${state.currentBlock.unfinished} unfinished items. If you skip this practice block, JessiPreps will generate a new one from your analytics and this block will be archived.`);
+      if (!proceed) return;
+      state.currentBlock = { id: `block-${Date.now()}`, unfinished: 3, label: `Adaptive block: ${adaptiveDrillTarget().weak.family}` };
+      state.notifications.unshift({ id: `skip-${Date.now()}`, title: "Practice block refreshed", body: "A new adaptive block was generated from your current analytics.", read: false });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-import-demo]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.imports.unshift({ id: `import-${Date.now()}`, date: new Date().toISOString(), label: "Imported outside LR section", raw: "18/26", note: "Use official LawHub here, log results here." });
+      state.officialLogs.unshift({ id: `import-lawhub-${Date.now()}`, loggedAt: new Date().toISOString(), ptSection: "Imported LR section", rawScore: "18/26", scaledScore: "", timingNotes: "Imported from outside practice", reflection: "Target the next adaptive drill from this result." });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-section-tool]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.notifications.unshift({ id: `section-tool-${Date.now()}`, title: "Section tool saved", body: `${button.dataset.sectionTool} added to this section history row.`, read: false });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-add-notification]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.notifications.unshift({ id: `ratings-${Date.now()}`, title: "Understand your ratings", body: "80 means reliable mastery of hard official-style questions. 100 is stretch mastery across the hardest local sets.", read: false });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-open-subscribe]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.subscriptionIntent = "open";
+      saveState();
+      renderApp();
+    });
+  });
+
   pageMount.querySelectorAll("[data-question]").forEach((button) => {
     button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
   });
@@ -1996,6 +2404,9 @@ function answerQuestion(questionId, choice, context) {
     confidence: correct ? "steady" : "shaky",
     timeSeconds,
   };
+  if ((context || "").includes("drill") || (context || "").includes("timed")) {
+    state.currentBlock.unfinished = Math.max(0, (state.currentBlock.unfinished || 0) - 1);
+  }
 
   question.lessonIds.forEach((lessonId) => {
     if (correct) {

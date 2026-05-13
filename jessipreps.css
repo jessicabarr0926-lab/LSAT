@@ -254,8 +254,9 @@ body.sidebar-collapsed .main {
 
 .nav__link {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid transparent;
@@ -264,6 +265,13 @@ body.sidebar-collapsed .main {
     transform 160ms ease,
     background 160ms ease,
     border-color 160ms ease;
+}
+
+.nav__link small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .nav__link::before {
@@ -445,6 +453,24 @@ body.sidebar-collapsed .main {
 .button--ghost {
   background: transparent;
   border-color: var(--line);
+}
+
+.button.is-active,
+.icon-button {
+  border-color: rgba(124, 55, 92, 0.28);
+  background: var(--accent-soft);
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .button[disabled] {
@@ -911,6 +937,173 @@ body.sidebar-collapsed .main {
   background: rgba(47, 122, 82, 0.14);
   color: var(--success);
   border-color: rgba(47, 122, 82, 0.18);
+}
+
+.status-pill--button,
+.bookmark-button {
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.official-pips,
+.question-card__meta,
+.tool-row,
+.commitment-bar,
+.feature-lane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.official-pips,
+.commitment-bar {
+  justify-content: space-between;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.official-pips strong {
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.quality-dial {
+  width: min(180px, 100%);
+  aspect-ratio: 1;
+  margin: 10px auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background:
+    radial-gradient(circle at center, var(--panel) 0 56%, transparent 57%),
+    conic-gradient(var(--accent) var(--quality), rgba(124, 55, 92, 0.12) 0);
+}
+
+.quality-dial strong,
+.quality-dial span {
+  grid-area: 1 / 1;
+}
+
+.quality-dial strong {
+  font-size: 2rem;
+  transform: translateY(-8px);
+}
+
+.quality-dial span {
+  color: var(--muted);
+  transform: translateY(22px);
+}
+
+.feature-lane {
+  align-items: stretch;
+}
+
+.feature-lane section {
+  flex: 1 1 170px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.analytics-tabs,
+.analytics-detail-grid,
+.tier-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.analytics-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.analytics-tabs section,
+.tier-grid section {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  padding: 16px;
+}
+
+.analytics-detail-grid {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.compact-row {
+  margin-top: 10px;
+}
+
+.question-card__meta {
+  justify-content: space-between;
+}
+
+.bookmark-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.bookmark-button.is-on {
+  color: var(--success);
+  background: rgba(47, 122, 82, 0.12);
+  border-color: rgba(47, 122, 82, 0.24);
+}
+
+.floating-panel,
+.cookie-panel {
+  position: fixed;
+  z-index: 60;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgba(48, 28, 46, 0.18);
+}
+
+.floating-panel {
+  right: 24px;
+  top: 96px;
+  width: min(360px, calc(100vw - 32px));
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.notification-panel {
+  top: 330px;
+}
+
+.notice-item {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.cookie-panel {
+  right: 24px;
+  bottom: 18px;
+  width: min(520px, calc(100vw - 32px));
+  border-radius: 20px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.cookie-panel p {
+  margin: 0;
+}
+
+.cookie-panel div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .scene-stack {
