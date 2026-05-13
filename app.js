@@ -107,6 +107,10 @@ function defaultState() {
     },
     officialLogs: [],
     bookmarks: {},
+    adaptiveMode: "weakness",
+    studyCalendar: [],
+    mistakeTags: {},
+    mistakeRetries: {},
     notifications: [
       { id: "welcome", title: "Welcome to JessiPreps", body: "Start with one sprint: learn, drill, review, log, stop.", read: false },
       { id: "writing", title: "LSAT Writing reminder", body: "Confirm whether a valid argumentative writing sample is already on file.", read: false },
@@ -168,6 +172,10 @@ function loadState() {
       onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
       officialLogs: parsed.officialLogs || [],
       bookmarks: parsed.bookmarks || {},
+      adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
+      studyCalendar: parsed.studyCalendar || [],
+      mistakeTags: parsed.mistakeTags || {},
+      mistakeRetries: parsed.mistakeRetries || {},
       notifications: parsed.notifications || base.notifications,
       imports: parsed.imports || [],
       cookieConsent: parsed.cookieConsent || "",
@@ -429,17 +437,32 @@ function daysUntilTest() {
 }
 
 function adaptiveDrillTarget() {
+  const mode = state.adaptiveMode || "weakness";
   const journalFamilies = state.journal.reduce((acc, entry) => {
     if (entry.family) acc[entry.family] = (acc[entry.family] || 0) + 1;
     return acc;
   }, {});
   const journalFamily = Object.entries(journalFamilies).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const weak = journalFamily ? { family: journalFamily, score: accuracyForFamily(journalFamily) || 0 } : weakestFamily();
+  let weak = journalFamily ? { family: journalFamily, score: accuracyForFamily(journalFamily) || 0 } : weakestFamily();
+  if (mode === "speed") {
+    const slow = familyAnalytics()
+      .filter((item) => item.avgTime)
+      .sort((a, b) => (b.avgTime || 0) - (a.avgTime || 0))[0];
+    if (slow) weak = { family: slow.family, score: slow.accuracy };
+  }
+  if (mode === "mixed") {
+    weak = { family: "Flaw", score: accuracyForFamily("Flaw") || 0 };
+  }
+  if (mode === "accuracy") {
+    const shaky = familyAnalytics().filter((item) => item.accuracy < 75)[0];
+    if (shaky) weak = { family: shaky.family, score: shaky.accuracy };
+  }
   const preset =
+    mode === "mixed" ? data.drillPresets.find((item) => item.id === "mixed-timed") :
     data.drillPresets.find((item) => item.families.includes(weak.family)) ||
     data.drillPresets.find((item) => item.id === "gap-work") ||
     data.drillPresets[0];
-  return { weak, preset };
+  return { weak, preset, mode };
 }
 
 function lastSavedLabel() {
@@ -610,6 +633,86 @@ function buildDrillAnalysis(family) {
     avgTime,
     targetTime,
   };
+}
+
+function changedAnswerStats() {
+  const entries = state.journal.filter((entry) => entry.secondPassAnswer);
+  const stats = { rightToWrong: 0, wrongToRight: 0, sameWrong: 0, sameRight: 0 };
+  entries.forEach((entry) => {
+    const question = findQuestion(entry.questionId);
+    if (!question) return;
+    const timed = state.attempts[entry.questionId]?.choice;
+    const br = parseAnswerLetter(entry.secondPassAnswer);
+    if (timed === undefined || br === null) return;
+    const timedRight = timed === question.answer;
+    const brRight = br === question.answer;
+    if (timedRight && !brRight) stats.rightToWrong += 1;
+    else if (!timedRight && brRight) stats.wrongToRight += 1;
+    else if (!timedRight && !brRight) stats.sameWrong += 1;
+    else stats.sameRight += 1;
+  });
+  return stats;
+}
+
+function parseAnswerLetter(value) {
+  const text = String(value || "").trim().toUpperCase();
+  const first = text[0];
+  if (!first || first < "A" || first > "E") return null;
+  return first.charCodeAt(0) - 65;
+}
+
+function blindReviewDiagnosis(entry) {
+  const question = findQuestion(entry.questionId);
+  if (!question) return "review";
+  const timed = state.attempts[entry.questionId]?.choice;
+  const br = parseAnswerLetter(entry.secondPassAnswer);
+  if (timed === undefined || br === null) return "incomplete";
+  const timedRight = timed === question.answer;
+  const brRight = br === question.answer;
+  if (!timedRight && brRight) return "timing";
+  if (!timedRight && !brRight) return "concept";
+  if (timedRight && !brRight) return "confidence";
+  return "mastery";
+}
+
+function mistakeReasonOptions() {
+  return [
+    "Misread stimulus",
+    "Misread question stem",
+    "Wrong answer trap",
+    "Timing issue",
+    "Narrowed to two",
+    "Did not understand argument",
+    "Careless error",
+  ];
+}
+
+function generatedStudyCalendar() {
+  if (state.studyCalendar.length) return state.studyCalendar;
+  const weak = weakestFamily().family;
+  return [
+    { day: "Monday", task: `${weak} micro-lesson + 10 targeted questions`, type: "Lesson + drill" },
+    { day: "Tuesday", task: "RC passage map + review every wrong answer", type: "Reading Comprehension" },
+    { day: "Wednesday", task: "Adaptive drill: weakness targeting", type: "Adaptive practice" },
+    { day: "Thursday", task: "35-minute timed LR section", type: "Timed section" },
+    { day: "Friday", task: "Forced Blind Review + mistake bank tagging", type: "Review" },
+    { day: "Saturday", task: "Full test-day simulator or two timed sections", type: "Stamina" },
+    { day: "Sunday", task: "Error log cleanup and light concept review", type: "Reset" },
+  ];
+}
+
+function regenerateStudyCalendar() {
+  const weak = weakestFamily().family;
+  const adaptive = adaptiveDrillTarget();
+  state.studyCalendar = [
+    { day: "Monday", task: `${weak} lesson, Magoosh-style quick card, and 8 easy questions`, type: "Concept" },
+    { day: "Tuesday", task: `${adaptive.preset.title}: 6-question accuracy block`, type: "Adaptive drill" },
+    { day: "Wednesday", task: "RC passage set with paragraph role map", type: "RC" },
+    { day: "Thursday", task: "35-minute strict test-day section", type: "Timed" },
+    { day: "Friday", task: "Blind Review: classify timing vs concept vs confidence", type: "Review" },
+    { day: "Saturday", task: "Full PrepTest simulator, then no explanations until review", type: "Full test" },
+    { day: "Sunday", task: "Mistake bank retry + one reusable rule per miss", type: "Recovery" },
+  ];
 }
 
 function qtScenesForPhase(lesson, phase) {
@@ -2136,6 +2239,18 @@ function renderTestResults() {
   `;
 }
 
+function renderFlaggedAccuracyLabel() {
+  const sections = testSections().filter((section) => section.scored);
+  const flagged = sections.flatMap((section) =>
+    section.questions
+      .map((question) => ({ section, question, key: `${section.id}:${question.id}` }))
+      .filter((item) => state.testDay.flagged[item.key])
+  );
+  if (!flagged.length) return "n/a";
+  const correct = flagged.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length;
+  return `${Math.round((correct / flagged.length) * 100)}%`;
+}
+
 function renderPracticePage(route) {
   if (route.subtype === "test-day") {
     return renderTestDayPage(route);
@@ -2209,6 +2324,14 @@ function renderPracticePage(route) {
         <span class="status-pill">Recommended: ${adaptive.weak.family}</span>
       </div>
       <p>The system chooses this session from your weakest family, unfinished review, and recent misses, so you do not have to manually pick RC Structure vs Assumption vs Flaw every time.</p>
+      <div class="adaptive-mode-row" role="group" aria-label="Adaptive drill mode">
+        ${[
+          ["weakness", "Weaknesses", "Recent misses and weakest family"],
+          ["accuracy", "Accuracy", "Easier build-up before speed"],
+          ["speed", "Speed", "Slowest family by timing"],
+          ["mixed", "Mixed Review", "Broad maintenance set"],
+        ].map(([mode, label, desc]) => `<button class="adaptive-mode ${state.adaptiveMode === mode ? "is-active" : ""}" type="button" data-adaptive-mode="${mode}"><strong>${label}</strong><span>${desc}</span></button>`).join("")}
+      </div>
       <div class="dashboard-actions">
         <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start adaptive drill</a>
         <a class="button button--ghost" href="#/practice/timed">Open test center</a>
@@ -2255,6 +2378,22 @@ function renderPracticePage(route) {
       </div>
       <div class="card-grid card-grid--two">
         ${data.drillPresets.map((preset) => `<a class="lesson-card" href="#/practice/drill/${preset.id}"><h4>${preset.title}</h4><p>${preset.rationale}</p></a>`).join("")}
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel__head">
+        <h3>Micro Lessons</h3>
+        <a class="text-link" href="#/learn">Open syllabus</a>
+      </div>
+      <div class="journal-list">
+        ${familyAnalytics().slice(0, 4).map((item) => `
+          <section class="journal-card">
+            <p class="mini-card__label">${item.family}</p>
+            <strong>${item.family.includes("Assumption") ? "Find the missing bridge." : item.family.includes("RC") ? "Name the passage job before details." : "Classify the task first."}</strong>
+            <p>Spot it, use the core method, avoid the common trap, then launch a 5-question mini drill.</p>
+            <a class="text-link" href="#/practice/drill/${adaptive.preset.id}">Mini drill</a>
+          </section>
+        `).join("")}
       </div>
     </article>
     <article class="panel">
@@ -2355,6 +2494,7 @@ function renderReviewPage(route = {}) {
   const families = familyAnalytics().slice(0, 6);
   const time = timeSummary();
   const split = rcPassageSplit();
+  const changed = changedAnswerStats();
   const trapGroups = state.journal.reduce((acc, entry) => {
     acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
     return acc;
@@ -2381,6 +2521,7 @@ function renderReviewPage(route = {}) {
                       <p>${question?.prompt || entry.note}</p>
                       <label class="br-field"><span>Second-pass answer</span><input data-br-answer="${index}" placeholder="A, B, C, D, or your own prediction"></label>
                       <label class="br-field"><span>Confidence</span><select data-br-confidence="${index}"><option>low</option><option>medium</option><option>high</option></select></label>
+                      <label class="br-field"><span>Mistake reason</span><select data-br-reason="${index}">${mistakeReasonOptions().map((reason) => `<option>${reason}</option>`).join("")}</select></label>
                       <label class="br-field br-field--wide"><span>Rule you will reuse</span><textarea data-br-note="${index}" rows="3" placeholder="Name the gap, trap, and corrected rule.">${entry.whyWrong || ""}</textarea></label>
                       <div class="dashboard-actions">
                         <button class="button button--primary" data-complete-br="${index}" type="button">Unlock explanation</button>
@@ -2421,6 +2562,12 @@ function renderReviewPage(route = {}) {
         <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>First try vs second try spread</p></section>
         <section class="mini-card"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Recent score stability</p></section>
         <section class="mini-card"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></section>
+      </div>
+      <div class="card-grid card-grid--four">
+        <section class="mini-card"><p class="mini-card__label">Changed right → wrong</p><h4>${changed.rightToWrong}</h4><p>Second-guessing risk.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Changed wrong → right</p><h4>${changed.wrongToRight}</h4><p>Knowledge exists; speed is the issue.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Flagged accuracy</p><h4>${renderFlaggedAccuracyLabel()}</h4><p>How well flags predict risk.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Mistake reasons</p><h4>${Object.keys(state.mistakeTags || {}).length}</h4><p>Tagged misses in the bank.</p></section>
       </div>
       <div class="analytics-detail-grid">
         <section class="transcript-block">
@@ -2493,11 +2640,42 @@ function renderReviewPage(route = {}) {
         <button class="bookmark-button" type="button" data-bookmark="review:current-section" data-bookmark-type="section">Bookmark</button>
       </div>
     </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Mistake Bank</h3>
+        <span class="status-pill">${state.journal.length} saved misses</span>
+      </div>
+      <div class="mistake-bank-list">
+        ${
+          state.journal.length
+            ? state.journal.slice(0, 10).map((entry, index) => {
+                const question = findQuestion(entry.questionId);
+                const diagnosis = blindReviewDiagnosis(entry);
+                return `
+                  <section class="journal-card mistake-bank-card">
+                    <div>
+                      <p class="mini-card__label">${entry.family} · ${diagnosis}</p>
+                      <h4>${question?.question || entry.trapPattern}</h4>
+                      <p>${entry.note || entry.whyWrong || "Add a reusable rule after review."}</p>
+                    </div>
+                    <label class="br-field"><span>Mistake reason</span><select data-mistake-tag="${index}">${mistakeReasonOptions().map((reason) => `<option ${state.mistakeTags[entry.questionId] === reason ? "selected" : ""}>${reason}</option>`).join("")}</select></label>
+                    <div class="dashboard-actions">
+                      <button class="button button--ghost" type="button" data-retry-mistake="${index}">${state.mistakeRetries[entry.questionId] ? "Retry logged" : "Mark retry correct"}</button>
+                      <a class="button button--ghost" href="#/practice/drill/${adaptiveDrillTarget().preset.id}">Retry related drill</a>
+                    </div>
+                  </section>
+                `;
+              }).join("")
+            : `<p class="muted">No mistake bank entries yet. Missed questions from drills, lessons, and test mode will collect here.</p>`
+        }
+      </div>
+    </article>
   `;
 }
 
 function renderPlanPage() {
   const profile = activeProfile();
+  const calendar = generatedStudyCalendar();
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -2544,6 +2722,25 @@ function renderPlanPage() {
           <li>Do one Blind Review Block</li>
           <li>Take one mixed timed set</li>
         </ol>
+        <button class="button button--ghost" type="button" data-regenerate-plan>Regenerate plan based on weaknesses</button>
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Blueprint-style calendar</p>
+          <h3>Weekly study schedule</h3>
+        </div>
+        <span class="status-pill">${state.plan.weeklyHours} hrs/week</span>
+      </div>
+      <div class="study-calendar-grid">
+        ${calendar.map((item) => `
+          <section class="study-calendar-day">
+            <p class="mini-card__label">${item.day}</p>
+            <strong>${item.type}</strong>
+            <span>${item.task}</span>
+          </section>
+        `).join("")}
       </div>
     </article>
     <article class="panel panel--wide">
@@ -2972,6 +3169,52 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-adaptive-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.adaptiveMode = button.dataset.adaptiveMode;
+      state.currentBlock = { id: `block-${Date.now()}`, unfinished: 6, label: `Adaptive block: ${button.textContent.trim().split(/\s+/)[0]}` };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-mistake-tag]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const entry = state.journal[Number(input.dataset.mistakeTag)];
+      if (!entry) return;
+      state.mistakeTags[entry.questionId] = input.value;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-retry-mistake]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const entry = state.journal[Number(button.dataset.retryMistake)];
+      if (!entry) return;
+      state.mistakeRetries[entry.questionId] = {
+        correct: true,
+        retriedAt: new Date().toISOString(),
+      };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-regenerate-plan]").forEach((button) => {
+    button.addEventListener("click", () => {
+      regenerateStudyCalendar();
+      state.notifications.unshift({
+        id: `plan-${Date.now()}`,
+        title: "Study plan regenerated",
+        body: `This week now targets ${weakestFamily().family} plus timed practice and Blind Review.`,
+        read: false,
+      });
+      saveState();
+      renderApp();
+    });
+  });
+
   pageMount.querySelectorAll("[data-live-reserve]").forEach((button) => {
     button.addEventListener("click", () => {
       const sessionId = button.dataset.liveReserve;
@@ -3138,8 +3381,11 @@ function wireInteractions(route) {
       entry.reviewedAt = new Date().toISOString();
       entry.secondPassAnswer = pageMount.querySelector(`[data-br-answer="${button.dataset.completeBr}"]`)?.value || "";
       entry.reviewConfidence = pageMount.querySelector(`[data-br-confidence="${button.dataset.completeBr}"]`)?.value || "medium";
+      entry.mistakeReason = pageMount.querySelector(`[data-br-reason="${button.dataset.completeBr}"]`)?.value || "Wrong answer trap";
+      state.mistakeTags[entry.questionId] = entry.mistakeReason;
       const note = pageMount.querySelector(`[data-br-note="${button.dataset.completeBr}"]`)?.value;
       if (note) entry.note = note;
+      entry.issueType = blindReviewDiagnosis(entry);
       saveState();
       renderApp();
     });
@@ -3411,6 +3657,7 @@ function answerQuestion(questionId, choice, context) {
         family: question.family,
         trapPattern: question.trapPattern,
         confidence: "high",
+        mistakeReason: "Wrong answer trap",
         blindReviewOutcome: "pending",
         wrongChoiceText,
         whyWrong: buildMissAnalysis(question),

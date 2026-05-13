@@ -2445,6 +2445,63 @@ body[data-route="dashboard"] #todaySidebarCard {
   margin-top: 6px;
 }
 
+.adaptive-mode-row,
+.study-calendar-grid,
+.mistake-bank-list {
+  display: grid;
+  gap: 12px;
+}
+
+.adaptive-mode-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.adaptive-mode {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  cursor: pointer;
+}
+
+.adaptive-mode.is-active {
+  background: var(--accent-soft);
+  border-color: rgba(124, 55, 92, 0.28);
+}
+
+.adaptive-mode span,
+.study-calendar-day span {
+  color: var(--muted);
+}
+
+.study-calendar-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.study-calendar-day,
+.mistake-bank-card {
+  display: grid;
+  gap: 10px;
+}
+
+.study-calendar-day {
+  min-height: 170px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.mistake-bank-card {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.32fr);
+  align-items: start;
+}
+
 body.test-day-active .sidebar,
 body.test-day-active .topbar,
 body.test-day-active #heroMount,
@@ -2859,7 +2916,10 @@ body.test-day-active .page-grid {
 
   .passage-reading-layout,
   .passage-questions-layout,
-  .test-rc-layout {
+  .test-rc-layout,
+  .adaptive-mode-row,
+  .study-calendar-grid,
+  .mistake-bank-card {
     grid-template-columns: 1fr;
   }
   .passage-questions-text {
@@ -2990,7 +3050,10 @@ body.test-day-active .page-grid {
   .test-rc-layout,
   .test-topbar,
   .test-bottombar,
-  .test-choice {
+  .test-choice,
+  .adaptive-mode-row,
+  .study-calendar-grid,
+  .mistake-bank-card {
     grid-template-columns: 1fr;
   }
 
