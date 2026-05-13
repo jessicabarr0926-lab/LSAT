@@ -1595,18 +1595,34 @@ function renderLessonPlayer(lesson) {
           <summary>Concept</summary>
           <div class="scene-stack">${lesson.scenes.slice(0, 2).map((scene) => `<section class="scene-card"><h4>${scene.title}</h4><p>${scene.explanation}</p><div class="scene-card__cue">${scene.actionCue}</div></section>`).join("")}</div>
           ${lesson.conceptSummary ? `<div class="recommendation-box"><strong>Concept summary:</strong> ${lesson.conceptSummary}</div>` : ""}
+          ${lesson.methodSteps ? `
+            <section class="content-boost-card">
+              <p class="mini-card__label">Professor Maya method</p>
+              <ol>${lesson.methodSteps.map((step) => `<li>${step}</li>`).join("")}</ol>
+            </section>
+          ` : ""}
         </details>
         <details id="example" class="lesson-accordion">
           <summary>Worked Example</summary>
           <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
           <p>${lesson.workedExample.reasoning}</p>
+          ${lesson.professorNotes ? `<div class="scene-stack">${lesson.professorNotes.map((note) => `<section class="scene-card"><h4>Teaching note</h4><p>${note}</p></section>`).join("")}</div>` : ""}
         </details>
         <details id="traps" class="lesson-accordion">
           <summary>Trap Warnings</summary>
           <p>${lesson.trapExplanation}</p>
+          ${lesson.trapWarnings ? `<ul class="trap-list">${lesson.trapWarnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>` : ""}
         </details>
         <details id="mastery" class="lesson-accordion" open>
           <summary>Knowledge check + mastery drill</summary>
+          ${lesson.miniDrill ? `
+            <section class="content-boost-card">
+              <p class="mini-card__label">Mini drill</p>
+              <h4>${lesson.miniDrill.prompt}</h4>
+              <ol>${lesson.miniDrill.steps.map((step) => `<li>${step}</li>`).join("")}</ol>
+              <p class="microcopy">${lesson.miniDrill.successRule}</p>
+            </section>
+          ` : ""}
           ${quiz ? `
             <section class="quiz-card">
               <p class="mini-card__label">Checkpoint</p>
@@ -3094,7 +3110,12 @@ function renderQuestionCard(question, context) {
       <div id="feedback-${question.id}" class="answer-feedback">
         ${
           attempt
-            ? `<strong>${attempt.correct ? "Correct." : "Review this."}</strong><p>${question.explanation}</p><p class="microcopy">Trap pattern: ${question.trapPattern}</p>${!attempt.correct && attempt.wrongChoiceText ? `<p class="microcopy">You picked: ${attempt.wrongChoiceText}</p>` : ""}`
+            ? `<strong>${attempt.correct ? "Correct." : "Review this."}</strong><p>${question.explanation}</p>
+              ${question.explanationSteps ? `<ol class="explanation-steps">${question.explanationSteps.map((step) => `<li>${step}</li>`).join("")}</ol>` : ""}
+              <p class="microcopy">Trap pattern: ${question.trapPattern}</p>
+              ${!attempt.correct && question.wrongAnswerDiagnostics ? `<div class="wrong-diagnostic">${question.wrongAnswerDiagnostics.map((item) => `<p>${item}</p>`).join("")}</div>` : ""}
+              ${!attempt.correct && question.onTheSpotFix ? `<p class="microcopy"><strong>Fix on the spot:</strong> ${question.onTheSpotFix}</p>` : ""}
+              ${!attempt.correct && attempt.wrongChoiceText ? `<p class="microcopy">You picked: ${attempt.wrongChoiceText}</p>` : ""}`
             : ""
         }
       </div>

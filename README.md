@@ -90,6 +90,8 @@ V2 keeps the project static and localStorage-based. Backend login, real-time AI 
 
 Coach now works as a local mini-chat assistant. It answers LSAT questions using the lesson library, question bank, RC passages, attempts, wrong-answer journal, and mistake tags. It also tracks answered questions, summarizes common mistake patterns, and gives an on-the-spot fix plus a linked next drill.
 
+The content boost layer adds richer teaching material to every lesson and question: Professor Maya method steps, trap warnings, mini-drill prompts, teaching notes, explanation steps, wrong-answer diagnostics, and immediate correction rules.
+
 ## Notes
 
 The practice questions are original LSAT-style examples, not copied official question text. Your PrepTest 130 score and review patterns are used as study analytics.

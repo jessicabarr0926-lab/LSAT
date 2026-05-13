@@ -2950,6 +2950,45 @@ body.test-day-active .page-grid {
   color: var(--muted);
 }
 
+.content-boost-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  margin: 16px 0;
+}
+
+.content-boost-card ol,
+.explanation-steps {
+  margin: 12px 0 0;
+  padding-left: 22px;
+}
+
+.content-boost-card li,
+.explanation-steps li,
+.trap-list li {
+  margin: 8px 0;
+}
+
+.trap-list {
+  margin: 14px 0 0;
+  padding-left: 22px;
+}
+
+.wrong-diagnostic {
+  display: grid;
+  gap: 8px;
+  border-left: 4px solid rgba(162, 61, 75, 0.35);
+  padding: 10px 0 10px 14px;
+  margin: 12px 0;
+  background: rgba(255, 245, 247, 0.72);
+  border-radius: 0 14px 14px 0;
+}
+
+.wrong-diagnostic p {
+  margin: 0;
+}
+
 @media (max-width: 1200px) {
   .app-shell {
     grid-template-columns: 1fr;

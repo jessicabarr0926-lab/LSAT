@@ -363,6 +363,67 @@ const v2QuestionFamilies = [
 const v2DifficultyCycle = ['easy', 'medium', 'medium', 'hard'];
 const v2MistakeReasons = ['Misread stimulus', 'Wrong answer trap', 'Timing issue', 'Narrowed to two', 'Careless error', 'Did not understand argument'];
 
+function contentBoostMethodSteps(family) {
+  const shared = {
+    'RC Structure': ['Read for paragraph jobs, not facts.', 'Name the shift: old view, complication, author response.', 'Choose the answer that describes movement, not topic.'],
+    'RC Inference': ['Locate the proof sentence.', 'Soften the answer until it is fully supported.', 'Reject choices that require outside knowledge or stronger force.'],
+    'RC Main Point': ['Find the author final position.', 'Attach the reason or contrast that makes it matter.', 'Reject answers that are only one paragraph wide.'],
+    'RC Function': ['Identify the local claim.', 'Ask why the author included it.', 'Match the answer to support, contrast, example, concession, or qualification.'],
+    'RC Attitude': ['Underline evaluative words.', 'Translate tone into plain English.', 'Avoid extreme emotions unless the passage earns them.'],
+    Flaw: ['Find the conclusion.', 'Name what the evidence fails to prove.', 'Match the answer to that exact broken move.'],
+    Assumption: ['Find the gap between evidence and conclusion.', 'Prephrase the missing bridge.', 'Negate contenders and keep only what breaks the argument.'],
+    Strengthen: ['Name the weak bridge.', 'Look for new information that supports that bridge.', 'Prefer direct support over background relevance.'],
+    Weaken: ['Name the weak bridge.', 'Look for new information that makes the bridge fail.', 'Avoid answers that merely discuss the topic.'],
+    'Conditional Logic': ['Translate the rule into X -> Y.', 'Check the contrapositive.', 'Do not reverse or negate unless the stimulus permits it.'],
+    'Must Be True': ['List only proven facts.', 'Match the weakest true claim.', 'Reject choices that are plausible but not forced.'],
+    'Role / Method / Technique': ['Mark conclusion and support.', 'Name the sentence job.', 'Choose function language, not content summary.'],
+    'Resolve / Explain': ['Keep both facts true.', 'Find what makes the surprise unsurprising.', 'Reject explanations that solve only one side.'],
+    Principle: ['Name the decision rule.', 'Match the rule to the exact conduct or judgment.', 'Avoid broad slogans.'],
+    'Parallel Flaw': ['Abstract the bad skeleton.', 'Ignore topic camouflage.', 'Match the same invalid move.'],
+    'Point at Issue': ['Turn the answer into a yes/no question.', 'Ask how each speaker would answer.', 'Keep only direct disagreement.'],
+  };
+  return shared[family] || ['Classify the task.', 'Predict the job before answers.', 'Choose the answer that proves the exact job.'];
+}
+
+function contentBoostTrapWarnings(family) {
+  const warnings = {
+    Flaw: ['Causal answers are tempting when the stimulus only shows timing or correlation.', 'A true criticism is not enough unless it criticizes the argument actually made.'],
+    Assumption: ['Many answers strengthen without being required.', 'If negating the answer only makes the argument less pretty, keep looking.'],
+    Strengthen: ['Background facts feel helpful but may not touch the gap.', 'Do not reward an answer for supporting the conclusion topic in general.'],
+    Weaken: ['Attacking a premise is different from attacking the support relationship.', 'A weakener can be modest; it only needs to hurt the argument.'],
+    'RC Structure': ['A topic summary is not a structure answer.', 'Do not choose an answer that skips the author final turn.'],
+    'RC Inference': ['Strong words like all, never, and proves usually overreach.', 'An answer can be true in real life and still unsupported by the passage.'],
+    'Conditional Logic': ['Only if introduces the necessary condition.', 'Contrapositive is valid; reverse is not.'],
+  };
+  return warnings[family] || ['Familiar wording is not proof.', 'Reject answers that change force, role, direction, or scope.'];
+}
+
+function contentBoostMiniDrill(family) {
+  return {
+    prompt: `Before answers, write one plain-English prediction for this ${family} task.`,
+    steps: ['Name the question family.', 'Say the burden in one sentence.', 'Predict what the right answer must do.', 'Eliminate anything that changes the job.'],
+    successRule: `You are ready to move on when you can explain why the trap is attractive and why it still fails the ${family} job.`,
+  };
+}
+
+function contentBoostQuestionDiagnostics(question) {
+  const steps = contentBoostMethodSteps(question.family);
+  const traps = contentBoostTrapWarnings(question.family);
+  return {
+    explanationSteps: [
+      `Task: this is a ${question.family} question, so the answer must perform that specific job.`,
+      `Proof: ${question.explanation}`,
+      `Method: ${steps[0]} ${steps[1] || ''}`,
+    ],
+    wrongAnswerDiagnostics: [
+      `Trap pattern: ${question.trapPattern || 'familiar wording without proof'}.`,
+      `Likely mistake: ${question.mistakeReason || 'Wrong answer trap'}.`,
+      `Fix now: ${traps[0] || 'Return to the task before choosing.'}`,
+    ],
+    onTheSpotFix: steps.join(' -> '),
+  };
+}
+
 function v2PromptForFamily(family, index) {
   const topic = ['public transit', 'museum funding', 'school tutoring', 'workplace scheduling', 'city gardens', 'digital archives'][index % 6];
   if (family.section === 'RC') {
@@ -400,7 +461,7 @@ function v2ChoicesForFamily(family, index) {
 function buildV2OriginalQuestion(index) {
   const family = v2QuestionFamilies[index % v2QuestionFamilies.length];
   const difficulty = v2DifficultyCycle[index % v2DifficultyCycle.length];
-  return {
+  const question = {
     id: `v2-original-${String(index + 1).padStart(3, '0')}`,
     section: family.section,
     family: family.family,
@@ -418,6 +479,7 @@ function buildV2OriginalQuestion(index) {
     mistakeReason: v2MistakeReasons[index % v2MistakeReasons.length],
     source: 'JessiPreps original V2',
   };
+  return Object.assign(question, contentBoostQuestionDiagnostics(question));
 }
 
 const v2AdditionalRcPassages = [
@@ -486,6 +548,13 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         caption: scene.actionCue,
       }));
       lesson.conceptSummary = lesson.conceptSummary || lesson.summary;
+      lesson.methodSteps = lesson.methodSteps || contentBoostMethodSteps(family);
+      lesson.trapWarnings = lesson.trapWarnings || contentBoostTrapWarnings(family);
+      lesson.miniDrill = lesson.miniDrill || contentBoostMiniDrill(family);
+      lesson.professorNotes = lesson.professorNotes || [
+        `Professor Maya framing: ${lesson.title} is not about memorizing labels; it is about knowing what job the answer must do.`,
+        `Relatable check: if two answers feel close, slow down and ask which one actually proves the task instead of sounding familiar.`,
+      ];
       lesson.quiz = lesson.quiz || {
         prompt: `What is the safest first move for ${lesson.title}?`,
         choices: ['Name the task before reading answers', 'Pick the answer with familiar words', 'Choose the strongest-sounding claim', 'Skip the stem and scan choices'],
@@ -506,6 +575,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || [];
       question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
       question.source = question.source || 'JessiPreps original';
+      Object.assign(question, contentBoostQuestionDiagnostics(question));
     });
     const existingIds = new Set(data.questionBank.map((question) => question.id));
     let index = 0;
@@ -532,6 +602,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || ['rc-structure-map'];
         question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
         question.source = question.source || 'JessiPreps original RC';
+        Object.assign(question, contentBoostQuestionDiagnostics(question));
       });
     });
   }
