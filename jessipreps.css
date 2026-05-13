@@ -138,8 +138,8 @@ body.sidebar-collapsed .sidebar__close {
 
 .sidebar-fab {
   position: fixed;
-  left: 28px;
-  top: 28px;
+  left: 18px;
+  top: 18px;
   z-index: 50;
 }
 
@@ -178,6 +178,10 @@ body.sidebar-collapsed.sidebar-open .sidebar {
 
 body.sidebar-collapsed .main {
   grid-column: 1 / -1;
+}
+
+body.sidebar-collapsed .topbar {
+  padding-left: 64px;
 }
 
 .brand,
@@ -435,6 +439,19 @@ body.sidebar-collapsed .main {
   align-items: center;
 }
 
+.profile-chip {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #af5f87);
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .topbar-search {
   display: grid;
   grid-template-columns: auto minmax(110px, 190px);
@@ -531,7 +548,27 @@ body.sidebar-collapsed .main {
 }
 
 .dashboard-overview .dashboard-card--hero {
-  grid-column: span 8;
+  grid-column: span 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  align-items: center;
+  min-height: 300px;
+}
+
+.dashboard-overview .dashboard-card--hero .dashboard-card__head {
+  grid-column: 1 / -1;
+}
+
+.dashboard-overview .dashboard-card--hero > p,
+.dashboard-overview .dashboard-card--hero .dashboard-actions {
+  grid-column: 1;
+}
+
+.dashboard-overview .dashboard-card--hero .hero-illustration {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  justify-self: center;
+  align-self: center;
 }
 
 .interactive-card {
@@ -1476,6 +1513,12 @@ body.sidebar-collapsed .main {
   align-items: center;
 }
 
+.lesson-row > span:not(.lesson-row__status) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .lesson-row__status {
   width: 30px;
   height: 30px;
@@ -1531,7 +1574,7 @@ body.sidebar-collapsed .main {
   background: rgba(255, 255, 255, 0.72);
 }
 
-.section-result-card div {
+.section-result-card > div:first-child {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -2190,8 +2233,24 @@ body.sidebar-collapsed .main {
     grid-column: span 1;
   }
 
+  .dashboard-overview .dashboard-card--hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-overview .dashboard-card--hero .dashboard-card__head,
+  .dashboard-overview .dashboard-card--hero > p,
+  .dashboard-overview .dashboard-card--hero .dashboard-actions,
+  .dashboard-overview .dashboard-card--hero .hero-illustration {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .topbar > div:first-child {
     max-width: none;
+  }
+
+  body.sidebar-collapsed .topbar {
+    padding-left: 0;
   }
 
   .topbar__actions {

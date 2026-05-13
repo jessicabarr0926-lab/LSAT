@@ -334,10 +334,22 @@ function renderAccuracyGrid(questions, limit = 30) {
   const cells = questions.slice(0, limit).map((question, index) => {
     const attempt = state.attempts[question.id];
     const cls = !attempt ? "is-empty" : attempt.correct ? "is-correct" : "is-wrong";
+    const color = !attempt ? "#d7d3df" : attempt.correct ? "#2f9d68" : "#d85a66";
     const label = `${question.family} Q${index + 1}: ${!attempt ? "unseen" : attempt.correct ? "correct" : "missed"}`;
-    return `<span class="${cls}" title="${label}" aria-label="${label}"></span>`;
+    return `<span class="${cls}" style="display:block;width:10px;height:10px;border-radius:3px;background:${color}" title="${label}" aria-label="${label}"></span>`;
   });
-  return `<div class="accuracy-grid">${cells.join("")}</div>`;
+  return `<div class="accuracy-grid" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px;margin-top:10px">${cells.join("")}</div>`;
+}
+
+function renderResultGrid(questions, total, missedEvery = 5) {
+  const cells = Array.from({ length: total }, (_, index) => {
+    const question = questions[index % Math.max(1, questions.length)];
+    const wrong = index % missedEvery === 0 || index === total - 2;
+    const cls = wrong ? "is-wrong" : "is-correct";
+    const label = `${question?.family || "Section"} Q${index + 1}: ${wrong ? "missed" : "correct"}`;
+    return `<span class="${cls}" style="display:block;width:10px;height:10px;border-radius:3px;background:${wrong ? "#d85a66" : "#2f9d68"}" title="${label}" aria-label="${label}"></span>`;
+  });
+  return `<div class="accuracy-grid" style="display:flex;flex-wrap:wrap;gap:5px;min-height:34px;margin-top:auto">${cells.join("")}</div>`;
 }
 
 function lessonUnits() {
@@ -859,7 +871,7 @@ function renderRouteMeta(route) {
 
 function renderPage(route) {
   stopLessonPlayback();
-  heroMount.innerHTML = route.page === "dashboard" ? renderDashboardHero() : "";
+  heroMount.innerHTML = "";
   const pageRenderers = {
     dashboard: renderDashboardPage,
     learn: renderLearnPage,
@@ -1817,7 +1829,7 @@ function renderPrepTestResults(id) {
           <a class="section-result-card interactive-card" href="#section-${index + 1}">
             <div><strong>${section.label}</strong><span>${section.type}</span></div>
             <h4>${section.score}/${section.total}</h4>
-            ${renderAccuracyGrid(section.questions, 26)}
+            ${renderResultGrid(section.questions, section.total, index + 4)}
           </a>
         `).join("")}
       </div>
@@ -1833,7 +1845,7 @@ function renderPrepTestResults(id) {
             <summary>
               <strong>${section.label} · ${section.type}</strong>
               <span>${section.time} · target ${section.delta}</span>
-              ${renderAccuracyGrid(section.questions, 14)}
+              ${renderResultGrid(section.questions, 14, index + 4)}
             </summary>
             <div class="section-review-detail">
               <section>
