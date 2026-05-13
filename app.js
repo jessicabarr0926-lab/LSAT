@@ -45,7 +45,6 @@ notificationBell?.addEventListener("click", () => {
   state.notificationsOpen = !state.notificationsOpen;
   saveState();
   renderApp();
-  location.hash = "#/dashboard";
 });
 
 subscribeCta?.addEventListener("click", () => {
@@ -1163,6 +1162,11 @@ function wireNoticeLayer() {
     saveState();
     renderApp();
   });
+  noticeMount?.querySelector("[data-close-notifications]")?.addEventListener("click", () => {
+    state.notificationsOpen = false;
+    saveState();
+    renderApp();
+  });
   noticeMount?.querySelector("[data-close-command]")?.addEventListener("click", () => {
     state.commandPaletteOpen = false;
     saveState();
@@ -1315,10 +1319,13 @@ function renderNoticeLayer() {
       </aside>
     ` : ""}
     ${state.notificationsOpen ? `
-      <aside class="floating-panel notification-panel">
+      <aside class="notification-drawer">
         <div class="panel__head">
           <h3>Notifications</h3>
-          <button class="icon-button" type="button" data-mark-notifications-read aria-label="Mark notifications read">✓</button>
+          <div class="dashboard-actions">
+            <button class="bookmark-button" type="button" data-mark-notifications-read>Mark read</button>
+            <button class="icon-button" type="button" data-close-notifications aria-label="Close notifications">×</button>
+          </div>
         </div>
         ${
           unread.length
@@ -2890,6 +2897,10 @@ function renderReviewPage(route = {}) {
   const changed = changedAnswerStats();
   const difficulty = difficultyAnalytics();
   const typeTimes = timeByTypeAnalytics();
+  const attemptsCount = Object.keys(state.attempts).length;
+  const studyQualityCopy = attemptsCount
+    ? "Study quality combines streak, answered questions, Blind Review, journal rules, and plan saves."
+    : "Study quality starts low until you answer questions, complete Blind Review, save journal rules, and keep a streak.";
   const trapGroups = state.journal.reduce((acc, entry) => {
     acc[entry.trapPattern] = (acc[entry.trapPattern] || 0) + 1;
     return acc;
@@ -2939,7 +2950,7 @@ function renderReviewPage(route = {}) {
         <section>
           <p class="mini-card__label">Overview</p>
           <h4>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</h4>
-          <p>Variance ${scoreVariance()} points. Study quality ${studyQualityScore()}/100.</p>
+          <p title="${studyQualityCopy}">Variance ${scoreVariance()} points. Study quality ${studyQualityScore()}/100.</p>
         </section>
         <section>
           <p class="mini-card__label">Priorities</p>
@@ -2948,7 +2959,7 @@ function renderReviewPage(route = {}) {
         </section>
         <section>
           <p class="mini-card__label">Questions</p>
-          <h4>${Object.keys(state.attempts).length} logged</h4>
+          <h4>${attemptsCount} logged</h4>
           <p>Correct avg ${time.correct || "n/a"}s · wrong avg ${time.wrong || "n/a"}s · review ${time.review || "n/a"}s.</p>
         </section>
       </div>
@@ -2968,8 +2979,8 @@ function renderReviewPage(route = {}) {
         <section class="transcript-block">
           <p class="mini-card__label">Accuracy by question type</p>
           ${families.map((item) => `
-            <div class="mastery-row compact-row">
-              <span>${item.family}</span><strong>${item.accuracy}%</strong><div><i style="width:${Math.max(8, item.accuracy)}%"></i></div>
+            <div class="mastery-row compact-row ${item.accuracy === 0 ? "is-zero" : ""}">
+              <span>${item.family}${item.attempts ? ` · ${item.attempts}/${item.questions} attempted` : ` · 0/${item.questions} attempted`}</span><strong>${item.accuracy}%</strong><div><i style="width:${item.accuracy}%"></i></div>
             </div>
           `).join("")}
         </section>
@@ -2983,8 +2994,8 @@ function renderReviewPage(route = {}) {
         <section class="transcript-block">
           <p class="mini-card__label">Accuracy by difficulty</p>
           ${difficulty.map((item) => `
-            <div class="mastery-row compact-row">
-              <span>${item.level}${item.attempts ? ` · ${item.attempts} attempts` : ""}</span><strong>${item.accuracy}%</strong><div><i style="width:${Math.max(8, item.accuracy)}%"></i></div>
+            <div class="mastery-row compact-row ${item.accuracy === 0 ? "is-zero" : ""}">
+              <span>${item.level}${item.attempts ? ` · ${item.attempts} attempts` : " · 0 attempts"}</span><strong>${item.accuracy}%</strong><div><i style="width:${item.accuracy}%"></i></div>
             </div>
           `).join("")}
         </section>
@@ -3048,7 +3059,7 @@ function renderReviewPage(route = {}) {
       <div class="panel__head">
         <h3>Test Review</h3>
       </div>
-      <p>Use this page as the shared review loop for local drills and official-link PT work. Save the exact trap, corrected takeaway, and blind-review outcome here.</p>
+      <p class="review-copy">Use this page as the shared review loop for local drills and official-link PT work. Save the exact trap, corrected takeaway, and blind-review outcome here.</p>
       <div class="tool-row">
         <button class="bookmark-button" type="button" data-section-tool="archive">Archive</button>
         <button class="bookmark-button" type="button" data-section-tool="comment">Comment</button>
