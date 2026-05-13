@@ -13,6 +13,8 @@ const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarClose = document.querySelector("#sidebarClose");
 const notificationBell = document.querySelector("#notificationBell");
 const subscribeCta = document.querySelector("#subscribeCta");
+const globalSearch = document.querySelector("#globalSearch");
+const commandPaletteButton = document.querySelector("#commandPaletteButton");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
@@ -50,6 +52,30 @@ subscribeCta?.addEventListener("click", () => {
   renderApp();
 });
 
+commandPaletteButton?.addEventListener("click", () => {
+  state.commandPaletteOpen = !state.commandPaletteOpen;
+  saveState();
+  renderApp();
+});
+
+globalSearch?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const term = globalSearch.value.trim().toLowerCase();
+  if (!term) return;
+  const lesson = data.lessons.find((item) => item.title.toLowerCase().includes(term) || item.track.toLowerCase().includes(term));
+  const family = [...new Set(data.questionBank.map((question) => question.family))].find((item) => item.toLowerCase().includes(term));
+  location.hash = lesson ? `#/learn/${lesson.id}` : family ? "#/practice" : "#/learn";
+});
+
+window.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    state.commandPaletteOpen = !state.commandPaletteOpen;
+    saveState();
+    renderApp();
+  }
+});
+
 window.addEventListener("hashchange", renderApp);
 
 function defaultState() {
@@ -81,6 +107,7 @@ function defaultState() {
     cookieConsent: "",
     subscriptionIntent: "",
     notificationsOpen: false,
+    commandPaletteOpen: false,
     currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
     lastSavedAt: "",
   };
@@ -111,6 +138,7 @@ function loadState() {
       cookieConsent: parsed.cookieConsent || "",
       subscriptionIntent: parsed.subscriptionIntent || "",
       notificationsOpen: Boolean(parsed.notificationsOpen),
+      commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
@@ -256,6 +284,88 @@ function rcPassageSplit() {
     questions: 330,
     check: 60,
   };
+}
+
+function renderSparkline(points, key = "score") {
+  const values = points.map((point) => point[key]);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(1, max - min);
+  const coords = points
+    .map((point, index) => {
+      const x = points.length === 1 ? 50 : (index / (points.length - 1)) * 100;
+      const y = 88 - ((point[key] - min) / range) * 72;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  return `
+    <svg class="sparkline" viewBox="0 0 100 100" role="img" aria-label="Score trend sparkline">
+      <polyline points="${coords}" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      ${points.map((point, index) => {
+        const x = points.length === 1 ? 50 : (index / (points.length - 1)) * 100;
+        const y = 88 - ((point[key] - min) / range) * 72;
+        return `<circle cx="${x}" cy="${y}" r="4"></circle>`;
+      }).join("")}
+    </svg>
+  `;
+}
+
+function renderDonut(percent, label, value) {
+  const safe = Math.max(0, Math.min(100, percent));
+  return `
+    <div class="donut-chart" style="--value:${safe}%">
+      <strong>${value}</strong>
+      <span>${label}</span>
+    </div>
+  `;
+}
+
+function renderActivityBars() {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const minutes = [35, 48, 20, 55, 42, 18, activeProfile().dailyMinutes || 45];
+  return `
+    <div class="activity-bars" aria-label="Weekly learning activity">
+      ${days.map((day, index) => `<section><i style="height:${Math.max(10, minutes[index])}%"></i><span>${day}</span></section>`).join("")}
+    </div>
+  `;
+}
+
+function renderAccuracyGrid(questions, limit = 30) {
+  const cells = questions.slice(0, limit).map((question, index) => {
+    const attempt = state.attempts[question.id];
+    const cls = !attempt ? "is-empty" : attempt.correct ? "is-correct" : "is-wrong";
+    const label = `${question.family} Q${index + 1}: ${!attempt ? "unseen" : attempt.correct ? "correct" : "missed"}`;
+    return `<span class="${cls}" title="${label}" aria-label="${label}"></span>`;
+  });
+  return `<div class="accuracy-grid">${cells.join("")}</div>`;
+}
+
+function lessonUnits() {
+  const units = [
+    { id: "foundations", title: "Foundations", match: (lesson) => lesson.track.includes("Strategy") || lesson.track.includes("Requested") && lesson.title.includes("Getting Started") },
+    { id: "rc-core", title: "RC Core", match: (lesson) => lesson.track.includes("RC Core") || lesson.track.includes("RC Requested") },
+    { id: "rc-advanced", title: "RC Advanced", match: (lesson) => lesson.track.includes("RC Advanced") },
+    { id: "lr-foundations", title: "LR Fundamentals", match: (lesson) => lesson.track.includes("LR Core") || lesson.track.includes("LR Requested") },
+    { id: "lr-advanced", title: "LR Advanced", match: (lesson) => lesson.track.includes("LR Advanced") },
+    { id: "review", title: "Timed Integration + Review", match: (lesson) => lesson.linkedQuestionFamilies?.some((family) => ["Flaw", "Assumption", "Strengthen", "Weaken"].includes(family)) },
+  ];
+  return units.map((unit) => {
+    const lessons = data.lessons.filter(unit.match).slice(0, 28);
+    return { ...unit, lessons: lessons.length ? lessons : data.lessons.slice(0, 6) };
+  });
+}
+
+function unitProgress(lessons) {
+  if (!lessons.length) return 0;
+  const done = lessons.filter((lesson) => state.lessonProgress[lesson.id]?.complete).length;
+  return Math.round((done / lessons.length) * 100);
+}
+
+function lessonStatusIcon(lesson) {
+  const progress = state.lessonProgress[lesson.id];
+  if (progress?.complete) return "✓";
+  if ((progress?.masteryWins || 0) > 0) return "▶";
+  return "○";
 }
 
 function daysUntilTest() {
@@ -650,6 +760,17 @@ function wireNoticeLayer() {
     saveState();
     renderApp();
   });
+  noticeMount?.querySelector("[data-close-command]")?.addEventListener("click", () => {
+    state.commandPaletteOpen = false;
+    saveState();
+    renderApp();
+  });
+  noticeMount?.querySelectorAll("[data-command-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      state.commandPaletteOpen = false;
+      saveState();
+    });
+  });
 }
 
 function renderSettings() {
@@ -716,6 +837,11 @@ function renderToday() {
 }
 
 function renderRouteMeta(route) {
+  if (route.page === "review" && route.subtype === "preptest") {
+    routeEyebrow.textContent = "PrepTest Results";
+    routeTitle.textContent = "PrepTest 130 Review";
+    return;
+  }
   if (route.page === "practice" && route.subtype === "rc") {
     const passage = route.id && route.id !== "rc" ? (data.rcPassages || []).find((p) => p.id === route.id) : null;
     routeEyebrow.textContent = "RC Passage Practice";
@@ -776,6 +902,18 @@ function renderNoticeLayer() {
         }
       </aside>
     ` : ""}
+    ${state.commandPaletteOpen ? `
+      <aside class="command-palette" role="dialog" aria-label="Command palette">
+        <div class="panel__head">
+          <h3>Command palette</h3>
+          <button class="icon-button" type="button" data-close-command aria-label="Close command palette">×</button>
+        </div>
+        <a href="#/practice/drill/${adaptiveDrillTarget().preset.id}" data-command-link><strong>Start adaptive drill</strong><span>${adaptiveDrillTarget().weak.family}</span></a>
+        <a href="#/learn/${nextLesson().id}" data-command-link><strong>Open last lesson</strong><span>${nextLesson().title}</span></a>
+        <a href="#/review/preptest/pt130" data-command-link><strong>Review PrepTest 130</strong><span>Results, timing, Blind Review</span></a>
+        <a href="#/plan" data-command-link><strong>Log LawHub result</strong><span>Official score companion</span></a>
+      </aside>
+    ` : ""}
     ${!state.cookieConsent ? `
       <aside class="cookie-panel">
         <p><strong>Cookies and privacy.</strong> JessiPreps stores progress locally in this browser. It does not store official LSAT question text.</p>
@@ -816,38 +954,22 @@ function renderDashboardPage() {
   const weak = weakestFamily();
   const adaptive = adaptiveDrillTarget();
   const lesson = nextLesson();
-  const studyModes = data.studyModes.slice(0, 3);
   const trend = scoreTrend();
   const testDays = daysUntilTest();
   const profile = activeProfile();
-  // SRS-lite: a journal entry is "due" until its blindReviewOutcome is
-  // marked complete. Treats missing/undefined outcomes as still pending
-  // so older entries surface here too.
-  const journalCount = state.journal.length;
   const dueEntries = state.journal.filter(
     (entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending"
   );
   const dueCount = dueEntries.length;
-  const dueHeadline =
-    dueCount > 0
-      ? `${dueCount} ${dueCount === 1 ? "question" : "questions"} ready for re-attempt`
-      : journalCount === 0
-      ? "Review queue starts after your first miss"
-      : "All caught up. Nice work.";
-  const dueBlurb =
-    dueCount > 0
-      ? "Blind-review misses that haven't been re-attempted. Clearing this queue is the single highest-leverage thing you can do today."
-      : journalCount === 0
-      ? "Answer practice questions and any miss will land here automatically for spaced re-attempt."
-      : "Every recorded miss has been reviewed. New misses will appear here as you drill.";
-  const dueCta = dueCount > 0 ? "Start review session" : "Open review log";
+  const lrBank = allQuestions().filter((question) => question.section === "LR");
+  const rcBank = allQuestions().filter((question) => question.section === "RC");
   return `
-    <section class="dashboard-grid">
-      <article class="dashboard-card dashboard-card--hero">
+    <section class="dashboard-overview">
+      <article class="dashboard-card dashboard-card--hero interactive-card">
         <div class="dashboard-card__head">
           <div>
-            <p class="mini-card__label">Start today</p>
-            <h3>12-minute LSAT sprint</h3>
+            <p class="mini-card__label">Next best move</p>
+            <h3>Start today's 12-minute LSAT sprint.</h3>
           </div>
           <span class="status-pill">${lastSavedLabel()}</span>
         </div>
@@ -857,46 +979,29 @@ function renderDashboardPage() {
           <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build adaptive drill</a>
           <a class="button button--ghost" href="#/practice/timed">Timed section</a>
         </div>
-        <div class="dashboard-metrics">
-          <section class="mini-card"><p class="mini-card__label">Scaled score</p><h4>${data.appMeta.scaledScore}</h4><p>Current snapshot from ${data.appMeta.currentPrepTest}</p></section>
-          <section class="mini-card"><p class="mini-card__label">Projected range</p><h4>${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</h4><p>Variance ${scoreVariance()} points</p></section>
-          <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap} pts</h4><p>${data.analyticsSnapshots.confidenceMismatch}</p></section>
-        </div>
+        <div class="hero-illustration" aria-hidden="true"><span>LR</span><span>RC</span><span>BR</span></div>
       </article>
 
-      <article class="dashboard-card dashboard-card--profile">
-        <div class="dashboard-profile">
-          <div class="dashboard-avatar">JB</div>
-          <div>
-            <h3>Jessica Barr</h3>
-            <p class="microcopy">JessiPreps study profile</p>
-          </div>
-        </div>
-        <div class="today-stack">
-          <div class="today-pill"><span>Target</span><strong>${data.appMeta.targetScore}</strong></div>
-          <div class="today-pill"><span>Weakest family</span><strong>${weak.family}</strong></div>
-          <div class="today-pill"><span>Streak</span><strong>${streakDays()} days</strong></div>
-          <div class="today-pill"><span>Next LSAT</span><strong>${testDays === null ? "Set date" : `${testDays} days`}</strong></div>
-          <div class="today-pill"><span>Daily time</span><strong>${profile.dailyMinutes} min</strong></div>
-        </div>
+      <article class="metric-tile metric-tile--green interactive-card">
+        <p class="mini-card__label">Readiness</p>
+        <h3>${data.appMeta.readinessScore}%</h3>
+        <p>Study quality ${studyQualityScore()}/100</p>
+        ${renderSparkline([{ score: 58 }, { score: 64 }, { score: 61 }, { score: data.appMeta.readinessScore }])}
+      </article>
+      <article class="metric-tile metric-tile--gold interactive-card">
+        <p class="mini-card__label">Scaled score</p>
+        <h3>${data.appMeta.scaledScore}</h3>
+        <p>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</p>
+        ${renderSparkline(trend)}
+      </article>
+      <article class="metric-tile metric-tile--navy interactive-card">
+        <p class="mini-card__label">Blind Review gap</p>
+        <h3>${data.analyticsSnapshots.blindReviewGap} pts</h3>
+        <p>${dueCount} due today</p>
+        ${renderDonut(Math.max(8, 100 - data.analyticsSnapshots.blindReviewGap * 3), "recovered", `${Math.max(0, 100 - data.analyticsSnapshots.blindReviewGap * 3)}%`)}
       </article>
 
-      <article class="dashboard-card dashboard-card--table">
-        <div class="dashboard-card__head">
-          <div>
-            <p class="mini-card__label">First-click fix</p>
-            <h3>Every shared dashboard URL opens complete.</h3>
-          </div>
-          <span class="status-pill">Route guard on</span>
-        </div>
-        <p>/LSAT/, /LSAT/index.html, and /LSAT/index.html#/dashboard all land on this full command center with useful fallback states instead of a sparse shell.</p>
-        <div class="dashboard-actions">
-          <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build recommended drill</a>
-          <a class="button button--ghost" href="#/plan">Build study plan</a>
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--table">
+      <article class="dashboard-card interactive-card">
         <div class="dashboard-card__head">
           <h3>Today Flow</h3>
           <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
@@ -910,122 +1015,48 @@ function renderDashboardPage() {
         </div>
       </article>
 
-      <article class="dashboard-card dashboard-card--progress">
+      <article class="dashboard-card interactive-card">
         <div class="dashboard-card__head">
-          <h3>Family mastery</h3>
-          <button class="status-pill status-pill--button" type="button" data-add-notification="ratings">Understand your ratings</button>
+          <h3>Question mix</h3>
+          <a class="text-link" href="#/practice">Practice</a>
         </div>
-        <div class="mastery-stack">
-          <section class="mastery-row"><span>Logical Reasoning</span><strong>${masteryRating("LR")}</strong><div><i style="width:${masteryRating("LR")}%"></i></div></section>
-          <section class="mastery-row"><span>Reading Comprehension</span><strong>${masteryRating("RC")}</strong><div><i style="width:${masteryRating("RC")}%"></i></div></section>
-          <section class="official-pips"><span>Official logs</span><strong>${"●".repeat(Math.min(5, officialTestCount()))}${"○".repeat(Math.max(0, 5 - Math.min(5, officialTestCount())))}</strong></section>
-          <p class="microcopy">Ratings blend accuracy, completed attempts, and recent review behavior so the next drill is chosen for you.</p>
+        <div class="donut-row">
+          ${renderDonut(Math.round((lrBank.length / allQuestions().length) * 100), "LR", lrBank.length)}
+          ${renderDonut(Math.round((rcBank.length / allQuestions().length) * 100), "RC", rcBank.length)}
+        </div>
+        <p class="microcopy">Original practice only. Official LSAT question text stays in LawHub.</p>
+      </article>
+
+      <article class="dashboard-card interactive-card">
+        <div class="dashboard-card__head">
+          <h3>Learning Activity</h3>
+          <span class="status-pill">This week</span>
+        </div>
+        ${renderActivityBars()}
+        <p class="microcopy">Daily target: ${profile.dailyMinutes} min. Next LSAT: ${testDays === null ? "set a date" : `${testDays} days`}.</p>
+      </article>
+
+      <article class="dashboard-card interactive-card">
+        <div class="dashboard-card__head">
+          <h3>Accuracy grids</h3>
+          <span class="status-pill">7Sage-style</span>
+        </div>
+        <div class="grid-stack">
+          <section><strong>Logical Reasoning</strong>${renderAccuracyGrid(lrBank, 32)}</section>
+          <section><strong>Reading Comprehension</strong>${renderAccuracyGrid(rcBank, 32)}</section>
         </div>
       </article>
 
-      <article class="dashboard-card dashboard-card--progress">
+      <article class="dashboard-card interactive-card">
         <div class="dashboard-card__head">
-          <h3>Study Quality</h3>
-          <span class="status-pill">${studyQualityScore()}/100</span>
+          <h3>Recent activity</h3>
+          <a class="text-link" href="#/review/preptest/pt130">PrepTest results</a>
         </div>
-        <div class="quality-dial" style="--quality:${studyQualityScore()}%">
-          <strong>${studyQualityScore()}</strong>
-          <span>habit score</span>
+        <div class="activity-feed">
+          <a href="#/learn/${lesson.id}"><strong>Continue</strong><span>${lesson.title}</span></a>
+          <a href="#/practice/drill/${adaptive.preset.id}"><strong>Adaptive drill</strong><span>${adaptive.weak.family}</span></a>
+          <a href="#/review"><strong>Blind Review</strong><span>${dueCount} item${dueCount === 1 ? "" : "s"} due</span></a>
         </div>
-        <p class="microcopy">Measures consistency, Blind Review follow-through, onboarding, and logged official work.</p>
-      </article>
-
-      <article class="dashboard-card dashboard-card--due" style="border-left: 4px solid ${dueCount > 0 ? "#f59e0b" : "#9ca3af"};">
-        <div class="dashboard-card__head">
-          <div>
-            <p class="mini-card__label" style="color:${dueCount > 0 ? "#b45309" : "inherit"};">Due today</p>
-            <h3>${dueHeadline}</h3>
-          </div>
-          <span class="status-pill" aria-label="Pending review items">${dueCount}</span>
-        </div>
-        <p>${dueBlurb}</p>
-        <div class="dashboard-actions">
-          <a class="button button--primary" href="#/review">${dueCta}</a>
-          ${
-            dueCount > 0
-              ? `<span class="microcopy" style="align-self:center;">Cleared queues correlate with the biggest blind-review-gap drops.</span>`
-              : ""
-          }
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--courses">
-        <div class="dashboard-card__head">
-          <h3>Study Tracks</h3>
-          <a class="text-link" href="#/learn">View all</a>
-        </div>
-        <div class="course-strip">
-          ${data.lessons.slice(0, 3).map((item, index) => `
-            <a class="course-card course-card--${index + 1}" href="#/learn/${item.id}">
-              <p class="mini-card__label">${item.track}</p>
-              <h4>${item.title}</h4>
-              <p>${item.summary}</p>
-            </a>
-          `).join("")}
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--table">
-        <div class="dashboard-card__head">
-          <h3>Adaptive Study Queue</h3>
-          <a class="text-link" href="#/plan">Open plan</a>
-        </div>
-        <div class="queue-list">
-          <section class="queue-row">
-            <strong>1. Auto-built drill: ${adaptive.weak.family}</strong>
-            <span>Now</span>
-            <p>${adaptive.preset.rationale}. This replaces manual drill picking when you want one-click practice.</p>
-          </section>
-          ${studyModes.map((mode, index) => `
-            <section class="queue-row">
-              <strong>${index + 2}. ${mode.title}</strong>
-              <span>${index === 0 ? "Today" : index === 1 ? "After lesson" : "This week"}</span>
-              <p>${mode.description}</p>
-            </section>
-          `).join("")}
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--progress">
-        <div class="dashboard-card__head">
-          <h3>Score Trend</h3>
-          <span class="status-pill">90 days</span>
-        </div>
-        <div class="trend-chart" aria-label="Score trend chart">
-          ${trend.map((point) => `<section style="--score:${Math.max(8, (point.score - 130) * 2)}%"><span>${point.score}</span><i></i><small>${point.label}</small></section>`).join("")}
-          <p class="microcopy">Use this with variance to see whether your score is stabilizing, not just rising once.</p>
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--roadmap">
-        <div class="dashboard-card__head">
-          <h3>Practice Modes</h3>
-          <a class="text-link" href="#/practice">Open practice</a>
-        </div>
-        <div class="roadmap dashboard-roadmap">
-          <a class="roadmap__step" href="#/practice/drill/${adaptive.preset.id}"><strong>Adaptive Drill</strong><p>One-click session based on weakest family.</p></a>
-          <a class="roadmap__step" href="#/practice/timed"><strong>Timed Section</strong><p>35-minute proctored section mode.</p></a>
-          <a class="roadmap__step" href="#/practice/timed"><strong>Practice Test</strong><p>Four-section simulator with review handoff.</p></a>
-          <a class="roadmap__step" href="#/review"><strong>Blind Review</strong><p>Re-answer before explanations unlock.</p></a>
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--table">
-        <div class="dashboard-card__head">
-          <h3>Scale features, staged safely</h3>
-          <span class="status-pill">Below the line</span>
-        </div>
-        <div class="feature-lane">
-          <section><strong>Community</strong><span>Discussion forum, tutor chat, leaderboard</span></section>
-          <section><strong>Live</strong><span>Classes, office hours, recorded sessions</span></section>
-          <section><strong>Admissions</strong><span>Applications, school data, scholarship estimator</span></section>
-        </div>
-        <p class="microcopy">These are visible as product lanes but kept secondary until the core study loop is strong.</p>
       </article>
     </section>
   `;
@@ -1040,58 +1071,60 @@ function renderLearnPage(route) {
     const lesson = data.lessons.find((item) => item.id === route.id) || nextLesson();
     return renderLessonPlayer(lesson);
   }
+  const units = lessonUnits();
+  const featured = nextLesson();
   return `
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Content Hub</h3>
-        <a href="#/learn/${nextLesson().id}" class="text-link">Open featured lesson</a>
+    <article class="panel panel--wide syllabus-shell">
+      <div class="syllabus-header">
+        <div>
+          <p class="mini-card__label">Syllabus</p>
+          <h3>Structured LSAT lesson path</h3>
+          <p>Collapse units, resume the next lesson, and jump into linked practice without scrolling through every lesson at once.</p>
+        </div>
+        <a class="button button--primary" href="#/learn/${featured.id}">Continue: ${featured.title}</a>
       </div>
-      <p>Guided sequence: RC structure first, then LR fundamentals, then advanced LR families, then timed integration and review.</p>
-      <div class="learn-focus">
-        <section class="learn-focus__lead">
-          <p class="mini-card__label">Featured next step</p>
-          <h4>${nextLesson().title}</h4>
-          <p>${nextLesson().summary}</p>
-          <a class="button button--primary" href="#/learn/${nextLesson().id}">Continue lesson path</a>
-        </section>
-        <section class="learn-focus__meta">
-          <div class="today-pill">
-            <span>Flagship lessons</span>
-            <strong>${data.lessons.length}</strong>
-          </div>
-          <div class="today-pill">
-            <span>Question-type academy</span>
-            <strong>${(data.questionTypeLessons || []).length}</strong>
-          </div>
-          <div class="today-pill">
-            <span>Best use</span>
-            <strong>Learn first, then drill</strong>
-          </div>
-        </section>
+      <div class="progress-ring-row">
+        ${units.slice(0, 4).map((unit) => `
+          <section>
+            ${renderDonut(unitProgress(unit.lessons), unit.title, `${unitProgress(unit.lessons)}%`)}
+          </section>
+        `).join("")}
       </div>
-    </article>
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>Flagship Lesson Path</h3>
+      <div class="continue-banner">
+        <strong>${featured.title}</strong>
+        <span>Lesson ${data.lessons.findIndex((lesson) => lesson.id === featured.id) + 1} of ${data.lessons.length} · ${featured.statusLabel}</span>
+        <a class="text-link" href="#/learn/${featured.id}">Resume</a>
       </div>
-      <div class="card-grid card-grid--two">
-        ${data.lessons
-          .map((lesson) => `
-            <a class="lesson-card" href="#/learn/${lesson.id}">
-              <p class="mini-card__label">${lesson.track}</p>
-              <h4>${lesson.title}</h4>
-              <p>${lesson.summary}</p>
-              <span class="status-pill ${state.lessonProgress[lesson.id]?.complete ? "is-done" : ""}">${state.lessonProgress[lesson.id]?.complete ? "Completed" : lesson.statusLabel}</span>
+      <div class="syllabus-layout">
+        <aside class="syllabus-units">
+          ${units.map((unit, index) => `
+            <a href="#unit-${unit.id}" class="${index === 0 ? "is-active" : ""}">
+              <strong>${unit.title}</strong>
+              <span>${unitProgress(unit.lessons)}% · ${unit.lessons.length} lessons</span>
             </a>
-          `)
-          .join("")}
+          `).join("")}
+        </aside>
+        <div class="syllabus-lessons">
+          ${units.map((unit, index) => `
+            <details id="unit-${unit.id}" class="unit-block" ${index < 2 ? "open" : ""}>
+              <summary>
+                <strong>${unit.title}</strong>
+                <span>${unitProgress(unit.lessons)}% complete</span>
+              </summary>
+              <div class="lesson-row-list">
+                ${unit.lessons.map((lesson) => `
+                  <a class="lesson-row interactive-card" href="#/learn/${lesson.id}">
+                    <span class="lesson-row__status">${lessonStatusIcon(lesson)}</span>
+                    <span><strong>${lesson.title}</strong><small>${lesson.summary}</small></span>
+                    <em>${Math.max(8, lesson.scenes?.length * 6 || 18)}m</em>
+                    <b>↗</b>
+                  </a>
+                `).join("")}
+              </div>
+            </details>
+          `).join("")}
+        </div>
       </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Explanations</h3>
-      </div>
-      <p>Frameworks here are designed to turn misses into reusable rules: structure before detail, bridge before answer choice, and trap pattern before retry.</p>
     </article>
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -1163,7 +1196,6 @@ function renderLessonPlayer(lesson) {
   ensureLessonPlayback(lesson);
   const progress = state.lessonProgress[lesson.id];
   const linkedQuestions = questionsForLesson(lesson.id);
-  const video = buildLessonVideo(lesson);
   const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
   const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
   // After this HTML is inserted, mount the rendered MP4 (if present) at
@@ -1179,18 +1211,27 @@ function renderLessonPlayer(lesson) {
     });
   }
   return `
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <h3>${lesson.title}</h3>
-        <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
-      </div>
-      <p>${lesson.summary}</p>
-      <section class="lesson-video">
-        <div class="lesson-video__player">
-          <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
-          <p class="mini-card__label">Video lesson</p>
-          <h4>${lesson.title} in ${video.runtime}</h4>
-          <p>This lesson is structured like a 5-10 minute walkthrough: concept first, then worked example, then trap-answer coaching, then your practice launch.</p>
+    <article class="panel panel--wide lesson-detail-shell">
+      <aside class="lesson-toc">
+        <button type="button" data-scroll-target="intro">Intro</button>
+        <button type="button" data-scroll-target="concept">Concept</button>
+        <button type="button" data-scroll-target="example">Worked Example</button>
+        <button type="button" data-scroll-target="traps">Trap Warnings</button>
+        <button type="button" data-scroll-target="mastery">Mastery Drill</button>
+        <button type="button" data-scroll-target="reflection">Reflection</button>
+      </aside>
+      <main class="lesson-content">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">${lesson.track}</p>
+            <h3>${lesson.title}</h3>
+          </div>
+          <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
+        </div>
+        <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
+        <details id="intro" class="lesson-accordion" open>
+          <summary>Intro and video</summary>
+          <p>${lesson.summary}</p>
           <div class="video-stage">
             <p class="mini-card__label">Now playing</p>
             <h4>${activeScene.title}</h4>
@@ -1203,66 +1244,37 @@ function renderLessonPlayer(lesson) {
             <button class="button button--primary" data-video-toggle="true">${lessonPlaybackState.playing ? "Pause lesson" : "Play lesson"}</button>
             <button class="button button--ghost" data-video-nav="next" ${lessonPlaybackState.sceneIndex === lesson.scenes.length - 1 ? "disabled" : ""}>Next</button>
           </div>
-          <div class="video-progress">
-            <span style="width:${progressPercent}"></span>
-          </div>
-          <div class="video-timeline">
-            ${video.chapters.map((chapter, index) => `<span class="${index === lessonPlaybackState.sceneIndex ? "is-active" : ""}" style="flex:${chapter.minutes}">${chapter.title}</span>`).join("")}
-          </div>
-        </div>
-        <div class="lesson-video__chapters">
-          ${video.chapters
-            .map(
-              (chapter, index) => `
-                <section class="video-chapter ${index === lessonPlaybackState.sceneIndex ? "is-active" : ""}">
-                  <strong>0${index + 1}. ${chapter.title}</strong>
-                  <span>${chapter.minutes} min</span>
-                  <p>${chapter.summary}</p>
-                </section>
-              `,
-            )
-            .join("")}
-        </div>
-      </section>
-      <div class="scene-stack">
-        ${lesson.scenes
-          .map(
-            (scene, index) => `
-              <section class="scene-card">
-                <p class="mini-card__label">${scene.type} scene ${index + 1}</p>
-                <h4>${scene.title}</h4>
-                <p>${scene.explanation}</p>
-                <div class="scene-card__story">${scene.storyboard}</div>
-                <div class="scene-card__cue">${scene.actionCue}</div>
-              </section>
-            `,
-          )
-          .join("")}
-      </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Worked Example</h3>
-      </div>
-      <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
-      <p>${lesson.workedExample.reasoning}</p>
-      <p class="microcopy"><strong>Trap pattern:</strong> ${lesson.trapExplanation}</p>
-      <div class="transcript-block">
-        <p class="mini-card__label">Video transcript excerpt</p>
-        <p>Start by naming the core move: ${lesson.scenes[0]?.explanation || lesson.summary}</p>
-        <p>Then walk the learner through the worked example: ${lesson.workedExample.reasoning}</p>
-        <p>Close by warning against the trap: ${lesson.trapExplanation}</p>
-      </div>
-    </article>
-    <article class="panel">
-      <div class="panel__head">
-        <h3>Linked Practice</h3>
-      </div>
-      <div class="practice-list">
-        ${linkedQuestions.map((question) => renderQuestionCard(question, "lesson")).join("")}
-      </div>
-      <button class="button button--primary" data-complete-lesson="${lesson.id}" ${progress.masteryWins < lesson.masteryThreshold ? "disabled" : ""}>Pass mastery gate</button>
-      <a class="text-link" href="${lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed"}">What to do next</a>
+          <div class="video-progress"><span style="width:${progressPercent}"></span></div>
+        </details>
+        <details id="concept" class="lesson-accordion" open>
+          <summary>Concept</summary>
+          <div class="scene-stack">${lesson.scenes.slice(0, 2).map((scene) => `<section class="scene-card"><h4>${scene.title}</h4><p>${scene.explanation}</p><div class="scene-card__cue">${scene.actionCue}</div></section>`).join("")}</div>
+        </details>
+        <details id="example" class="lesson-accordion">
+          <summary>Worked Example</summary>
+          <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
+          <p>${lesson.workedExample.reasoning}</p>
+        </details>
+        <details id="traps" class="lesson-accordion">
+          <summary>Trap Warnings</summary>
+          <p>${lesson.trapExplanation}</p>
+        </details>
+        <details id="mastery" class="lesson-accordion" open>
+          <summary>Knowledge check + mastery drill</summary>
+          ${linkedQuestions[0] ? renderQuestionCard(linkedQuestions[0], "lesson-check") : `<p class="muted">Knowledge check will appear after the linked question bank loads.</p>`}
+          <a class="button button--primary" href="#/practice/drill/${adaptiveDrillTarget().preset.id}">Open 3-5 question mastery drill</a>
+        </details>
+        <details id="reflection" class="lesson-accordion">
+          <summary>Reflection</summary>
+          <label class="br-field br-field--wide"><span>What is one trap you would now recognize?</span><textarea rows="4" data-lesson-reflection="${lesson.id}" placeholder="Write one reusable rule."></textarea></label>
+          <button class="button button--primary" type="button" data-save-lesson-reflection="${lesson.id}">Save to journal</button>
+        </details>
+      </main>
+      <aside class="lesson-progress-rail">
+        ${renderDonut(Math.min(100, Math.round((progress.masteryWins / Math.max(1, lesson.masteryThreshold)) * 100)), "lesson", `${progress.masteryWins}/${lesson.masteryThreshold}`)}
+        <a class="button button--ghost" href="${lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed"}">Next lesson</a>
+        <button class="button button--primary" data-complete-lesson="${lesson.id}" ${progress.masteryWins < lesson.masteryThreshold ? "disabled" : ""}>Pass mastery gate</button>
+      </aside>
     </article>
   `;
 }
@@ -1774,7 +1786,82 @@ function renderPracticePage(route) {
   `;
 }
 
-function renderReviewPage() {
+function renderPrepTestResults(id) {
+  const lr = allQuestions().filter((question) => question.section === "LR").slice(0, 26);
+  const rc = allQuestions().filter((question) => question.section === "RC").slice(0, 27);
+  const sections = [
+    { label: "Section 1", type: "LR", score: 18, total: 26, questions: lr, time: "34:42", delta: "+2:18" },
+    { label: "Section 2", type: "RC", score: 19, total: 27, questions: rc, time: "35:00", delta: "+0:00" },
+    { label: "Section 3", type: "LR", score: 20, total: 26, questions: lr.slice().reverse(), time: "33:51", delta: "-1:09" },
+    { label: "Section 4", type: "Experimental", score: 16, total: 26, questions: lr.slice(0, 20), time: "35:00", delta: "+0:00" },
+  ];
+  const totalScore = sections.slice(0, 3).reduce((sum, section) => sum + section.score, 0);
+  const totalQuestions = sections.slice(0, 3).reduce((sum, section) => sum + section.total, 0);
+  const percent = Math.round((totalScore / totalQuestions) * 100);
+  return `
+    <article class="panel panel--wide preptest-results">
+      <header class="preptest-header">
+        <div>
+          <p class="mini-card__label">PrepTest results</p>
+          <h3>${id.toUpperCase()} · ${data.appMeta.currentPrepTest}</h3>
+          <p>Logged locally · Total time 2h 19m · Review mode unlocked</p>
+        </div>
+        ${renderDonut(percent, "accuracy", `${percent}%`)}
+      </header>
+      <section class="insight-banner">
+        <strong>Personalized insight</strong>
+        <span>You are losing more points to second-guessing correct answers than to running out of time. Review confidence before adding speed.</span>
+      </section>
+      <div class="section-card-row">
+        ${sections.map((section, index) => `
+          <a class="section-result-card interactive-card" href="#section-${index + 1}">
+            <div><strong>${section.label}</strong><span>${section.type}</span></div>
+            <h4>${section.score}/${section.total}</h4>
+            ${renderAccuracyGrid(section.questions, 26)}
+          </a>
+        `).join("")}
+      </div>
+    </article>
+    <article class="panel panel--wide preptest-tabs">
+      <div class="panel__head">
+        <h3>Sections</h3>
+        <div class="segmented-control"><button class="is-active" type="button">Question list</button><button type="button">Timing</button></div>
+      </div>
+      <div class="section-review-list">
+        ${sections.map((section, index) => `
+          <details id="section-${index + 1}" class="section-review-row" ${index === 0 ? "open" : ""}>
+            <summary>
+              <strong>${section.label} · ${section.type}</strong>
+              <span>${section.time} · target ${section.delta}</span>
+              ${renderAccuracyGrid(section.questions, 14)}
+            </summary>
+            <div class="section-review-detail">
+              <section>
+                <p class="mini-card__label">Question list</p>
+                ${section.questions.slice(0, 12).map((question, qIndex) => `
+                  <a class="question-jump" href="#/review">
+                    <span class="${state.attempts[question.id]?.correct ? "is-correct" : qIndex % 4 === 0 ? "is-wrong" : "is-empty"}"></span>
+                    <strong>Q${qIndex + 1}</strong>
+                    <em>${question.family}</em>
+                  </a>
+                `).join("")}
+              </section>
+              <section>
+                <p class="mini-card__label">Timing</p>
+                <div class="activity-bars">${section.questions.slice(0, 8).map((question, qIndex) => `<section><i style="height:${35 + (qIndex % 5) * 10}%"></i><span>Q${qIndex + 1}</span></section>`).join("")}</div>
+              </section>
+            </div>
+          </details>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderReviewPage(route = {}) {
+  if (route.subtype === "preptest") {
+    return renderPrepTestResults(route.id || "pt130");
+  }
   const weak = weakestFamily();
   const dueEntries = state.journal.filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending");
   const families = familyAnalytics().slice(0, 6);
@@ -2147,6 +2234,34 @@ function wireInteractions(route) {
       state.subscriptionIntent = "open";
       saveState();
       renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-save-lesson-reflection]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.saveLessonReflection;
+      const lesson = data.lessons.find((item) => item.id === lessonId);
+      const note = pageMount.querySelector(`[data-lesson-reflection="${lessonId}"]`)?.value.trim();
+      if (!note) return;
+      state.journal.unshift({
+        questionId: `lesson-${lessonId}`,
+        family: lesson?.linkedQuestionFamilies?.[0] || "Lesson reflection",
+        trapPattern: "Lesson reflection",
+        confidence: "medium",
+        blindReviewOutcome: "complete",
+        wrongChoiceText: "",
+        whyWrong: note,
+        note,
+      });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-scroll-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = pageMount.querySelector(`#${button.dataset.scrollTarget}`);
+      target?.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "start" });
     });
   });
 
