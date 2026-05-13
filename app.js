@@ -124,6 +124,7 @@ function defaultState() {
     profileMenuOpen: false,
     liveReservations: {},
     coachMessages: [],
+    answerLog: [],
     testDay: {
       mode: "strict",
       active: false,
@@ -187,6 +188,7 @@ function loadState() {
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
       liveReservations: parsed.liveReservations || {},
       coachMessages: parsed.coachMessages || [],
+      answerLog: parsed.answerLog || [],
       testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
@@ -687,6 +689,132 @@ function mistakeReasonOptions() {
     "Did not understand argument",
     "Careless error",
   ];
+}
+
+function coachMistakeProfile() {
+  const attempts = (state.answerLog && state.answerLog.length)
+    ? state.answerLog.map((log) => ({ questionId: log.questionId, attempt: log, question: findQuestion(log.questionId) })).filter((item) => item.question)
+    : Object.entries(state.attempts || {}).map(([questionId, attempt]) => ({ questionId, attempt, question: findQuestion(questionId) })).filter((item) => item.question);
+  const missed = attempts.filter((item) => !item.attempt.correct);
+  const byFamily = missed.reduce((acc, item) => {
+    acc[item.question.family] = (acc[item.question.family] || 0) + 1;
+    return acc;
+  }, {});
+  const byReason = state.journal.reduce((acc, entry) => {
+    const reason = state.mistakeTags[entry.questionId] || entry.mistakeReason || "Wrong answer trap";
+    acc[reason] = (acc[reason] || 0) + 1;
+    return acc;
+  }, {});
+  const byTrap = state.journal.reduce((acc, entry) => {
+    acc[entry.trapPattern || "Unclassified trap"] = (acc[entry.trapPattern || "Unclassified trap"] || 0) + 1;
+    return acc;
+  }, {});
+  const topFamily = Object.entries(byFamily).sort((a, b) => b[1] - a[1])[0] || [weakestFamily().family, 0];
+  const topReason = Object.entries(byReason).sort((a, b) => b[1] - a[1])[0] || ["Not enough tagged misses yet", 0];
+  const topTrap = Object.entries(byTrap).sort((a, b) => b[1] - a[1])[0] || ["No recurring trap yet", 0];
+  const accuracy = attempts.length ? Math.round(((attempts.length - missed.length) / attempts.length) * 100) : 0;
+  const slow = attempts
+    .filter((item) => Number.isFinite(item.attempt.timeSeconds))
+    .sort((a, b) => (b.attempt.timeSeconds || 0) - (a.attempt.timeSeconds || 0))[0];
+  return {
+    attempts: attempts.length,
+    missed: missed.length,
+    accuracy,
+    topFamily,
+    topReason,
+    topTrap,
+    slow,
+    recent: attempts.slice(-8).reverse(),
+  };
+}
+
+function coachSearchContent(prompt) {
+  const terms = String(prompt || "").toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 3);
+  const scoreText = (text) => terms.reduce((score, term) => score + (String(text || "").toLowerCase().includes(term) ? 1 : 0), 0);
+  const lessons = data.lessons
+    .map((lesson) => ({
+      type: "lesson",
+      title: lesson.title,
+      href: `#/learn/${lesson.id}`,
+      score: scoreText(`${lesson.title} ${lesson.track} ${lesson.summary} ${lesson.script} ${(lesson.linkedQuestionFamilies || []).join(" ")}`),
+      body: lesson.conceptSummary || lesson.summary,
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  const questions = allQuestions()
+    .map((question) => ({
+      type: "question",
+      title: question.family,
+      href: "#/practice",
+      score: scoreText(`${question.family} ${question.question || question.questionStem} ${question.prompt} ${question.explanation} ${question.trapPattern}`),
+      body: question.explanation,
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+  return [...lessons, ...questions].slice(0, 4);
+}
+
+function coachFixForFamily(family) {
+  const fixes = {
+    "RC Structure": "Map each paragraph as a job: old view, complication, author response. Do not answer from memory until you can say the passage movement.",
+    "RC Inference": "Circle force words. The right answer should be boring, provable, and no stronger than the passage.",
+    "RC Attitude": "Translate tone into one plain phrase before choices: approving, skeptical, qualified, neutral, or critical.",
+    "RC Function": "Ask why the sentence is there, not what topic it mentions.",
+    "RC Main Point": "Use the final author position plus the reason it matters. Reject answer choices that are only paragraph-level details.",
+    Flaw: "Name the broken move before choices. For cause/effect, ask: is there another cause, reversed cause, or coincidence?",
+    Assumption: "Find the bridge, then negate the answer. If the argument can survive, it is not necessary.",
+    Strengthen: "Support the exact bridge between evidence and conclusion. Relevant background is not enough.",
+    Weaken: "Attack the bridge, not the subject. Ask what would make the evidence fail to prove the conclusion.",
+    "Conditional Logic": "Write the rule as X -> Y, then test the contrapositive. Never reverse unless the text gives both directions.",
+    "Must Be True": "Pick only what the text forces. If you need outside common sense, it is too strong.",
+    "Role / Method / Technique": "Label conclusion, support, objection, concession, and example before reading choices.",
+    "Resolve / Explain": "Keep both facts true. The right answer explains why they can coexist.",
+    Principle: "Match the rule to the exact decision, not the prettiest moral slogan.",
+    "Parallel Flaw": "Strip topic words and match the bad skeleton.",
+    "Point at Issue": "Ask whether both speakers would answer yes/no differently.",
+  };
+  return fixes[family] || "Slow down, classify the question family, name the job, predict, then compare answers.";
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function buildCoachReply(prompt, supportType) {
+  const text = String(prompt || "").trim();
+  const profile = coachMistakeProfile();
+  const target = adaptiveDrillTarget();
+  const matches = coachSearchContent(text);
+  const explicitFamily = [...new Set(allQuestions().map((question) => question.family))]
+    .find((family) => text.toLowerCase().includes(family.toLowerCase()));
+  const family = explicitFamily || profile.topFamily[0] || target.weak.family;
+  const lesson = matches.find((item) => item.type === "lesson");
+  const answerLead = /why|miss|wrong|mistake|analy/i.test(text)
+    ? `You are most likely missing these because ${profile.topTrap[0].toLowerCase()} is showing up before you finish the method.`
+    : `Here is the clean LSAT way to think about ${family}.`;
+  const evidence = profile.attempts
+    ? `I am using ${profile.attempts} answered question${profile.attempts === 1 ? "" : "s"}, ${profile.missed} miss${profile.missed === 1 ? "" : "es"}, and your journal tags.`
+    : "I need a few answered questions to personalize this more, so I am using the lesson library and starter analytics.";
+  const immediateFix = coachFixForFamily(family);
+  const nextStep = `Do a 6-question ${family} block, force a prediction before answer choices, then write one rule for any miss.`;
+  const sources = matches.map((item) => `${item.title}: ${item.body}`).join(" ");
+  return {
+    id: `coach-${Date.now()}-assistant`,
+    role: "assistant",
+    type: supportType || "Coach answer",
+    prompt: "",
+    answer: `${answerLead}\n\n${evidence}\n\nOn-the-spot fix: ${immediateFix}\n\nNext move: ${nextStep}${lesson ? `\n\nBest linked lesson: ${lesson.title}.` : ""}`,
+    sources,
+    family,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 function generatedStudyCalendar() {
@@ -3108,6 +3236,7 @@ function renderLivePage() {
 function renderCoachPage() {
   const messages = state.coachMessages || [];
   const target = adaptiveDrillTarget();
+  const profile = coachMistakeProfile();
   const checklist = [
     "Confirm current score, goal score, and test date in Plan.",
     `Run one ${target.weak.family} drill before asking for a new plan.`,
@@ -3123,18 +3252,36 @@ function renderCoachPage() {
           <p>Coach is the place to ask, "why did I miss this?" and get a direct explanation, a next drill, and an admissions-aware plan.</p>
         </div>
         <div class="coach-stack">
-          <section><strong>Tutor messaging</strong><span>Question help, lesson clarification, pacing decisions.</span></section>
-          <section><strong>Admissions strategy</strong><span>Score goals, school list thinking, scholarship positioning.</span></section>
+          <section><strong>${profile.attempts}</strong><span>Questions answered and tracked locally.</span></section>
+          <section><strong>${profile.accuracy}%</strong><span>Current local accuracy across answered questions.</span></section>
+          <section><strong>${profile.topFamily[0]}</strong><span>Most common miss family.</span></section>
         </div>
       </article>
       <article class="panel panel--wide coach-console">
         <div class="panel__head">
-          <h3>Message your AI LSAT coach</h3>
-          <span class="status-pill">Soft gated preview</span>
+          <h3>Ask your JessiPreps coach</h3>
+          <span class="status-pill">Local mini-chat</span>
         </div>
         <div class="recommendation-box">
           <strong>Coach recommendation:</strong> Start with ${target.weak.family}. This was selected from your local misses, timing, and current adaptive mode.
           <a class="button button--ghost" href="#/practice/drill/${target.preset.id}">Open suggested drill</a>
+        </div>
+        <div class="coach-diagnosis-grid">
+          <section>
+            <p class="mini-card__label">Why this is happening</p>
+            <h4>${profile.topTrap[0]}</h4>
+            <p>${profile.topTrap[1] ? `${profile.topTrap[1]} logged miss${profile.topTrap[1] === 1 ? "" : "es"} share this trap.` : "Answer more questions to make this diagnosis stronger."}</p>
+          </section>
+          <section>
+            <p class="mini-card__label">On-the-spot fix</p>
+            <h4>${profile.topFamily[0]}</h4>
+            <p>${coachFixForFamily(profile.topFamily[0])}</p>
+          </section>
+          <section>
+            <p class="mini-card__label">Slowest recent question</p>
+            <h4>${profile.slow ? `${profile.slow.attempt.timeSeconds}s` : "n/a"}</h4>
+            <p>${profile.slow ? `${profile.slow.question.family}: review whether time went into method or second-guessing.` : "Timing analysis appears after timed answers."}</p>
+          </section>
         </div>
         <form id="coachForm" class="coach-form">
           <label><span>Support type</span>
@@ -3145,11 +3292,34 @@ function renderCoachPage() {
               <option>Admissions strategy</option>
             </select>
           </label>
-          <label class="br-field--wide"><span>What do you want help with?</span><textarea name="coachPrompt" rows="5" placeholder="Example: Explain necessary assumptions like I am stuck at the bridge step."></textarea></label>
-          <button class="button button--primary" type="submit">Send to coach queue</button>
+          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" placeholder="Example: Why do I keep missing necessary assumptions? Explain it like a mini ChatGPT using my lessons and mistakes."></textarea></label>
+          <button class="button button--primary" type="submit">Ask coach</button>
         </form>
-        <div class="coach-message-list">
-          ${messages.length ? messages.map((item) => `<section class="notice-item"><strong>${item.type}</strong><p>${item.prompt}</p><small>${new Date(item.createdAt).toLocaleString()}</small></section>`).join("") : `<p class="muted">No coach messages yet. Send one question and it will appear here with your support type.</p>`}
+        <div class="coach-message-list coach-chat-log">
+          ${messages.length ? messages.map((item) => `
+            <section class="coach-bubble coach-bubble--${item.role || "user"}">
+              <strong>${(item.role || "user") === "assistant" ? "JessiPreps Coach" : item.type}</strong>
+              <p>${escapeHtml(item.answer || item.prompt || "").replace(/\n/g, "<br>")}</p>
+              ${item.sources ? `<details><summary>Content used</summary><p>${escapeHtml(item.sources)}</p></details>` : ""}
+              <small>${new Date(item.createdAt).toLocaleString()}</small>
+            </section>
+          `).join("") : `<p class="muted">Ask a question and Coach will answer using your lessons, question bank, attempts, journal, and mistake tags.</p>`}
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Answered-question tracker</h3>
+          <span class="status-pill">${profile.recent.length} recent shown</span>
+        </div>
+        <div class="practice-list">
+          ${profile.recent.length ? profile.recent.map((item) => `
+            <section class="question-card">
+              <p class="mini-card__label">${item.question.family} · ${item.attempt.context || "practice"}</p>
+              <h4>${item.question.question || item.question.questionStem}</h4>
+              <p>${item.attempt.correct ? "Correct" : "Missed"}${Number.isFinite(item.attempt.timeSeconds) ? ` · ${item.attempt.timeSeconds}s` : ""}</p>
+              <p class="microcopy">${item.attempt.correct ? "Keep the method." : buildMissAnalysis(item.question)}</p>
+            </section>
+          `).join("") : `<p class="muted">No answered questions yet. Start a drill and Coach will track every response here.</p>`}
         </div>
       </article>
       <article class="panel panel--wide">
@@ -3356,16 +3526,19 @@ function wireInteractions(route) {
       const formData = new FormData(coachForm);
       const prompt = String(formData.get("coachPrompt") || "").trim();
       if (!prompt) return;
-      state.coachMessages.unshift({
-        id: `coach-${Date.now()}`,
+      const userMessage = {
+        id: `coach-${Date.now()}-user`,
+        role: "user",
         type: String(formData.get("supportType") || "Coach support"),
         prompt,
         createdAt: new Date().toISOString(),
-      });
+      };
+      const assistantMessage = buildCoachReply(prompt, userMessage.type);
+      state.coachMessages.unshift(assistantMessage, userMessage);
       state.notifications.unshift({
         id: `coach-note-${Date.now()}`,
-        title: "Coach message queued",
-        body: "Your support request is saved locally in Coach.",
+        title: "Coach answered",
+        body: `Coach analyzed ${coachMistakeProfile().attempts} answered questions and replied in chat.`,
         read: false,
       });
       saveState();
@@ -3760,6 +3933,21 @@ function answerQuestion(questionId, choice, context) {
     confidence: correct ? "steady" : "shaky",
     timeSeconds,
   };
+  state.answerLog = state.answerLog || [];
+  state.answerLog.unshift({
+    id: `answer-${Date.now()}-${questionId}`,
+    questionId,
+    family: question.family,
+    correct,
+    choice,
+    correctAnswer: question.answer,
+    context,
+    timeSeconds,
+    trapPattern: question.trapPattern,
+    mistakeReason: correct ? "" : (question.mistakeReason || "Wrong answer trap"),
+    answeredAt: new Date().toISOString(),
+  });
+  state.answerLog = state.answerLog.slice(0, 500);
   if ((context || "").includes("drill") || (context || "").includes("timed")) {
     state.currentBlock.unfinished = Math.max(0, (state.currentBlock.unfinished || 0) - 1);
   }

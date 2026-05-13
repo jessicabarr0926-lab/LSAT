@@ -88,6 +88,8 @@ The original question bank is expanded to 600 local LSAT-style questions with di
 
 V2 keeps the project static and localStorage-based. Backend login, real-time AI classrooms, payment enforcement, and a full admissions CRM remain future milestones.
 
+Coach now works as a local mini-chat assistant. It answers LSAT questions using the lesson library, question bank, RC passages, attempts, wrong-answer journal, and mistake tags. It also tracks answered questions, summarizes common mistake patterns, and gives an on-the-spot fix plus a linked next drill.
+
 ## Notes
 
 The practice questions are original LSAT-style examples, not copied official question text. Your PrepTest 130 score and review patterns are used as study analytics.
