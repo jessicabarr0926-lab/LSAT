@@ -156,7 +156,12 @@ function daysUntilTest() {
 }
 
 function adaptiveDrillTarget() {
-  const weak = weakestFamily();
+  const journalFamilies = state.journal.reduce((acc, entry) => {
+    if (entry.family) acc[entry.family] = (acc[entry.family] || 0) + 1;
+    return acc;
+  }, {});
+  const journalFamily = Object.entries(journalFamilies).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const weak = journalFamily ? { family: journalFamily, score: accuracyForFamily(journalFamily) || 0 } : weakestFamily();
   const preset =
     data.drillPresets.find((item) => item.families.includes(weak.family)) ||
     data.drillPresets.find((item) => item.id === "gap-work") ||

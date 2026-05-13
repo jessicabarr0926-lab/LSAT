@@ -2291,7 +2291,6 @@ function buildRecommendedDrill() {
 function renderCurrentQuestion() {
   if (!has("#drillCard")) return;
   const count = currentDrill.length;
-  $("#drillCount").textContent = `${count} question${count === 1 ? "" : "s"} queued`;
   $("#drillFocus").textContent = `Focus: ${currentFocus}`;
   $("#drillFeedback").textContent = "";
   submittedCurrentQuestion = false;
@@ -2300,6 +2299,8 @@ function renderCurrentQuestion() {
 
   if (!count) {
     const weakSkill = getWeakSkills()[0];
+    $("#drillCount").textContent = "Click Start next drill to queue 6 questions";
+    $("#drillFocus").textContent = `Recommended: ${weakSkill}`;
     const preview = questionBank
       .filter((question) => question.skill === weakSkill || getQuestionStatus(question) === "missed")
       .slice(0, 6);
@@ -2321,6 +2322,8 @@ function renderCurrentQuestion() {
     if (has("#drillMastery")) $("#drillMastery").textContent = "Mastery gate: score 90% or higher to clear this set.";
     return;
   }
+
+  $("#drillCount").textContent = `${count} question${count === 1 ? "" : "s"} queued`;
 
   const question = currentDrill[currentQuestionIndex];
   currentRevealStage = state.accessibility?.predictionMode ? 0 : 2;
