@@ -73,8 +73,6 @@ The requested LSAT lesson expansion is now wired into `script.js` as 127 additio
 
 `content-system-plan.md` is the source-informed production plan for the first lesson set, animated video scripts, tagging taxonomy, and recommendation rules. It is written as original JessiPreps teaching material rather than copied book text.
 
-`platform-audit.md` compares JessiPreps against premium LSAT prep features and lists the next upgrades needed for a serious custom study system.
-
 ## Notes
 
 The practice questions are original LSAT-style examples, not copied official question text. Your PrepTest 130 score and review patterns are used as study analytics.

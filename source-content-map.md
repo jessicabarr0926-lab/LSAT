@@ -13,7 +13,6 @@ This file is the merged source-of-truth map for the rebuilt JessiPreps repo. It 
 | `script.js` | Shared browser behavior for the static multi-page flow |
 | `jessipreps.css` | Alternate branded styling surface |
 | `content-system-plan.md` | Curriculum seed, taxonomy, and recommendation rules |
-| `platform-audit.md` | Product strategy, premium-feature audit, and upgrade priorities |
 
 ## Live Page Map
 
@@ -154,12 +153,11 @@ Each RC passage currently carries five questions and is suitable for structure, 
 3. Expose or route the lesson through `app.js`.
 4. Reflect discoverability in `content.html`, `lessons.html`, or dedicated lesson pages.
 5. Tie the lesson to questions, drills, and analytics.
-6. Update `platform-audit.md` when a feature meaningfully changes product scope.
+6. Verify the live UI still routes students into a study action.
 
 ## Practical Source Of Truth Rules
 
 - Lesson copy, question data, RC passages, and question-type videos live in `content.js`.
 - Navigation and study behavior live in `app.js`.
 - Static page framing lives in the relevant `.html` files.
-- Strategy and roadmap docs live in markdown, not inside page copy.
 - New curriculum should be added once in structured data, then surfaced through the UI, not hand-copied into multiple pages.
