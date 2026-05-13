@@ -2612,7 +2612,6 @@ function renderPracticePage(route) {
   const grouped = [...new Set(data.questionBank.map((question) => question.family))];
   const adaptive = adaptiveDrillTarget();
   const time = timeSummary();
-  const bookStats = bookCompanionStats();
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -2669,43 +2668,6 @@ function renderPracticePage(route) {
             `;
           })
           .join("")}
-      </div>
-    </article>
-    <article class="panel panel--wide">
-      <div class="panel__head">
-        <div>
-          <p class="mini-card__label">Book / official companion</p>
-          <h3>Track outside questions without copying protected text.</h3>
-        </div>
-        <span class="status-pill">${bookStats.total} logged</span>
-      </div>
-      <p>Use this for PowerScore, Loophole, Trainer, LawHub, or any other source. Store only source, page/test reference, family, result, and your notes. Do not paste copyrighted question text.</p>
-      <form id="bookCompanionForm" class="plan-form">
-        <label><span>Source</span><input name="source" placeholder="PowerScore LR Bible, LawHub PT, The Loophole" /></label>
-        <label><span>Reference</span><input name="reference" placeholder="Chapter 6, p. 142, PT 152 S3 Q17" /></label>
-        <label><span>Family</span>
-          <select name="family">${grouped.map((family) => `<option>${family}</option>`).join("")}</select>
-        </label>
-        <label><span>Difficulty</span><select name="difficulty"><option>easy</option><option>medium</option><option>hard</option></select></label>
-        <label><span>Result</span><select name="result"><option>correct</option><option>missed</option><option>skipped</option><option>blind review fix</option></select></label>
-        <label><span>Mistake reason</span><select name="mistakeReason">${mistakeReasonOptions().map((reason) => `<option>${reason}</option>`).join("")}</select></label>
-        <label class="br-field--wide"><span>Reflection, not question text</span><textarea name="note" rows="3" placeholder="Example: I confused sufficient and necessary. Redrill conditional logic."></textarea></label>
-        <button class="button button--primary" type="submit">Log outside question</button>
-      </form>
-      <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Outside questions</p><h4>${bookStats.total}</h4><p>Source references tracked.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Missed</p><h4>${bookStats.missed}</h4><p>Added to analysis.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Top family</p><h4>${bookStats.topFamily}</h4><p>Use original drills to practice safely.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Reviewed</p><h4>${bookStats.reviewed}</h4><p>Marked as cleaned up.</p></section>
-      </div>
-      <div class="journal-list">
-        ${bookStats.recent.length ? bookStats.recent.map((log) => `
-          <section class="journal-card">
-            <strong>${log.source} · ${log.reference}</strong>
-            <p>${log.family} · ${log.result} · ${log.mistakeReason}</p>
-            <p class="microcopy">${log.note || "No reflection yet."}</p>
-          </section>
-        `).join("") : `<p class="muted">No outside questions logged yet. Add source references here, then drill original JessiPreps questions for the same family.</p>`}
       </div>
     </article>
     <article class="panel">
@@ -3942,44 +3904,6 @@ function wireInteractions(route) {
       state.rcProgress[passageId].readStartTime = Date.now();
       saveState();
     }
-  }
-
-  const bookCompanionForm = pageMount.querySelector("#bookCompanionForm");
-  if (bookCompanionForm) {
-    bookCompanionForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const formData = new FormData(bookCompanionForm);
-      const family = String(formData.get("family") || adaptiveDrillTarget().weak.family);
-      const result = String(formData.get("result") || "missed");
-      const log = {
-        id: `book-log-${Date.now()}`,
-        source: String(formData.get("source") || "Outside source"),
-        reference: String(formData.get("reference") || "Reference only"),
-        family,
-        difficulty: String(formData.get("difficulty") || "medium"),
-        result,
-        mistakeReason: String(formData.get("mistakeReason") || "Wrong answer trap"),
-        note: String(formData.get("note") || ""),
-        reviewed: result === "blind review fix",
-        loggedAt: new Date().toISOString(),
-      };
-      state.bookQuestionLogs.unshift(log);
-      if (result === "missed" || result === "skipped") {
-        state.journal.unshift({
-          questionId: log.id,
-          family,
-          trapPattern: "Outside source reference",
-          confidence: "medium",
-          mistakeReason: log.mistakeReason,
-          blindReviewOutcome: "pending",
-          wrongChoiceText: "",
-          whyWrong: log.note || `Review ${family} from ${log.source} ${log.reference}.`,
-          note: log.note || `Outside reference only: ${log.source} ${log.reference}. Do not store protected question text.`,
-        });
-      }
-      saveState();
-      renderApp();
-    });
   }
 
   if (route.page === "plan") {

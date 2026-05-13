@@ -84,7 +84,7 @@ The hash app now normalizes all 139 lessons with full script, storyboard beats, 
 - Conditional Logic
 - Blind Review Method
 
-The original question bank is expanded to 600 local LSAT-style questions with difficulty, timing target, question type, trap pattern, linked lesson, explanation, and mistake-reason metadata. Reading Comprehension now includes 12 original passages with passage-map prompts and question sets.
+The original question bank is expanded to 1,000 local LSAT-style questions with difficulty, timing target, question type, trap pattern, linked lesson, explanation, and mistake-reason metadata. Reading Comprehension now includes 20 original passages with passage-map prompts and question sets.
 
 V2 keeps the project static and localStorage-based. Backend login, real-time AI classrooms, payment enforcement, and a full admissions CRM remain future milestones.
 
@@ -92,7 +92,7 @@ Coach now works as a local mini-chat assistant. It answers LSAT questions using 
 
 The content boost layer adds richer teaching material to every lesson and question: Professor Maya method steps, trap warnings, mini-drill prompts, teaching notes, explanation steps, wrong-answer diagnostics, and immediate correction rules.
 
-The static V2 now includes safe replacements for the two backend/copyright-heavy requests: a Book / Official Companion logger that tracks source references and reflections without storing protected question text, and a Local Account + Sync panel that saves profile data and supports backup/restore JSON across browsers.
+The static V2 keeps copyrighted materials out of the app and trains the same LSAT skills with original questions, original RC passages, boosted explanations, and a Local Account + Sync panel that saves profile data and supports backup/restore JSON across browsers.
 
 ## Notes
 

@@ -491,6 +491,14 @@ const v2AdditionalRcPassages = [
   ['rc-v2-solar-flares', 'Solar Flare Forecasting', 'Natural Science', 'A discussion of prediction models, uncertainty, and why accuracy improves unevenly across flare types.'],
   ['rc-v2-museum-labels', 'Museum Labels and Interpretation', 'Humanities', 'A critique of neutral museum labels that argues interpretation is unavoidable but can be transparent.'],
   ['rc-v2-food-deserts', 'Food Deserts and Mobility', 'Social Science', 'A passage challenging distance-only models of food access by adding transit and work schedule data.'],
+  ['rc-v3-climate-litigation', 'Climate Litigation and Standing', 'Law', 'A passage about courts weighing future injury, causation, and institutional limits in climate-related suits.'],
+  ['rc-v3-deep-sea-microbes', 'Deep-Sea Microbial Communities', 'Natural Science', 'A passage challenging the assumption that sunlight-based ecosystems provide the best model for all biological communities.'],
+  ['rc-v3-translation-poetry', 'Translation and Poetic Form', 'Humanities', 'A passage arguing that translated poetry should preserve function and effect rather than mirror literal surface structure.'],
+  ['rc-v3-housing-mobility', 'Housing Mobility Studies', 'Social Science', 'A passage qualifying claims about neighborhood relocation programs by distinguishing opportunity access from measured outcomes.'],
+  ['rc-v3-algorithmic-evidence', 'Algorithmic Evidence in Courts', 'Law', 'A passage evaluating whether predictive tools can be useful while still requiring transparent standards of review.'],
+  ['rc-v3-plant-communication', 'Plant Signaling Research', 'Natural Science', 'A passage about chemical signaling among plants and the risks of overstating intentional language in biology.'],
+  ['rc-v3-oral-performance', 'Oral Performance Traditions', 'Humanities', 'A passage arguing that performance traditions should be studied as adaptive systems rather than imperfect written texts.'],
+  ['rc-v3-voting-behavior', 'Voting Behavior and Local Information', 'Social Science', 'A passage complicating simple turnout theories by adding social networks, ballot design, and local news access.'],
 ];
 
 function buildV2RcPassage([id, title, topic, summary], index) {
@@ -579,7 +587,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
     });
     const existingIds = new Set(data.questionBank.map((question) => question.id));
     let index = 0;
-    while (data.questionBank.length < 600) {
+    while (data.questionBank.length < 1000) {
       const question = buildV2OriginalQuestion(index);
       if (!existingIds.has(question.id)) {
         data.questionBank.push(question);
