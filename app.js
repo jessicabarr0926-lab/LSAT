@@ -866,6 +866,67 @@ function coachFixForFamily(family) {
   return fixes[family] || "Slow down, classify the question family, name the job, predict, then compare answers.";
 }
 
+function coachTopicFromPrompt(prompt) {
+  const text = String(prompt || "").toLowerCase();
+  const topicMap = [
+    { test: /\b(main idea|main point|primary purpose|central idea|big idea)\b/, family: "RC Main Point" },
+    { test: /\b(rc inference|infer|inference|strongly supported|must be true)\b/, family: "RC Inference" },
+    { test: /\b(function|purpose of reference|role of paragraph|why does the author mention)\b/, family: "RC Function" },
+    { test: /\b(author attitude|tone|attitude|viewpoint)\b/, family: "RC Attitude" },
+    { test: /\b(structure|passage map|paragraph map|organization)\b/, family: "RC Structure" },
+    { test: /\b(necessary assumption|assumption required|negate)\b/, family: "Assumption" },
+    { test: /\b(strengthen|support the argument)\b/, family: "Strengthen" },
+    { test: /\b(weaken|undermine)\b/, family: "Weaken" },
+    { test: /\b(flaw|cause and effect|causal)\b/, family: "Flaw" },
+    { test: /\b(conditional|if then|only if|unless)\b/, family: "Conditional Logic" },
+  ];
+  return topicMap.find((item) => item.test.test(text))?.family || "";
+}
+
+function coachLessonForFamily(family, matches = []) {
+  const fromSearch = matches.find((item) => item.type === "lesson" && item.title);
+  if (fromSearch && (!/main point|main idea/i.test(family) || /main point|main idea|primary purpose/i.test(fromSearch.title))) return fromSearch;
+  const lesson = data.lessons.find((item) =>
+    (item.linkedQuestionFamilies || []).includes(family) ||
+    item.title.toLowerCase().includes(family.toLowerCase().replace(/^rc\s+/, ""))
+  );
+  return lesson ? { type: "lesson", title: lesson.title, href: `#/learn/${lesson.id}`, body: lesson.conceptSummary || lesson.summary || "" } : fromSearch;
+}
+
+function coachTeachingPlan(family, prompt) {
+  if (family === "RC Main Point") {
+    return {
+      lead: "For main idea questions, do not hunt for the prettiest summary. Hunt for the author's whole-job sentence.",
+      method: [
+        "After each paragraph, write a tiny job label: background, problem, rival view, author response, consequence.",
+        "Ask: what did the author spend the whole passage trying to make me understand or accept?",
+        "Build a prediction with two parts: the central subject plus the author's attitude or direction.",
+        "Choose the answer that covers the whole passage, not the answer that perfectly describes one paragraph.",
+      ],
+      traps: [
+        "Too narrow: true detail from one paragraph.",
+        "Too broad: topic area without the author's actual point.",
+        "Too strong: adds a conclusion the passage never earned.",
+      ],
+      drill: "Do one RC passage and pause before the questions. Write a 12-word main point prediction before looking at answer choices.",
+    };
+  }
+  if (family === "RC Inference") {
+    return {
+      lead: "For RC inference, the right answer should feel almost boring because the passage already paid for it.",
+      method: ["Find the exact proof line.", "Soften the claim until every word is supported.", "Reject answers that require outside knowledge or stronger force."],
+      traps: ["Plausible but not stated.", "Uses extreme language.", "Combines two true ideas into an unsupported new claim."],
+      drill: "Do 6 RC inference questions and underline the proof sentence before choosing.",
+    };
+  }
+  return {
+    lead: `Here is the clean LSAT way to handle ${family}.`,
+    method: [coachFixForFamily(family), "Name the answer's job before reading choices.", "Eliminate choices that change the job, force, or scope."],
+    traps: ["Relevant but not responsive.", "Too broad or too strong.", "Right topic, wrong job."],
+    drill: `Do a 6-question ${family} block and write one rule for any miss.`,
+  };
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -882,23 +943,21 @@ function buildCoachReply(prompt, supportType) {
   const matches = coachSearchContent(text);
   const explicitFamily = [...new Set(allQuestions().map((question) => question.family))]
     .find((family) => text.toLowerCase().includes(family.toLowerCase()));
-  const family = explicitFamily || profile.topFamily[0] || target.weak.family;
-  const lesson = matches.find((item) => item.type === "lesson");
-  const answerLead = /why|miss|wrong|mistake|analy/i.test(text)
-    ? `You are most likely missing these because ${profile.topTrap[0].toLowerCase()} is showing up before you finish the method.`
-    : `Here is the clean LSAT way to think about ${family}.`;
-  const evidence = profile.attempts
-    ? `I am using ${profile.attempts} answered question${profile.attempts === 1 ? "" : "s"}, ${profile.missed} miss${profile.missed === 1 ? "" : "es"}, and your journal tags.`
-    : "I need a few answered questions to personalize this more, so I am using the lesson library and starter analytics.";
-  const immediateFix = coachFixForFamily(family);
-  const nextStep = `Do a 6-question ${family} block, force a prediction before answer choices, then write one rule for any miss.`;
+  const family = coachTopicFromPrompt(text) || explicitFamily || profile.topFamily[0] || target.weak.family;
+  const lesson = coachLessonForFamily(family, matches);
+  const plan = coachTeachingPlan(family, text);
+  const analyticsNote = profile.attempts
+    ? `I also see ${profile.attempts} answered question${profile.attempts === 1 ? "" : "s"} and ${profile.missed} miss${profile.missed === 1 ? "" : "es"} in your local tracker, so I would keep this practical and prediction-first.`
+    : "Once you answer more questions, I can tailor this to your actual misses. For now, use this as the clean method.";
+  const method = plan.method.map((step, index) => `${index + 1}. ${step}`).join("\n");
+  const traps = plan.traps.map((trap) => `- ${trap}`).join("\n");
   const sources = matches.map((item) => `${item.title}: ${item.body}`).join(" ");
   return {
     id: `coach-${Date.now()}-assistant`,
     role: "assistant",
     type: supportType || "Coach answer",
     prompt: "",
-    answer: `${answerLead}\n\n${evidence}\n\nOn-the-spot fix: ${immediateFix}\n\nNext move: ${nextStep}${lesson ? `\n\nBest linked lesson: ${lesson.title}.` : ""}`,
+    answer: `${plan.lead}\n\nUse this method:\n${method}\n\nWatch for these traps:\n${traps}\n\nTry this now: ${plan.drill}\n\n${analyticsNote}${lesson ? `\n\nBest linked lesson: ${lesson.title}.` : ""}`,
     sources,
     family,
     createdAt: new Date().toISOString(),
@@ -3494,6 +3553,7 @@ function renderCoachPage() {
     "Log one Blind Review rule from the most recent miss.",
     "Draft a target/reach/safety school list before admissions advising.",
   ];
+  const suggestedFamily = coachTopicFromPrompt(messages[0]?.prompt || messages[1]?.prompt || "") || target.weak.family;
   return `
     <section class="feature-page coach-page">
       <article class="feature-hero panel panel--wide">
@@ -3514,19 +3574,19 @@ function renderCoachPage() {
           <span class="status-pill">Local mini-chat</span>
         </div>
         <div class="recommendation-box">
-          <strong>Coach recommendation:</strong> Start with ${target.weak.family}. This was selected from your local misses, timing, and current adaptive mode.
+          <strong>Suggested next drill:</strong> ${suggestedFamily}. This updates from your local misses and whatever you ask Coach about.
           <a class="button button--ghost" href="#/practice/drill/${target.preset.id}">Open suggested drill</a>
         </div>
         <div class="coach-diagnosis-grid">
           <section>
-            <p class="mini-card__label">Why this is happening</p>
+            <p class="mini-card__label">Pattern read</p>
             <h4>${profile.topTrap[0]}</h4>
-            <p>${profile.topTrap[1] ? `${profile.topTrap[1]} logged miss${profile.topTrap[1] === 1 ? "" : "es"} share this trap.` : "Answer more questions to make this diagnosis stronger."}</p>
+            <p>${profile.topTrap[1] ? `${profile.topTrap[1]} logged miss${profile.topTrap[1] === 1 ? "" : "es"} share this trap.` : "No recurring trap yet. Ask a concept question or answer more questions and this will get sharper."}</p>
           </section>
           <section>
-            <p class="mini-card__label">On-the-spot fix</p>
-            <h4>${profile.topFamily[0]}</h4>
-            <p>${coachFixForFamily(profile.topFamily[0])}</p>
+            <p class="mini-card__label">Quick method card</p>
+            <h4>${suggestedFamily}</h4>
+            <p>${coachFixForFamily(suggestedFamily)}</p>
           </section>
           <section>
             <p class="mini-card__label">Slowest recent question</p>
@@ -3543,7 +3603,7 @@ function renderCoachPage() {
               <option>Admissions strategy</option>
             </select>
           </label>
-          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" placeholder="Example: Why do I keep missing necessary assumptions? Explain it like a mini ChatGPT using my lessons and mistakes."></textarea></label>
+          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" placeholder="Example: How do I answer main idea questions? Give me the method and traps."></textarea></label>
           <button class="button button--primary" type="submit">Ask coach</button>
         </form>
         <div class="coach-message-list coach-chat-log">
