@@ -1418,8 +1418,7 @@ body[data-route="dashboard"] #todaySidebarCard {
 }
 
 .analytics-tabs,
-.analytics-detail-grid,
-.tier-grid {
+.analytics-detail-grid {
   display: grid;
   gap: 12px;
 }
@@ -1429,38 +1428,11 @@ body[data-route="dashboard"] #todaySidebarCard {
   margin-bottom: 14px;
 }
 
-.analytics-tabs section,
-.tier-grid section {
+.analytics-tabs section {
   border-radius: 18px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.68);
   padding: 16px;
-}
-
-.tier-grid section {
-  display: grid;
-  gap: 8px;
-}
-
-.tier-grid section.is-active {
-  border-color: rgba(47, 122, 82, 0.34);
-  background: rgba(230, 247, 236, 0.84);
-  box-shadow: inset 0 0 0 1px rgba(47, 122, 82, 0.1);
-}
-
-.tier-grid a,
-.tier-grid button {
-  color: var(--accent);
-  font-weight: 800;
-}
-
-.tier-grid button {
-  justify-self: start;
-  border: 1px solid rgba(124, 55, 92, 0.2);
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
 }
 
 .analytics-detail-grid {
@@ -2003,13 +1975,13 @@ body[data-route="dashboard"] #todaySidebarCard {
   color: inherit;
 }
 
-.tier-page {
+.feature-page {
   grid-column: 1 / -1;
   display: grid;
   gap: 20px;
 }
 
-.tier-hero {
+.feature-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.35fr);
   align-items: center;
@@ -3210,7 +3182,7 @@ body.test-day-active .page-grid {
   .dashboard-overview,
   .command-strip,
   .card-grid--four,
-  .tier-hero,
+  .feature-hero,
   .class-agenda-grid,
   .live-class-grid,
   .live-classroom-grid,
@@ -3295,7 +3267,7 @@ body.test-day-active .page-grid {
   .hero-card,
   .dashboard-grid,
   .dashboard-overview,
-  .tier-hero,
+  .feature-hero,
   .animation-stage,
   .class-agenda-grid,
   .live-class-grid,

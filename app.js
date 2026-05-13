@@ -12,7 +12,6 @@ const noticeMount = document.querySelector("#noticeMount");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarClose = document.querySelector("#sidebarClose");
 const notificationBell = document.querySelector("#notificationBell");
-const subscribeCta = document.querySelector("#subscribeCta");
 const globalSearch = document.querySelector("#globalSearch");
 const commandPaletteButton = document.querySelector("#commandPaletteButton");
 const profileChip = document.querySelector("#profileChip");
@@ -43,12 +42,6 @@ sidebarClose?.addEventListener("click", () => {
 
 notificationBell?.addEventListener("click", () => {
   state.notificationsOpen = !state.notificationsOpen;
-  saveState();
-  renderApp();
-});
-
-subscribeCta?.addEventListener("click", () => {
-  state.subscriptionIntent = state.subscriptionIntent === "open" ? "" : "open";
   saveState();
   renderApp();
 });
@@ -124,7 +117,6 @@ function defaultState() {
       syncCode: "",
       lastBackupAt: "",
     },
-    subscriptionTier: "Core",
     liveClassroom: {
       activeSessionId: "live-flaw-30",
       currentStep: 0,
@@ -141,7 +133,6 @@ function defaultState() {
       ],
     },
     cookieConsent: "",
-    subscriptionIntent: "",
     notificationsOpen: false,
     commandPaletteOpen: false,
     profileMenuOpen: false,
@@ -206,7 +197,6 @@ function loadState() {
       imports: parsed.imports || [],
       bookQuestionLogs: parsed.bookQuestionLogs || [],
       localAccount: { ...base.localAccount, ...(parsed.localAccount || {}) },
-      subscriptionTier: parsed.subscriptionTier || base.subscriptionTier,
       liveClassroom: { ...base.liveClassroom, ...(parsed.liveClassroom || {}) },
       admissions: {
         ...base.admissions,
@@ -215,7 +205,6 @@ function loadState() {
         schools: parsed.admissions?.schools || [],
       },
       cookieConsent: parsed.cookieConsent || "",
-      subscriptionIntent: parsed.subscriptionIntent || "",
       notificationsOpen: Boolean(parsed.notificationsOpen),
       commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
@@ -347,14 +336,6 @@ function localBackupPayload() {
     version: "jessipreps-static-v2",
     state,
   }, null, 2);
-}
-
-function tierRank(tier = state.subscriptionTier) {
-  return { Core: 1, Live: 2, Coach: 3 }[tier] || 1;
-}
-
-function hasTier(required) {
-  return tierRank() >= tierRank(required);
 }
 
 function liveClassroomReply(prompt) {
@@ -1095,7 +1076,6 @@ function renderApp() {
     notificationBell.textContent = String(unread);
     notificationBell.setAttribute("aria-label", `${unread} unread notification${unread === 1 ? "" : "s"}`);
   }
-  if (subscribeCta) subscribeCta.classList.toggle("is-active", state.subscriptionIntent === "open");
   if (notificationBell) notificationBell.classList.toggle("is-active", state.notificationsOpen);
   if (profileChip) profileChip.classList.toggle("is-active", state.profileMenuOpen);
   if (!document.querySelector(".sidebar-backdrop")) {
@@ -1150,11 +1130,6 @@ function wireNoticeLayer() {
       saveState();
       renderApp();
     });
-  });
-  noticeMount?.querySelector("[data-close-subscribe]")?.addEventListener("click", () => {
-    state.subscriptionIntent = "";
-    saveState();
-    renderApp();
   });
   noticeMount?.querySelector("[data-mark-notifications-read]")?.addEventListener("click", () => {
     state.notifications = state.notifications.map((item) => ({ ...item, read: true }));
@@ -1304,20 +1279,6 @@ function renderNoticeLayer() {
   if (!noticeMount) return;
   const unread = state.notifications.filter((item) => !item.read).slice(0, 3);
   noticeMount.innerHTML = `
-    ${state.subscriptionIntent === "open" ? `
-      <aside class="floating-panel subscribe-panel">
-        <div class="panel__head">
-          <h3>JessiPreps tiers</h3>
-          <button class="icon-button" type="button" data-close-subscribe aria-label="Close subscribe panel">×</button>
-        </div>
-        <div class="tier-grid">
-          <section class="${state.subscriptionTier === "Core" ? "is-active" : ""}"><strong>Core</strong><span>Self-study dashboard, lessons, drills, review, and plan.</span><button type="button" data-select-tier="Core">Use Core</button></section>
-          <section class="${state.subscriptionTier === "Live" ? "is-active" : ""}"><strong>Live</strong><span>Interactive AI-teacher classroom, 30-minute sessions, and recordings.</span><button type="button" data-select-tier="Live">Unlock Live locally</button></section>
-          <section class="${state.subscriptionTier === "Coach" ? "is-active" : ""}"><strong>Coach</strong><span>Coach chat, admissions CRM, and personalized next steps.</span><button type="button" data-select-tier="Coach">Unlock Coach locally</button></section>
-        </div>
-        <p class="microcopy">Static V2 uses local tier gating only. Real checkout and server-side enforcement remain a backend milestone.</p>
-      </aside>
-    ` : ""}
     ${state.notificationsOpen ? `
       <aside class="notification-drawer">
         <div class="panel__head">
@@ -3277,27 +3238,29 @@ function renderPlanPage() {
         ${(state.admissions.tasks || []).map((task) => `<label><input type="checkbox" data-admissions-task="${task.id}" ${task.done ? "checked" : ""}> <span>${task.label}</span></label>`).join("")}
       </div>
     </article>
-    <article class="panel">
+    <article class="panel panel--wide">
       <div class="panel__head">
-        <h3>Support</h3>
+        <h3>Question help and confusion queue</h3>
+        <a class="status-pill status-pill--button" href="#/coach">Open Coach</a>
       </div>
+      <p>These personal help notes feed the Coach chat and review loop. Use them when a question, lesson, or strategy point feels sticky.</p>
       <div class="journal-list">
         ${state.support.map((entry) => `<section class="journal-card"><p>${entry}</p></section>`).join("")}
       </div>
       <div class="support-actions">
-        <button class="button button--ghost" data-support-fill="question">Ask for help on this exact question</button>
-        <button class="button button--ghost" data-support-fill="lesson">Save confusion from this lesson</button>
+        <button class="button button--ghost" data-support-fill="question">Add question help note</button>
+        <button class="button button--ghost" data-support-fill="lesson">Add lesson confusion note</button>
       </div>
     </article>
-    <article class="panel">
+    <article class="panel panel--wide">
       <div class="panel__head">
-        <h3>Pricing and gated features</h3>
-        <button class="status-pill status-pill--button" type="button" data-open-subscribe>Open tiers</button>
+        <h3>Everything included in this personal LSAT workspace</h3>
+        <span class="status-pill">All tools included</span>
       </div>
       <div class="card-grid card-grid--three">
-        <section class="mini-card"><p class="mini-card__label">Core</p><h4>Self-study</h4><p>Dashboard, lessons, drills, review, plan.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Live</p><h4>Local classes</h4><p>Soft-gated AI-teacher sessions, agenda chat, and recordings.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Local support</h4><p>Coach chat, mistake analysis, and admissions CRM.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Study</p><h4>Self-study loop</h4><p>Dashboard, lessons, drills, Blind Review, mistake bank, analytics, and plan.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Classroom</p><h4>Live tools</h4><p>Professor Maya agenda chat, voice read, class reservations, and recordings.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Personal strategy</h4><p>Coach chat, common-mistake analysis, next drill, school tracker, and scholarship notes.</p></section>
       </div>
     </article>
   `;
@@ -3413,17 +3376,16 @@ function renderLivePage() {
   const recordings = data.videoSamples || [];
   const activeSession = sessions.find((session) => session.id === state.liveClassroom.activeSessionId) || sessions[0];
   const currentStep = Math.min(state.liveClassroom.currentStep || 0, activeSession.agenda.length - 1);
-  const liveUnlocked = hasTier("Live");
   return `
-    <section class="tier-page live-page">
-      <article class="tier-hero panel panel--wide">
+    <section class="feature-page live-page">
+      <article class="feature-hero panel panel--wide">
         <div>
-          <p class="mini-card__label">Live tier · ${liveUnlocked ? "unlocked locally" : "upgrade preview"}</p>
+          <p class="mini-card__label">Personal live classroom</p>
           <h3>30-minute AI-teacher classes that feel like someone is actually sitting with you.</h3>
           <p>Live is where Professor Maya Brooks breaks down the lesson, asks you to predict, pauses for a You Try, and turns the miss into one journal rule.</p>
           <div class="dashboard-actions">
             <button class="button button--primary" type="button" data-live-reserve="live-flaw-30">Reserve next class</button>
-            <button class="button button--ghost" type="button" data-select-tier="Live">${liveUnlocked ? "Live unlocked" : "Unlock Live locally"}</button>
+            <a class="button button--ghost" href="#/coach">Ask Coach</a>
           </div>
         </div>
         <div class="teacher-card">
@@ -3439,7 +3401,7 @@ function renderLivePage() {
             <p class="mini-card__label">Interactive classroom</p>
             <h3>${activeSession.title}</h3>
           </div>
-          <span class="status-pill">${liveUnlocked ? "Live tools on" : "Preview mode"}</span>
+          <span class="status-pill">Included</span>
         </div>
         <div class="live-classroom-grid">
           <section class="teacher-stage">
@@ -3533,10 +3495,10 @@ function renderCoachPage() {
     "Draft a target/reach/safety school list before admissions advising.",
   ];
   return `
-    <section class="tier-page coach-page">
-      <article class="tier-hero panel panel--wide">
+    <section class="feature-page coach-page">
+      <article class="feature-hero panel panel--wide">
         <div>
-          <p class="mini-card__label">Coach tier · local support</p>
+          <p class="mini-card__label">Personal LSAT coach</p>
           <h3>AI tutor messaging plus admissions strategy, built around your actual LSAT work.</h3>
           <p>Coach is the place to ask, "why did I miss this?" and get a direct explanation, a next drill, and an admissions-aware plan.</p>
         </div>
@@ -3573,7 +3535,7 @@ function renderCoachPage() {
           </section>
         </div>
         <form id="coachForm" class="coach-form">
-          <label><span>Support type</span>
+          <label><span>Help type</span>
             <select name="supportType">
               <option>Break down a lesson</option>
               <option>Explain a missed question</option>
@@ -3961,29 +3923,6 @@ function wireInteractions(route) {
   pageMount.querySelectorAll("[data-add-notification]").forEach((button) => {
     button.addEventListener("click", () => {
       state.notifications.unshift({ id: `ratings-${Date.now()}`, title: "Understand your ratings", body: "80 means reliable mastery of hard official-style questions. 100 is stretch mastery across the hardest local sets.", read: false });
-      saveState();
-      renderApp();
-    });
-  });
-
-  pageMount.querySelectorAll("[data-open-subscribe]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.subscriptionIntent = "open";
-      saveState();
-      renderApp();
-    });
-  });
-
-  pageMount.querySelectorAll("[data-select-tier]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.subscriptionTier = button.dataset.selectTier || "Core";
-      state.subscriptionIntent = "";
-      state.notifications.unshift({
-        id: `tier-${Date.now()}`,
-        title: `${state.subscriptionTier} tier selected`,
-        body: "Static V2 tier access is stored locally in this browser.",
-        read: false,
-      });
       saveState();
       renderApp();
     });
