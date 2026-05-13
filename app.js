@@ -15,6 +15,7 @@ const notificationBell = document.querySelector("#notificationBell");
 const subscribeCta = document.querySelector("#subscribeCta");
 const globalSearch = document.querySelector("#globalSearch");
 const commandPaletteButton = document.querySelector("#commandPaletteButton");
+const profileChip = document.querySelector("#profileChip");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
 let qtPlaybackTimer = null;
@@ -54,6 +55,12 @@ subscribeCta?.addEventListener("click", () => {
 
 commandPaletteButton?.addEventListener("click", () => {
   state.commandPaletteOpen = !state.commandPaletteOpen;
+  saveState();
+  renderApp();
+});
+
+profileChip?.addEventListener("click", () => {
+  state.profileMenuOpen = !state.profileMenuOpen;
   saveState();
   renderApp();
 });
@@ -108,6 +115,7 @@ function defaultState() {
     subscriptionIntent: "",
     notificationsOpen: false,
     commandPaletteOpen: false,
+    profileMenuOpen: false,
     currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
     lastSavedAt: "",
   };
@@ -139,6 +147,7 @@ function loadState() {
       subscriptionIntent: parsed.subscriptionIntent || "",
       notificationsOpen: Boolean(parsed.notificationsOpen),
       commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
+      profileMenuOpen: Boolean(parsed.profileMenuOpen),
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
@@ -323,9 +332,10 @@ function renderDonut(percent, label, value) {
 function renderActivityBars() {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const minutes = [35, 48, 20, 55, 42, 18, activeProfile().dailyMinutes || 45];
+  const max = Math.max(...minutes, 1);
   return `
     <div class="activity-bars" aria-label="Weekly learning activity">
-      ${days.map((day, index) => `<section><i style="height:${Math.max(10, minutes[index])}%"></i><span>${day}</span></section>`).join("")}
+      ${days.map((day, index) => `<section title="${minutes[index]} minutes studied"><i style="height:${Math.max(12, Math.round((minutes[index] / max) * 100))}%"></i><span>${day}</span></section>`).join("")}
     </div>
   `;
 }
@@ -336,7 +346,7 @@ function renderAccuracyGrid(questions, limit = 30) {
     const cls = !attempt ? "is-empty" : attempt.correct ? "is-correct" : "is-wrong";
     const color = !attempt ? "#d7d3df" : attempt.correct ? "#2f9d68" : "#d85a66";
     const label = `${question.family} Q${index + 1}: ${!attempt ? "unseen" : attempt.correct ? "correct" : "missed"}`;
-    return `<span class="${cls}" style="display:block;width:10px;height:10px;border-radius:3px;background:${color}" title="${label}" aria-label="${label}"></span>`;
+    return `<a class="${cls}" href="#/review" style="display:block;width:10px;height:10px;border-radius:3px;background:${color}" title="${label}" aria-label="${label}"></a>`;
   });
   return `<div class="accuracy-grid" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px;margin-top:10px">${cells.join("")}</div>`;
 }
@@ -707,9 +717,16 @@ function renderApp() {
   renderSettings();
   renderToday();
   renderNoticeLayer();
-  if (notificationBell) notificationBell.textContent = String(unreadNotifications());
+  const route = routeInfo();
+  document.body.dataset.route = route.page;
+  if (notificationBell) {
+    const unread = unreadNotifications();
+    notificationBell.textContent = String(unread);
+    notificationBell.setAttribute("aria-label", `${unread} unread notification${unread === 1 ? "" : "s"}`);
+  }
   if (subscribeCta) subscribeCta.classList.toggle("is-active", state.subscriptionIntent === "open");
   if (notificationBell) notificationBell.classList.toggle("is-active", state.notificationsOpen);
+  if (profileChip) profileChip.classList.toggle("is-active", state.profileMenuOpen);
   if (!document.querySelector(".sidebar-backdrop")) {
     const backdrop = document.createElement("div");
     backdrop.className = "sidebar-backdrop";
@@ -717,10 +734,10 @@ function renderApp() {
     document.body.appendChild(backdrop);
   }
   document.body.classList.remove("sidebar-open");
-  const route = routeInfo();
   renderRouteMeta(route);
   renderPage(route);
   wireNoticeLayer();
+  animateCountups();
 }
 
 function applySettings() {
@@ -776,6 +793,17 @@ function wireNoticeLayer() {
     state.commandPaletteOpen = false;
     saveState();
     renderApp();
+  });
+  noticeMount?.querySelector("[data-close-profile]")?.addEventListener("click", () => {
+    state.profileMenuOpen = false;
+    saveState();
+    renderApp();
+  });
+  noticeMount?.querySelectorAll("[data-profile-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      state.profileMenuOpen = false;
+      saveState();
+    });
   });
   noticeMount?.querySelectorAll("[data-command-link]").forEach((link) => {
     link.addEventListener("click", () => {
@@ -926,6 +954,17 @@ function renderNoticeLayer() {
         <a href="#/plan" data-command-link><strong>Log LawHub result</strong><span>Official score companion</span></a>
       </aside>
     ` : ""}
+    ${state.profileMenuOpen ? `
+      <aside class="floating-panel profile-panel" role="dialog" aria-label="Profile menu">
+        <div class="panel__head">
+          <h3>Jessica's study profile</h3>
+          <button class="icon-button" type="button" data-close-profile aria-label="Close profile menu">×</button>
+        </div>
+        <section class="notice-item"><strong>Goal</strong><p>${activeProfile().currentScore} -> ${activeProfile().goalScore} · ${activeProfile().dailyMinutes} min/day</p></section>
+        <a class="button button--ghost" href="#/plan" data-profile-link>Update plan</a>
+        <a class="button button--ghost" href="#/review" data-profile-link>Open journal</a>
+      </aside>
+    ` : ""}
     ${!state.cookieConsent ? `
       <aside class="cookie-panel">
         <p><strong>Cookies and privacy.</strong> JessiPreps stores progress locally in this browser. It does not store official LSAT question text.</p>
@@ -988,7 +1027,6 @@ function renderDashboardPage() {
         <p>6 ${weak.family} questions -> Blind Review misses -> journal one rule. One rule per miss.</p>
         <div class="dashboard-actions">
           <a class="button button--primary sprint-cta" href="#/practice/drill/${adaptive.preset.id}">Start today's sprint</a>
-          <a class="button button--ghost" href="#/practice/drill/${adaptive.preset.id}">Build adaptive drill</a>
           <a class="button button--ghost" href="#/practice/timed">Timed section</a>
         </div>
         <div class="hero-illustration" aria-hidden="true"><span>LR</span><span>RC</span><span>BR</span></div>
@@ -996,19 +1034,19 @@ function renderDashboardPage() {
 
       <article class="metric-tile metric-tile--green interactive-card">
         <p class="mini-card__label">Readiness</p>
-        <h3>${data.appMeta.readinessScore}%</h3>
+        <h3 data-countup-value="${data.appMeta.readinessScore}" data-countup-suffix="%">${data.appMeta.readinessScore}%</h3>
         <p>Study quality ${studyQualityScore()}/100</p>
         ${renderSparkline([{ score: 58 }, { score: 64 }, { score: 61 }, { score: data.appMeta.readinessScore }])}
       </article>
       <article class="metric-tile metric-tile--gold interactive-card">
         <p class="mini-card__label">Scaled score</p>
-        <h3>${data.appMeta.scaledScore}</h3>
+        <h3 data-countup-value="${data.appMeta.scaledScore}">${data.appMeta.scaledScore}</h3>
         <p>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</p>
         ${renderSparkline(trend)}
       </article>
       <article class="metric-tile metric-tile--navy interactive-card">
         <p class="mini-card__label">Blind Review gap</p>
-        <h3>${data.analyticsSnapshots.blindReviewGap} pts</h3>
+        <h3 data-countup-value="${data.analyticsSnapshots.blindReviewGap}" data-countup-suffix=" pts">${data.analyticsSnapshots.blindReviewGap} pts</h3>
         <p>${dueCount} due today</p>
         ${renderDonut(Math.max(8, 100 - data.analyticsSnapshots.blindReviewGap * 3), "recovered", `${Math.max(0, 100 - data.analyticsSnapshots.blindReviewGap * 3)}%`)}
       </article>
@@ -1018,12 +1056,12 @@ function renderDashboardPage() {
           <h3>Today Flow</h3>
           <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
         </div>
-        <div class="today-flow-grid">
-          <a href="#/learn/${lesson.id}"><strong>Learn</strong><span>${lesson.title}</span></a>
-          <a href="#/practice/drill/${adaptive.preset.id}"><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
-          <a href="#/review"><strong>Review</strong><span>Blind Review misses</span></a>
-          <a href="#/review"><strong>Log</strong><span>One reusable rule</span></a>
-          <a href="#/dashboard"><strong>Stop</strong><span>Protect tomorrow's streak</span></a>
+        <div class="today-flow-grid today-stepper">
+          <a href="#/learn/${lesson.id}"><i>1</i><strong>Learn</strong><span>${lesson.title}</span></a>
+          <a href="#/practice/drill/${adaptive.preset.id}"><i>2</i><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
+          <a href="#/review"><i>3</i><strong>Review</strong><span>Blind Review misses</span></a>
+          <a href="#/review"><i>4</i><strong>Log</strong><span>One reusable rule</span></a>
+          <a href="#/dashboard"><i>5</i><strong>Stop</strong><span>Protect tomorrow's streak</span></a>
         </div>
       </article>
 
@@ -1036,6 +1074,7 @@ function renderDashboardPage() {
           ${renderDonut(Math.round((lrBank.length / allQuestions().length) * 100), "LR", lrBank.length)}
           ${renderDonut(Math.round((rcBank.length / allQuestions().length) * 100), "RC", rcBank.length)}
         </div>
+        <div class="donut-legend"><span><i></i>Colored arc = share of ${allQuestions().length} total questions</span></div>
         <p class="microcopy">Original practice only. Official LSAT question text stays in LawHub.</p>
       </article>
 
@@ -1104,7 +1143,7 @@ function renderLearnPage(route) {
       </div>
       <div class="continue-banner">
         <strong>${featured.title}</strong>
-        <span>Lesson ${data.lessons.findIndex((lesson) => lesson.id === featured.id) + 1} of ${data.lessons.length} · ${featured.statusLabel}</span>
+        <span>Ready to start · ${data.lessons.length} flagship lessons unlocked · ${featured.statusLabel}</span>
         <a class="text-link" href="#/learn/${featured.id}">Resume</a>
       </div>
       <div class="syllabus-layout">
@@ -1225,7 +1264,7 @@ function renderLessonPlayer(lesson) {
   return `
     <article class="panel panel--wide lesson-detail-shell">
       <aside class="lesson-toc">
-        <button type="button" data-scroll-target="intro">Intro</button>
+        <button class="is-active" type="button" data-scroll-target="intro">Intro</button>
         <button type="button" data-scroll-target="concept">Concept</button>
         <button type="button" data-scroll-target="example">Worked Example</button>
         <button type="button" data-scroll-target="traps">Trap Warnings</button>
@@ -1233,6 +1272,13 @@ function renderLessonPlayer(lesson) {
         <button type="button" data-scroll-target="reflection">Reflection</button>
       </aside>
       <main class="lesson-content">
+        <nav class="lesson-breadcrumb" aria-label="Lesson breadcrumb">
+          <a href="#/learn">Learn</a>
+          <span>/</span>
+          <a href="#/learn">${lesson.track}</a>
+          <span>/</span>
+          <strong>${lesson.title}</strong>
+        </nav>
         <div class="panel__head">
           <div>
             <p class="mini-card__label">${lesson.track}</p>
@@ -2034,7 +2080,7 @@ function renderPlanPage() {
       <form id="onboardingForm" class="plan-form">
         <label><span>Current score</span><input name="currentScore" type="number" min="120" max="180" value="${profile.currentScore}" /></label>
         <label><span>Goal score</span><input name="goalScore" type="number" min="120" max="180" value="${profile.goalScore}" /></label>
-        <label><span>Test date</span><input name="testDate" type="date" value="${profile.testDate}" /></label>
+        <label><span>Test date</span><input name="testDate" type="date" value="${profile.testDate}" /><small>Used to pace your study queue. You can change this any time.</small></label>
         <label><span>Weakest section</span>
           <select name="weakestSection">
             ${["Logical Reasoning", "Reading Comprehension", "Timing", "Blind Review"].map((value) => `<option value="${value}" ${profile.weakestSection === value ? "selected" : ""}>${value}</option>`).join("")}
@@ -2272,6 +2318,8 @@ function wireInteractions(route) {
 
   pageMount.querySelectorAll("[data-scroll-target]").forEach((button) => {
     button.addEventListener("click", () => {
+      pageMount.querySelectorAll("[data-scroll-target]").forEach((item) => item.classList.remove("is-active"));
+      button.classList.add("is-active");
       const target = pageMount.querySelector(`#${button.dataset.scrollTarget}`);
       target?.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "start" });
     });
@@ -2451,8 +2499,25 @@ function wireInteractions(route) {
         state.plan.targetScore = state.onboarding.goalScore;
         saveState();
         renderApp();
-      });
-    }
+  });
+}
+
+function animateCountups() {
+  if (state.settings.reducedMotion) return;
+  pageMount.querySelectorAll("[data-countup-value]").forEach((node) => {
+    const target = Number(node.dataset.countupValue || 0);
+    const suffix = node.dataset.countupSuffix || "";
+    const start = performance.now();
+    const duration = 650;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      node.textContent = `${Math.round(target * eased)}${suffix}`;
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
 
     const form = document.querySelector("#planForm");
     if (form) {

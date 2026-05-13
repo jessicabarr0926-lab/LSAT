@@ -28,6 +28,23 @@ body {
   min-height: 100vh;
 }
 
+.skip-link {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  z-index: 100;
+  transform: translateY(-140%);
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 body.theme-dyslexia {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 }
@@ -138,8 +155,8 @@ body.sidebar-collapsed .sidebar__close {
 
 .sidebar-fab {
   position: fixed;
-  left: 18px;
-  top: 18px;
+  left: 22px;
+  top: 20px;
   z-index: 50;
 }
 
@@ -181,7 +198,11 @@ body.sidebar-collapsed .main {
 }
 
 body.sidebar-collapsed .topbar {
-  padding-left: 64px;
+  padding-left: 82px;
+}
+
+body[data-route="dashboard"] #todaySidebarCard {
+  display: none;
 }
 
 .brand,
@@ -437,6 +458,7 @@ body.sidebar-collapsed .topbar {
   flex-wrap: nowrap;
   gap: 10px;
   align-items: center;
+  min-width: 0;
 }
 
 .profile-chip {
@@ -450,6 +472,11 @@ body.sidebar-collapsed .topbar {
   background: linear-gradient(135deg, var(--accent), #af5f87);
   font-weight: 900;
   cursor: pointer;
+}
+
+.profile-chip.is-active,
+#notificationBell.is-active {
+  box-shadow: 0 0 0 4px rgba(138, 116, 232, 0.16);
 }
 
 .topbar-search {
@@ -540,6 +567,7 @@ body.sidebar-collapsed .topbar {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: row;
   gap: 20px;
 }
 
@@ -581,6 +609,24 @@ body.sidebar-collapsed .topbar {
   border-color: rgba(124, 55, 92, 0.22);
 }
 
+.lesson-card,
+.activity-feed a,
+.today-flow-grid a,
+.section-result-card,
+.question-jump {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.lesson-card:hover,
+.activity-feed a:hover,
+.today-flow-grid a:hover,
+.section-result-card:hover,
+.question-jump:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(48, 28, 46, 0.1);
+  border-color: rgba(124, 55, 92, 0.22);
+}
+
 .hero-illustration {
   display: flex;
   gap: 10px;
@@ -616,6 +662,7 @@ body.sidebar-collapsed .topbar {
   color: #20202b;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .metric-tile h3 {
@@ -629,6 +676,7 @@ body.sidebar-collapsed .topbar {
 
 .metric-tile--gold {
   background: linear-gradient(160deg, #fff0bd, #fffaf0);
+  color: #171724;
 }
 
 .metric-tile--navy {
@@ -641,6 +689,7 @@ body.sidebar-collapsed .topbar {
   height: 58px;
   color: currentColor;
   opacity: 0.9;
+  overflow: visible;
 }
 
 .sparkline circle {
@@ -671,7 +720,7 @@ body.sidebar-collapsed .topbar {
   background:
     radial-gradient(circle at center, var(--panel) 0 55%, transparent 56%),
     conic-gradient(var(--accent) var(--value), rgba(124, 55, 92, 0.14) 0);
-  animation: dialIn 520ms ease both;
+  animation: dialIn 760ms ease both;
 }
 
 .donut-chart strong,
@@ -719,6 +768,25 @@ body.sidebar-collapsed .topbar {
   font-size: 0.78rem;
 }
 
+.donut-legend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 8px;
+}
+
+.donut-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  margin-right: 6px;
+}
+
 .accuracy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, 10px);
@@ -729,6 +797,7 @@ body.sidebar-collapsed .topbar {
 }
 
 .accuracy-grid span,
+.accuracy-grid a,
 .question-jump span {
   width: 10px;
   height: 10px;
@@ -744,6 +813,11 @@ body.sidebar-collapsed .topbar {
 .accuracy-grid .is-wrong,
 .question-jump .is-wrong {
   background: #d85a66;
+}
+
+.accuracy-grid a:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .grid-stack,
@@ -809,6 +883,10 @@ body.sidebar-collapsed .topbar {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 20px;
+}
+
+.page-grid > * {
+  animation: pageFade 200ms ease both;
 }
 
 /* Full-width containers that sit directly in page-grid */
@@ -1061,6 +1139,22 @@ body.sidebar-collapsed .topbar {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.74);
+}
+
+.today-stepper a {
+  position: relative;
+}
+
+.today-stepper i {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #af5f87);
+  font-style: normal;
+  font-weight: 900;
 }
 
 .today-flow-grid strong {
@@ -1416,6 +1510,12 @@ body.sidebar-collapsed .topbar {
   color: var(--muted);
 }
 
+.profile-panel {
+  right: 24px;
+  top: 92px;
+  width: min(320px, calc(100vw - 32px));
+}
+
 .syllabus-shell,
 .lesson-detail-shell,
 .preptest-results,
@@ -1482,6 +1582,12 @@ body.sidebar-collapsed .topbar {
   background: var(--accent-soft);
 }
 
+.lesson-toc button.is-active,
+.lesson-toc button:hover {
+  background: var(--accent-soft);
+  border-color: rgba(124, 55, 92, 0.22);
+}
+
 .syllabus-units span,
 .lesson-row small {
   color: var(--muted);
@@ -1532,6 +1638,20 @@ body.sidebar-collapsed .topbar {
 
 .lesson-detail-shell {
   grid-template-columns: 170px minmax(0, 1fr) 190px;
+}
+
+.lesson-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 14px;
+}
+
+.lesson-breadcrumb a {
+  color: var(--accent);
 }
 
 .lesson-toc button {
@@ -1625,6 +1745,11 @@ body.sidebar-collapsed .topbar {
 @keyframes dialIn {
   from { opacity: 0; transform: scale(0.94); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes barGrow {
@@ -1779,6 +1904,21 @@ body.sidebar-collapsed .topbar {
 .method-list {
   margin: 12px 0 0;
   padding-left: 20px;
+}
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  padding: 28px 0 8px;
+}
+
+.app-footer a {
+  color: inherit;
 }
 
 .tag-stack {
@@ -2136,6 +2276,15 @@ body.sidebar-collapsed .topbar {
     display: grid;
   }
 
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .hero-card,
   .dashboard-grid,
   .dashboard-overview,
@@ -2164,6 +2313,14 @@ body.sidebar-collapsed .topbar {
   .dashboard-card--profile,
   .dashboard-card--progress {
     grid-column: auto;
+  }
+
+  .dashboard-overview > * {
+    grid-column: auto;
+  }
+
+  .dashboard-overview .dashboard-card--hero {
+    grid-column: 1 / -1;
   }
 
   .dashboard-metrics,
@@ -2228,6 +2385,10 @@ body.sidebar-collapsed .topbar {
     display: grid;
   }
 
+  .topbar {
+    padding-left: 0;
+  }
+
   .dashboard-overview > *,
   .dashboard-overview .dashboard-card--hero {
     grid-column: span 1;
@@ -2255,10 +2416,17 @@ body.sidebar-collapsed .topbar {
 
   .topbar__actions {
     justify-items: stretch;
+    width: 100%;
   }
 
   .topbar-search {
     grid-template-columns: 1fr;
+  }
+
+  .button,
+  .icon-button,
+  .profile-chip {
+    width: 100%;
   }
 
   .syllabus-units,

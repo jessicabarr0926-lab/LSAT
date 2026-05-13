@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="./jessipreps.css" />
   </head>
   <body>
+    <a class="skip-link" href="#pageMount">Skip to main content</a>
     <button id="sidebarToggle" class="sidebar-fab" aria-label="Toggle sidebar">☰</button>
     <div class="app-shell">
       <aside class="sidebar" id="sidebarPanel">
@@ -28,7 +29,7 @@
           <div id="settingsPanel" class="settings-grid"></div>
         </section>
 
-        <section class="sidebar-card">
+        <section class="sidebar-card" id="todaySidebarCard">
           <p class="sidebar-card__label">Today</p>
           <div id="todayCard"></div>
         </section>
@@ -46,17 +47,24 @@
               <input id="globalSearch" type="search" placeholder="Lesson, drill, question..." />
             </label>
             <button id="commandPaletteButton" class="icon-button" type="button" aria-label="Open command palette">⌘K</button>
-            <button id="quickStart" class="button button--primary">Start today's sprint</button>
-            <button id="openWeakest" class="button button--ghost">Weakest skill</button>
-            <button id="notificationBell" class="icon-button" type="button" aria-label="Notifications">0</button>
+            <button id="quickStart" class="button button--primary" aria-label="Start today's sprint">Sprint</button>
+            <button id="openWeakest" class="button button--ghost" aria-label="Open weakest skill drill">Weak skill</button>
+            <button id="notificationBell" class="icon-button" type="button" aria-label="0 unread notifications">0</button>
             <button id="subscribeCta" class="button button--ghost" type="button">Subscribe</button>
-            <button class="profile-chip" type="button" aria-label="Profile">JB</button>
+            <button id="profileChip" class="profile-chip" type="button" aria-label="Open profile menu">JB</button>
           </div>
         </header>
 
         <section id="heroMount"></section>
         <section id="pageMount" class="page-grid"></section>
         <section id="noticeMount"></section>
+        <footer class="app-footer">
+          <span>© JessiPreps</span>
+          <a href="#/dashboard">About</a>
+          <a href="mailto:jessipreps@example.com">Contact</a>
+          <a href="#/plan">Methodology</a>
+          <a href="#/plan">Privacy</a>
+        </footer>
       </main>
     </div>
 
