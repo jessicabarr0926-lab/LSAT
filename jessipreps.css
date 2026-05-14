@@ -795,6 +795,10 @@ body[data-route="dashboard"] #todaySidebarCard {
   gap: 8px;
 }
 
+.activity-bars.is-empty {
+  opacity: 0.78;
+}
+
 .activity-bars section {
   display: grid;
   gap: 8px;
@@ -814,6 +818,28 @@ body[data-route="dashboard"] #todaySidebarCard {
 .activity-bars span {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.sparkline-empty {
+  display: grid;
+  min-height: 86px;
+  place-items: end center;
+  color: var(--muted);
+  text-align: center;
+}
+
+.sparkline-empty span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.sparkline-empty p {
+  max-width: 16rem;
+  margin: 8px 0 0;
+  font-size: 0.82rem;
 }
 
 .donut-legend {
@@ -3580,6 +3606,34 @@ body.test-day-active .page-grid {
   .maya-teacher {
     right: 14px;
     bottom: 14px;
+  }
+
+  .cookie-panel {
+    right: 12px;
+    bottom: 88px;
+    width: calc(100vw - 24px);
+    max-height: 34vh;
+    overflow: auto;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .cookie-panel div {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cookie-panel .button {
+    min-height: 42px;
+  }
+
+  .maya-teacher__bubble {
+    padding: 8px 10px 8px 8px;
+  }
+
+  .maya-teacher__bubble span {
+    width: 32px;
+    height: 32px;
   }
 
   .maya-teacher__panel {

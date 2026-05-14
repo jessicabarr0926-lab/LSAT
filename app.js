@@ -298,6 +298,10 @@ function scoreTrend() {
   return [{ label: "Today", score: fallbackScore }];
 }
 
+function hasScoreTrendData() {
+  return scoreTrend().length > 1;
+}
+
 function scoreVariance() {
   const scores = scoreTrend().map((point) => point.score);
   const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
@@ -455,6 +459,14 @@ function rcPassageSplit() {
 }
 
 function renderSparkline(points, key = "score") {
+  if (!points || points.length < 2) {
+    return `
+      <div class="sparkline-empty" role="note">
+        <span></span>
+        <p>Log 2+ PrepTests to show trend.</p>
+      </div>
+    `;
+  }
   const values = points.map((point) => point[key]);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -498,7 +510,7 @@ function renderActivityBars() {
   const minutes = days.map((_, index) => (index === todayIndex ? todayMinutes : 0));
   const max = Math.max(...minutes, activeProfile().dailyMinutes || 45, 1);
   return `
-    <div class="activity-bars" aria-label="Weekly learning activity">
+    <div class="activity-bars ${todayMinutes ? "" : "is-empty"}" aria-label="Weekly learning activity">
       ${days.map((day, index) => `<section title="${minutes[index] ? `${minutes[index]} minutes studied today` : "No local activity logged yet"}"><i style="height:${Math.max(4, Math.round((minutes[index] / max) * 100))}%"></i><span>${day}</span></section>`).join("")}
     </div>
   `;
@@ -1758,8 +1770,8 @@ function renderDashboardPage() {
       </article>
       <article class="metric-tile metric-tile--gold interactive-card">
         <p class="mini-card__label">Scaled score</p>
-        <h3 data-countup-value="${data.appMeta.scaledScore}">${data.appMeta.scaledScore}</h3>
-        <p>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</p>
+        <h3 data-countup-value="${profile.currentScore}">${profile.currentScore}</h3>
+        <p>${hasScoreTrendData() ? `Range ${profile.currentScore - scoreVariance()}-${profile.currentScore + scoreVariance()}` : "Log 2+ PrepTests to show range"}</p>
         ${renderSparkline(trend)}
       </article>
       <article class="metric-tile metric-tile--navy interactive-card">
@@ -1802,7 +1814,7 @@ function renderDashboardPage() {
           <span class="status-pill">This week</span>
         </div>
         ${renderActivityBars()}
-        <p class="microcopy">Daily target: ${profile.dailyMinutes} min. Next LSAT: ${testDays === null ? "set a date" : `${testDays} days`}.</p>
+        <p class="microcopy">${Object.keys(state.attempts || {}).length || completedLessons() || state.journal.length ? "" : "No study activity logged this week. "}Daily target: ${profile.dailyMinutes} min. Next LSAT: ${testDays === null ? "set a date" : `${testDays} days`}.</p>
       </article>
 
       <article class="dashboard-card dashboard-card--accuracy interactive-card">
@@ -3374,8 +3386,8 @@ function renderReviewPage(route = {}) {
       <div class="analytics-tabs">
         <section>
           <p class="mini-card__label">Overview</p>
-          <h4>Range ${data.appMeta.scaledScore - scoreVariance()}-${data.appMeta.scaledScore + scoreVariance()}</h4>
-          <p title="${studyQualityCopy}">Variance ${scoreVariance()} points. Study quality ${studyQualityScore()}/100.</p>
+          <h4>${hasScoreTrendData() ? `Range ${activeProfile().currentScore - scoreVariance()}-${activeProfile().currentScore + scoreVariance()}` : "Range needs 2+ PrepTests"}</h4>
+          <p title="${studyQualityCopy}">${hasScoreTrendData() ? `Variance ${scoreVariance()} points.` : "Variance appears after more score logs."} Study quality ${studyQualityScore()}/100.</p>
         </section>
         <section>
           <p class="mini-card__label">Priorities</p>
@@ -4089,6 +4101,7 @@ function wireInteractions(route) {
     button.addEventListener("click", () => {
       resetTestSession(button.dataset.testStart || "strict");
       location.hash = "#/practice/test-day";
+      renderApp();
     });
   });
 
