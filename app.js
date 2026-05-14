@@ -1,4 +1,5 @@
 const APP_KEY = "jessipreps-v1";
+const LEGACY_APP_KEYS = ["jessipreps-study-state-v2", "lexiprep-study-state-v2"];
 const data = window.JESSI_PREPS_DATA;
 
 const navRail = document.querySelector("#navRail");
@@ -179,7 +180,9 @@ function defaultState() {
 }
 
 function loadState() {
-  const raw = localStorage.getItem(APP_KEY);
+  const raw = [APP_KEY, ...LEGACY_APP_KEYS]
+    .map((key) => localStorage.getItem(key))
+    .find(Boolean);
   const base = defaultState();
   if (!raw) return base;
   try {
@@ -246,7 +249,10 @@ function ensureLessonProgress(lessonId) {
 function saveState() {
   state.lastSavedAt = new Date().toISOString();
   state.journalEntries = state.journal;
-  localStorage.setItem(APP_KEY, JSON.stringify(state));
+  const serialized = JSON.stringify(state);
+  localStorage.setItem(APP_KEY, serialized);
+  localStorage.setItem("jessipreps-study-state-v2", serialized);
+  localStorage.setItem("lexiprep-study-state-v2", serialized);
 }
 
 function completedLessons() {
@@ -663,7 +669,17 @@ function questionsForLesson(lessonId) {
 }
 
 function lessonDrillHref(lesson) {
-  return `#/practice/drill/lesson-${lesson.id}`;
+  return `#/practice/drill/${lesson.masteryDrillId || `mastery-${lesson.id}`}`;
+}
+
+function findLessonDrill(routeId) {
+  const id = String(routeId || "");
+  if (!id) return null;
+  return data.lessons.find((lesson) =>
+    id === lesson.masteryDrillId ||
+    id === `mastery-${lesson.id}` ||
+    id === `lesson-${lesson.id}`
+  ) || null;
 }
 
 function lessonDrillQuestions(lesson, limit = 5) {
@@ -3095,9 +3111,7 @@ function renderPracticePage(route) {
   }
 
   if (route.subtype === "drill") {
-    const lessonDrill = String(route.id || "").startsWith("lesson-")
-      ? data.lessons.find((lesson) => lesson.id === String(route.id).replace(/^lesson-/, ""))
-      : null;
+    const lessonDrill = findLessonDrill(route.id);
     const preset = lessonDrill ? null : data.drillPresets.find((item) => item.id === route.id) || data.drillPresets[0];
     const questions = lessonDrill
       ? lessonDrillQuestions(lessonDrill, 5)
@@ -4500,6 +4514,12 @@ function wireInteractions(route) {
       progress.reflectionSaved = true;
       progress.masteryWins = Math.min(lesson?.masteryThreshold || 3, (progress.masteryWins || 0) + 1);
       state.lessonProgress[lessonId] = progress;
+      state.notifications.unshift({
+        id: `lesson-reflection-${Date.now()}`,
+        title: "Reflection saved",
+        body: `${lesson?.title || "Lesson"} was added to your wrong-answer journal as a reusable rule.`,
+        read: false,
+      });
       saveState();
       renderApp();
     });
@@ -4836,7 +4856,12 @@ function wireInteractions(route) {
         try {
           const parsed = JSON.parse(input.value);
           const restored = parsed.state || parsed;
-          localStorage.setItem(APP_KEY, JSON.stringify({ ...restored, lastSavedAt: new Date().toISOString() }));
+          const serialized = JSON.stringify({
+            ...restored,
+            journalEntries: restored.journal || restored.journalEntries || [],
+            lastSavedAt: new Date().toISOString(),
+          });
+          [APP_KEY, ...LEGACY_APP_KEYS].forEach((key) => localStorage.setItem(key, serialized));
           window.alert("Backup restored. JessiPreps will reload with restored local data.");
           window.location.reload();
         } catch {
