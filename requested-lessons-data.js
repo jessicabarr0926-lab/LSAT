@@ -130,9 +130,19 @@ const requestedWebsiteLessonBlueprints = [
   ["ka-logic-conditional-quick", "A Quick Guide to Conditional Logic", "lr", "Logical Reasoning", "Core concepts", "Beginner", 8, "Quick guide", "Conditional Logic"],
 ];
 
+function requestedLessonFocus(title, skill) {
+  const cleanedTitle = String(title || '')
+    .replace(/\s*\|\s*(Quick Guide|Learn More|Video Lesson|Worked Example|Examples).*$/i, '')
+    .replace(/^A\s+Quick\s+Guide\s+to\s+/i, '')
+    .replace(/^Working\s+with\s+/i, '')
+    .replace(/\s*\|\s*(Humanities|Law|Science|Social Science).*$/i, '')
+    .trim();
+  return (cleanedTitle || skill || 'LSAT task').toLowerCase();
+}
+
 function requestedDashboardLessonSummary(title, type, skill) {
   const lowerType = type.toLowerCase();
-  const focus = skill.toLowerCase();
+  const focus = requestedLessonFocus(title, skill);
   if (lowerType.includes('worked')) return `Worked example: identify the ${focus} task, predict the answer job, eliminate traps, and launch a targeted drill.`;
   if (lowerType.includes('quick')) return `Quick guide: the fastest method for ${focus}, its most tempting trap, and the next practice move.`;
   if (lowerType.includes('video')) return `Animated lesson: Professor Maya walks through ${focus} with storyboard frames, trap analysis, and mastery practice.`;
@@ -142,12 +152,13 @@ function requestedDashboardLessonSummary(title, type, skill) {
 function requestedDashboardScenes(title, type, skill, topicLabel) {
   const isRc = topicLabel === 'Reading Comprehension';
   const isWorked = type.toLowerCase().includes('worked');
+  const focus = requestedLessonFocus(title, skill);
   const target = isRc ? 'passage' : 'stimulus';
   return [
     { type: 'concept', title: 'What this trains', explanation: title + ' trains you to name the task before answer choices start borrowing familiar words.', storyboard: 'Task -> method -> proof.', actionCue: 'Say the job in plain English first.' },
     { type: 'worked-example', title: isWorked ? 'Worked example flow' : 'Core method', explanation: isRc ? 'Map the passage movement, locate proof, then choose the answer that matches the author role and wording.' : 'Find the conclusion or fact set, name the bridge or burden, then choose the answer that performs the exact job.', storyboard: target + ' -> proof -> answer job.', actionCue: 'Predict before you look down.' },
     { type: 'trap', title: 'Trap to reject', explanation: 'Wrong answers often match the topic while changing the force, viewpoint, role, or logical direction.', storyboard: 'Familiar words are not proof.', actionCue: 'Eliminate the answer that sounds related but misses the job.' },
-    { type: 'recap', title: 'Next move', explanation: 'After the lesson, run a short ' + skill.toLowerCase() + ' drill and journal one reusable rule from any miss.', storyboard: 'Watch -> drill -> journal.', actionCue: 'Turn the lesson into one action.' },
+    { type: 'recap', title: 'Next move', explanation: 'After the lesson, run a short ' + focus + ' drill and journal one reusable rule from any miss.', storyboard: 'Watch -> drill -> journal.', actionCue: 'Turn the lesson into one action.' },
   ];
 }
 

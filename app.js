@@ -465,12 +465,19 @@ function rcPassageSplit() {
 }
 
 function renderSparkline(points, key = "score") {
-  if (!points || points.length < 2) {
+  if (!points || !points.length) {
     return `
       <div class="sparkline-empty" role="note">
         <span></span>
         <p>Log 2+ PrepTests to show trend.</p>
       </div>
+    `;
+  }
+  if (points.length === 1) {
+    return `
+      <svg class="sparkline" viewBox="0 0 100 100" role="img" aria-label="Single score data point">
+        <circle cx="50" cy="50" r="6"></circle>
+      </svg>
     `;
   }
   const values = points.map((point) => point[key]);
@@ -517,7 +524,11 @@ function renderActivityBars() {
   const max = Math.max(...minutes, activeProfile().dailyMinutes || 45, 1);
   return `
     <div class="activity-bars ${todayMinutes ? "" : "is-empty"}" aria-label="Weekly learning activity">
-      ${days.map((day, index) => `<section title="${minutes[index] ? `${minutes[index]} minutes studied today` : "No local activity logged yet"}"><i style="height:${Math.max(4, Math.round((minutes[index] / max) * 100))}%"></i><span>${day}</span></section>`).join("")}
+      ${days.map((day, index) => {
+        const height = minutes[index] ? Math.max(12, Math.round((minutes[index] / max) * 100)) : 0;
+        const isToday = index === todayIndex;
+        return `<section class="${isToday ? "is-today" : ""}" title="${minutes[index] ? `${minutes[index]} minutes studied today` : isToday ? "Today: no local activity logged yet" : "No local activity logged"}"><i style="height:${height}%"></i><span>${day}</span></section>`;
+      }).join("")}
     </div>
   `;
 }
@@ -1093,6 +1104,11 @@ function buildMayaLocalReply(prompt, route = routeInfo()) {
 
 function renderMayaTeacher(route = routeInfo()) {
   if (!mayaTeacherMount) return;
+  const shouldShowMaya = route.page === "live" || (route.page === "learn" && route.id && route.id !== "content");
+  if (!shouldShowMaya || route.page === "coach" || (route.page === "practice" && route.subtype === "test-day")) {
+    mayaTeacherMount.innerHTML = "";
+    return;
+  }
   const teacher = state.mayaTeacher || {};
   const context = currentMayaContext(route);
   const lesson = context.lesson;
@@ -1107,11 +1123,12 @@ function renderMayaTeacher(route = routeInfo()) {
         <section class="maya-teacher__panel" role="dialog" aria-label="Talk with Professor Maya">
           <div class="panel__head">
             <div>
-              <p class="mini-card__label">Live AI teacher</p>
+              <p class="mini-card__label">Local lesson coach</p>
               <h3>Professor Maya</h3>
             </div>
             <button class="icon-button" type="button" data-maya-toggle aria-label="Close Professor Maya">×</button>
           </div>
+          <p class="microcopy">Typed answers use your local lesson library, attempts, and journal. Voice uses the optional backend only after you connect it.</p>
           <p class="maya-context">${escapeHtml(lesson ? `Using lesson: ${lesson.title}` : `Using current focus: ${context.family}`)}</p>
           <div class="maya-actions">
             <button class="button button--ghost" type="button" data-maya-preset="Explain this lesson in plain English.">Explain this</button>
@@ -1772,7 +1789,8 @@ function renderDashboardPage() {
         </div>
         <p>6 ${weak.family} questions -> Blind Review misses -> journal one rule. One rule per miss.</p>
         <div class="dashboard-actions">
-          <a class="button button--primary sprint-cta" href="#/practice/drill/${adaptive.preset.id}">Start today's sprint</a>
+          <a class="button button--primary sprint-cta" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>Start today's sprint</a>
+          <a class="button button--ghost" href="#/plan">Set goal/test date</a>
           <a class="button button--ghost" href="#/practice/timed">Timed section</a>
         </div>
         <div class="hero-illustration" aria-hidden="true"><span>LR</span><span>RC</span><span>BR</span></div>
@@ -1781,7 +1799,7 @@ function renderDashboardPage() {
       <article class="metric-tile metric-tile--green interactive-card">
         <p class="mini-card__label">Readiness</p>
         <h3 data-countup-value="${data.appMeta.readinessScore}" data-countup-suffix="%">${data.appMeta.readinessScore}%</h3>
-        <p>Study quality ${studyQualityScore()}/100</p>
+        <p title="Study quality combines streak, answered questions, Blind Review, journal rules, and saved plan setup.">Study quality ${studyQualityScore()}/100 · streak + review habits</p>
         ${renderSparkline([{ score: 58 }, { score: 64 }, { score: 61 }, { score: data.appMeta.readinessScore }])}
       </article>
       <article class="metric-tile metric-tile--gold interactive-card">
@@ -1793,7 +1811,7 @@ function renderDashboardPage() {
       <article class="metric-tile metric-tile--navy interactive-card">
         <p class="mini-card__label">Blind Review gap</p>
         <h3 data-countup-value="${data.analyticsSnapshots.blindReviewGap}" data-countup-suffix=" pts">${data.analyticsSnapshots.blindReviewGap} pts</h3>
-        <p>${dueCount} due today</p>
+        <p title="Estimated spread between first-try performance and second-pass Blind Review performance. Lower is better.">${dueCount} due today · first try vs second pass</p>
         ${renderDonut(Math.max(8, 100 - data.analyticsSnapshots.blindReviewGap * 3), "recovered", `${Math.max(0, 100 - data.analyticsSnapshots.blindReviewGap * 3)}%`)}
       </article>
 
@@ -1803,11 +1821,11 @@ function renderDashboardPage() {
           <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
         </div>
         <div class="today-flow-grid today-stepper">
-          <a href="#/learn/${lesson.id}"><i>1</i><strong>Learn</strong><span>${lesson.title}</span></a>
-          <a href="#/practice/drill/${adaptive.preset.id}"><i>2</i><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
-          <a href="#/review"><i>3</i><strong>Review</strong><span>Blind Review misses</span></a>
-          <a href="#/review"><i>4</i><strong>Log</strong><span>One reusable rule</span></a>
-          <a href="#/dashboard"><i>5</i><strong>Stop</strong><span>Protect tomorrow's streak</span></a>
+          <a href="#/learn/${lesson.id}" data-flow-step="learn"><i>1</i><strong>Learn</strong><span>${lesson.title}</span></a>
+          <a href="#/practice/drill/${adaptive.preset.id}" data-flow-step="drill" data-start-adaptive><i>2</i><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
+          <a href="#/review" data-flow-step="review"><i>3</i><strong>Review</strong><span>Blind Review misses</span></a>
+          <a href="#/review" data-flow-step="log"><i>4</i><strong>Log</strong><span>One reusable rule</span></a>
+          <a href="#/plan" data-flow-step="stop"><i>5</i><strong>Stop</strong><span>Set tomorrow's target</span></a>
         </div>
       </article>
 
@@ -1830,7 +1848,7 @@ function renderDashboardPage() {
           <span class="status-pill">This week</span>
         </div>
         ${renderActivityBars()}
-        <p class="microcopy">${Object.keys(state.attempts || {}).length || completedLessons() || state.journal.length ? "" : "No study activity logged this week. "}Daily target: ${profile.dailyMinutes} min. Next LSAT: ${testDays === null ? "set a date" : `${testDays} days`}.</p>
+        <p class="microcopy">${Object.keys(state.attempts || {}).length || completedLessons() || state.journal.length ? "" : "No study activity logged this week. "}Daily target: ${profile.dailyMinutes} min from Plan. Next LSAT: ${testDays === null ? "set a date in Plan" : `${testDays} days from saved date`}.</p>
       </article>
 
       <article class="dashboard-card dashboard-card--accuracy interactive-card">
@@ -1889,7 +1907,7 @@ function renderLearnPage(route) {
       </div>
       <div class="continue-banner">
         <strong>${featured.title}</strong>
-        <span>Ready to start · ${data.lessons.length} flagship lessons unlocked · ${featured.statusLabel}</span>
+        <span>Ready to start · ${data.lessons.length} lessons available · ${featured.statusLabel}</span>
         <a class="text-link" href="#/learn/${featured.id}">Resume</a>
       </div>
       <div class="syllabus-layout">
@@ -3127,7 +3145,7 @@ function renderPracticePage(route) {
         <p>${lessonDrill ? `Lesson focus: ${focus}. These original questions are tied to this lesson, not the generic adaptive queue.` : `Adaptive focus: ${focus}. This preset is chosen because of weak performance plus incomplete mastery.`}</p>
         <div class="commitment-bar">
           <strong>${state.currentBlock.label}</strong>
-          <span>${state.currentBlock.unfinished} unfinished items</span>
+          <span>${state.currentBlock.unfinished} unfinished items in this daily practice set</span>
           <button class="button button--ghost" type="button" data-skip-block>Skip block</button>
         </div>
         <div class="practice-list">${questions.map((question) => renderQuestionCard(question, "drill")).join("")}</div>
@@ -3184,7 +3202,7 @@ function renderPracticePage(route) {
         ].map(([mode, label, desc]) => `<button class="adaptive-mode ${state.adaptiveMode === mode ? "is-active" : ""}" type="button" data-adaptive-mode="${mode}"><strong>${label}</strong><span>${desc}</span></button>`).join("")}
       </div>
       <div class="dashboard-actions">
-        <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}">Start adaptive drill</a>
+        <a class="button button--primary" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>Start adaptive drill</a>
         <a class="button button--ghost" href="#/practice/timed">Open test center</a>
         <button class="button button--ghost" type="button" data-import-demo>Import outside score</button>
       </div>
@@ -3195,7 +3213,7 @@ function renderPracticePage(route) {
         <span class="status-pill">${Object.keys(state.attempts).length} attempts</span>
       </div>
       <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Resume</p><h4>${state.currentBlock.label}</h4><p>${state.currentBlock.unfinished} unfinished items before the block can clear.</p></section>
+        <section class="mini-card"><p class="mini-card__label">Resume</p><h4>${state.currentBlock.label}</h4><p>${state.currentBlock.unfinished} unfinished items before this daily practice set clears.</p></section>
         <section class="mini-card"><p class="mini-card__label">Correct avg</p><h4>${time.correct || "1:24"}</h4><p>Seconds per correct question.</p></section>
         <section class="mini-card"><p class="mini-card__label">Wrong avg</p><h4>${time.wrong || "1:58"}</h4><p>Seconds per missed question.</p></section>
         <section class="mini-card"><p class="mini-card__label">Bookmarks</p><h4>${bookmarkCount()}</h4><p>Saved questions, drills, sections, and lessons.</p></section>
@@ -3416,7 +3434,7 @@ function renderReviewPage(route = {}) {
       </div>
       <div class="card-grid card-grid--four">
         <section class="mini-card"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy</p></section>
-        <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>First try vs second try spread</p></section>
+        <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>Estimated first-try vs second-pass score spread. Lower is better.</p></section>
         <section class="mini-card"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Recent score stability</p></section>
         <section class="mini-card"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></section>
       </div>
@@ -4027,8 +4045,9 @@ function renderCoachPage() {
         </div>
         <div class="recommendation-box">
           <strong>Suggested next drill:</strong> ${suggestedFamily}. This updates from your local misses and whatever you ask Coach about.
-          <a class="button button--ghost" href="#/practice/drill/${target.preset.id}">Open suggested drill</a>
+          <a class="button button--ghost" href="#/practice/drill/${target.preset.id}" data-start-adaptive>Open suggested drill</a>
         </div>
+        <p class="microcopy">Coach answers locally from your lesson content, original questions, answered-question history, journal tags, and mistake patterns. No backend is required for typed help.</p>
         <div class="coach-diagnosis-grid">
           <section>
             <p class="mini-card__label">Pattern read</p>
@@ -4055,7 +4074,7 @@ function renderCoachPage() {
               <option>Admissions strategy</option>
             </select>
           </label>
-          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" placeholder="Example: How do I answer main idea questions? Give me the method and traps."></textarea></label>
+          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" required placeholder="Example: How do I answer main idea questions? Give me the method and traps."></textarea></label>
           <button class="button button--primary" type="submit">Ask coach</button>
         </form>
         <div class="coach-message-list coach-chat-log">
@@ -4111,6 +4130,31 @@ function renderCoachPage() {
 }
 
 function wireInteractions(route) {
+  pageMount.querySelectorAll("[data-start-adaptive]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const target = adaptiveDrillTarget();
+      state.notifications.unshift({
+        id: `adaptive-start-${Date.now()}`,
+        title: "Adaptive drill loaded",
+        body: `Opening ${target.weak.family}: chosen from local accuracy, journal misses, and ${target.mode} mode.`,
+        read: false,
+      });
+      saveState();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-flow-step]").forEach((link) => {
+    link.addEventListener("click", () => {
+      state.notifications.unshift({
+        id: `flow-${Date.now()}`,
+        title: `Today Flow: ${link.dataset.flowStep}`,
+        body: "The daily sprint is learn, drill, review, log, then stop with tomorrow's target set.",
+        read: true,
+      });
+      saveState();
+    });
+  });
+
   pageMount.querySelectorAll("[data-test-start]").forEach((button) => {
     button.addEventListener("click", () => {
       resetTestSession(button.dataset.testStart || "strict");
@@ -4985,5 +5029,7 @@ if (!location.hash) {
   location.hash = "#/dashboard";
 }
 
-document.body.classList.add("sidebar-collapsed");
+if (window.matchMedia("(max-width: 900px)").matches) {
+  document.body.classList.add("sidebar-collapsed");
+}
 renderApp();

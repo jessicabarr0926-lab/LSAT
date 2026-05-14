@@ -160,6 +160,12 @@ body.sidebar-collapsed .sidebar__close {
   z-index: 50;
 }
 
+@media (min-width: 1201px) {
+  body:not(.sidebar-collapsed) .sidebar-fab {
+    display: none;
+  }
+}
+
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -327,7 +333,7 @@ body[data-route="dashboard"] #todaySidebarCard {
   line-height: 1;
 }
 
-.nav__link[data-route="dashboard"]::before { content: "⌂"; }
+.nav__link[data-route="dashboard"]::before { content: "🏠"; }
 .nav__link[data-route="learn"]::before { content: "📖"; }
 .nav__link[data-route="practice"]::before { content: "🎯"; }
 .nav__link[data-route="review"]::before { content: "🔍"; }
@@ -804,15 +810,32 @@ body[data-route="dashboard"] #todaySidebarCard {
   gap: 8px;
   align-items: end;
   justify-items: center;
+  min-height: 132px;
 }
 
 .activity-bars i {
   display: block;
   width: 100%;
-  min-height: 16px;
+  min-height: 0;
   border-radius: 12px 12px 5px 5px;
   background: linear-gradient(180deg, var(--accent), #f6b44b);
   animation: barGrow 520ms ease both;
+}
+
+.activity-bars section:not(.is-today) i[style*="height:0%"],
+.activity-bars section:not(.is-today) i[style*="height: 0%"] {
+  background: transparent;
+  border-top: 2px solid rgba(110, 106, 137, 0.18);
+}
+
+.activity-bars section.is-today i {
+  background: linear-gradient(180deg, #2f9d68, #f6b44b);
+  box-shadow: 0 8px 18px rgba(47, 157, 104, 0.22);
+}
+
+.activity-bars section.is-today span {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .activity-bars span {

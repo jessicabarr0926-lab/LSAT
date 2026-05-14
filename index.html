@@ -6,7 +6,7 @@
     <title>JessiPreps</title>
     <link rel="stylesheet" href="./jessipreps.css" />
   </head>
-  <body class="sidebar-collapsed">
+  <body>
     <a class="skip-link" href="#pageMount">Skip to main content</a>
     <button id="sidebarToggle" class="sidebar-fab" aria-label="Toggle sidebar">☰</button>
     <div class="app-shell">
@@ -18,7 +18,7 @@
           <div class="brand__text">
             <p class="eyebrow">Personal LSAT Operating System</p>
             <h1>JessiPreps</h1>
-            <p class="muted">Premium study flow built to remove decision fatigue.</p>
+            <p class="muted">Personal study flow built to remove decision fatigue.</p>
           </div>
         </div>
 
@@ -47,8 +47,8 @@
               <input id="globalSearch" type="search" placeholder="Lesson, drill, question..." />
             </label>
             <button id="commandPaletteButton" class="icon-button" type="button" aria-label="Open command palette">⌘K</button>
-            <button id="quickStart" class="button button--primary" aria-label="Start today's sprint">Sprint</button>
-            <button id="openWeakest" class="button button--ghost" aria-label="Open weakest skill drill">Weak skill</button>
+            <button id="quickStart" class="button button--primary" aria-label="Start today's sprint" title="Start today's recommended LSAT sprint">Sprint</button>
+            <button id="openWeakest" class="button button--ghost" aria-label="Open weakest skill drill" title="Open a drill for your current weakest question family">Weak skill</button>
             <button id="notificationBell" class="icon-button" type="button" aria-label="0 unread notifications">0</button>
             <button id="profileChip" class="profile-chip" type="button" aria-label="Open profile menu">JB</button>
           </div>
@@ -59,10 +59,9 @@
         <section id="pageMount" class="page-grid"></section>
         <footer class="app-footer">
           <span>© JessiPreps</span>
-          <a href="#/dashboard">About</a>
+          <span>Personal localStorage LSAT workspace</span>
           <a href="mailto:jessipreps@example.com">Contact</a>
-          <a href="#/plan">Methodology</a>
-          <a href="#/plan">Privacy</a>
+          <a href="#/plan">Plan setup</a>
         </footer>
       </main>
     </div>
@@ -71,5 +70,6 @@
     <script src="./requested-lessons-data.js"></script>
     <script src="./video-lesson-map.js"></script>
     <script src="./app.js"></script>
+    <script src="./jessipreps-polish-fixes.js"></script>
   </body>
 </html>
