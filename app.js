@@ -21,6 +21,9 @@ let qtPlaybackTimer = null;
 let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
 let testDayTimer = null;
 const questionRenderTimes = {};
+const mayaTeacherMount = document.createElement("div");
+mayaTeacherMount.id = "mayaTeacherMount";
+document.body.appendChild(mayaTeacherMount);
 
 const state = loadState();
 
@@ -138,6 +141,12 @@ function defaultState() {
     profileMenuOpen: false,
     liveReservations: {},
     coachMessages: [],
+    mayaTeacher: {
+      open: false,
+      backendUrl: "",
+      voiceStatus: "offline",
+      transcript: [],
+    },
     answerLog: [],
     testDay: {
       mode: "strict",
@@ -183,7 +192,7 @@ function loadState() {
       questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
       rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
       attempts: parsed.attempts || {},
-      journal: parsed.journal || [],
+      journal: parsed.journal || parsed.journalEntries || [],
       support: parsed.support || base.support,
       plan: { ...base.plan, ...(parsed.plan || {}) },
       onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
@@ -210,6 +219,7 @@ function loadState() {
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
       liveReservations: parsed.liveReservations || {},
       coachMessages: parsed.coachMessages || [],
+      mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
       answerLog: parsed.answerLog || [],
       testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
@@ -220,8 +230,22 @@ function loadState() {
   }
 }
 
+function ensureLessonProgress(lessonId) {
+  const existing = state.lessonProgress[lessonId] || {};
+  const normalized = {
+    complete: Boolean(existing.complete),
+    masteryWins: Number(existing.masteryWins || 0),
+    quiz: existing.quiz || null,
+    checks: existing.checks || {},
+    reflectionSaved: Boolean(existing.reflectionSaved),
+  };
+  state.lessonProgress[lessonId] = normalized;
+  return normalized;
+}
+
 function saveState() {
   state.lastSavedAt = new Date().toISOString();
+  state.journalEntries = state.journal;
   localStorage.setItem(APP_KEY, JSON.stringify(state));
 }
 
@@ -260,13 +284,18 @@ function masteryRating(section) {
 }
 
 function scoreTrend() {
-  const base = data.appMeta.scaledScore - 6;
-  return [
-    { label: "Dec 4", score: base },
-    { label: "Jan 1", score: base + 2 },
-    { label: "Jan 13", score: base + 4 },
-    { label: "Today", score: data.appMeta.scaledScore },
-  ];
+  const fallbackScore = Number(state.onboarding?.currentScore || data.appMeta.scaledScore || 154);
+  const loggedScores = (state.officialLogs || [])
+    .map((log) => ({
+      label: log.ptSection || log.loggedAt?.slice(0, 10) || "Official log",
+      score: Number(log.scaledScore || 0),
+      date: log.loggedAt || "",
+    }))
+    .filter((log) => log.score >= 120 && log.score <= 180)
+    .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+    .slice(-4);
+  if (loggedScores.length > 1) return loggedScores;
+  return [{ label: "Today", score: fallbackScore }];
 }
 
 function scoreVariance() {
@@ -461,11 +490,16 @@ function renderDonut(percent, label, value) {
 
 function renderActivityBars() {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const minutes = [35, 48, 20, 55, 42, 18, activeProfile().dailyMinutes || 45];
-  const max = Math.max(...minutes, 1);
+  const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const attemptMinutes = Object.keys(state.attempts || {}).length * 3;
+  const journalMinutes = (state.journal || []).length * 2;
+  const lessonMinutes = completedLessons() * 6;
+  const todayMinutes = Math.min(120, Math.max(0, attemptMinutes + journalMinutes + lessonMinutes));
+  const minutes = days.map((_, index) => (index === todayIndex ? todayMinutes : 0));
+  const max = Math.max(...minutes, activeProfile().dailyMinutes || 45, 1);
   return `
     <div class="activity-bars" aria-label="Weekly learning activity">
-      ${days.map((day, index) => `<section title="${minutes[index]} minutes studied"><i style="height:${Math.max(12, Math.round((minutes[index] / max) * 100))}%"></i><span>${day}</span></section>`).join("")}
+      ${days.map((day, index) => `<section title="${minutes[index] ? `${minutes[index]} minutes studied today` : "No local activity logged yet"}"><i style="height:${Math.max(4, Math.round((minutes[index] / max) * 100))}%"></i><span>${day}</span></section>`).join("")}
     </div>
   `;
 }
@@ -614,6 +648,22 @@ function nextBestAction() {
 
 function questionsForLesson(lessonId) {
   return data.questionBank.filter((question) => question.lessonIds.includes(lessonId)).slice(0, 5);
+}
+
+function lessonDrillHref(lesson) {
+  return `#/practice/drill/lesson-${lesson.id}`;
+}
+
+function lessonDrillQuestions(lesson, limit = 5) {
+  const exact = data.questionBank.filter((question) => (question.lessonIds || []).includes(lesson.id));
+  if (exact.length >= limit) return exact.slice(0, limit);
+  const families = lesson.linkedQuestionFamilies || [];
+  const familyMatches = data.questionBank.filter((question) => families.includes(question.family) && !(question.lessonIds || []).includes(lesson.id));
+  return [...exact, ...familyMatches].slice(0, limit);
+}
+
+function lessonPracticeFocus(lesson) {
+  return lesson.linkedQuestionFamilies?.join(" + ") || lesson.videoTheme || "Lesson practice";
 }
 
 function findQuestionTypeLesson(id) {
@@ -964,6 +1014,257 @@ function buildCoachReply(prompt, supportType) {
   };
 }
 
+function currentMayaContext(route = routeInfo()) {
+  const lesson = route.page === "learn" && route.id ? data.lessons.find((item) => item.id === route.id) : null;
+  const target = adaptiveDrillTarget();
+  const profile = coachMistakeProfile();
+  const family = lesson?.linkedQuestionFamilies?.[0] || target.weak.family;
+  return {
+    route,
+    lesson,
+    family,
+    profile,
+    summary: lesson?.conceptSummary || lesson?.summary || `Current focus: ${family}`,
+    mistakes: state.answerLog?.slice(0, 6) || [],
+    journal: state.journal?.slice(0, 4) || [],
+  };
+}
+
+function mayaTeacherInstructions(context = currentMayaContext()) {
+  const lesson = context.lesson;
+  const lessonTitle = lesson?.title || "the current JessiPreps page";
+  const method = lesson?.methodSteps?.join(" -> ") || coachFixForFamily(context.family);
+  const traps = lesson?.trapWarnings?.join(" ") || "Watch for familiar wording that does not do the job.";
+  return `
+You are Professor Maya Brooks, JessiPreps' warm, direct LSAT teacher.
+You are helping Jessica study Logical Reasoning and Reading Comprehension.
+Current lesson/page: ${lessonTitle}.
+Current family: ${context.family}.
+Lesson summary: ${context.summary}.
+Method to reinforce: ${method}.
+Trap warnings: ${traps}.
+Student local stats: ${context.profile.attempts} answered questions, ${context.profile.accuracy}% local accuracy, common miss family ${context.profile.topFamily[0]}.
+Teach in plain English. Ask one short check-for-understanding question when useful.
+Do not copy official LSAT, book, or paid-platform question text. Use original examples only.
+If Jessica asks for test-day help, give a concrete next move and one rule to save in the journal.
+  `.trim();
+}
+
+function buildMayaLocalReply(prompt, route = routeInfo()) {
+  const context = currentMayaContext(route);
+  const coachReply = buildCoachReply(prompt, "Professor Maya");
+  const lesson = context.lesson;
+  const lessonLine = lesson ? `Right now we are inside ${lesson.title}. ` : "";
+  return [
+    `Let us make this feel doable. ${lessonLine}${coachReply.answer}`,
+    lesson?.methodSteps?.length ? `Maya method: ${lesson.methodSteps.slice(0, 3).join(" -> ")}.` : `Maya method: ${coachFixForFamily(context.family)}`,
+    lesson?.trapWarnings?.[0] ? `Trap to watch: ${lesson.trapWarnings[0]}` : `Trap to watch: do not pick an answer just because it sounds familiar.`,
+    `Your next move: ${coachReply.nextMove || `Do a short ${context.family} block, predict first, then log one rule.`}`,
+  ].join("\n\n");
+}
+
+function renderMayaTeacher(route = routeInfo()) {
+  if (!mayaTeacherMount) return;
+  const teacher = state.mayaTeacher || {};
+  const context = currentMayaContext(route);
+  const lesson = context.lesson;
+  const statusLabel = teacher.voiceStatus === "connected" ? "Voice connected" : teacher.voiceStatus === "connecting" ? "Connecting..." : "Voice offline";
+  mayaTeacherMount.innerHTML = `
+    <aside class="maya-teacher ${teacher.open ? "is-open" : ""}" aria-label="Professor Maya AI teacher">
+      <button class="maya-teacher__bubble" type="button" data-maya-toggle aria-expanded="${teacher.open ? "true" : "false"}">
+        <span>MB</span>
+        <strong>Ask Maya</strong>
+      </button>
+      ${teacher.open ? `
+        <section class="maya-teacher__panel" role="dialog" aria-label="Talk with Professor Maya">
+          <div class="panel__head">
+            <div>
+              <p class="mini-card__label">Live AI teacher</p>
+              <h3>Professor Maya</h3>
+            </div>
+            <button class="icon-button" type="button" data-maya-toggle aria-label="Close Professor Maya">×</button>
+          </div>
+          <p class="maya-context">${escapeHtml(lesson ? `Using lesson: ${lesson.title}` : `Using current focus: ${context.family}`)}</p>
+          <div class="maya-actions">
+            <button class="button button--ghost" type="button" data-maya-preset="Explain this lesson in plain English.">Explain this</button>
+            <button class="button button--ghost" type="button" data-maya-preset="Quiz me with one original question and wait for my answer.">Quiz me</button>
+            <button class="button button--ghost" type="button" data-maya-preset="Why do I keep missing this type, and how do I fix it on the spot?">Fix my misses</button>
+          </div>
+          <form id="mayaTeacherForm" class="maya-form">
+            <textarea name="mayaPrompt" rows="3" placeholder="Ask Professor Maya anything about this lesson..."></textarea>
+            <div class="maya-form__actions">
+              <button class="button button--primary" type="submit">Ask</button>
+              <button class="button button--ghost" type="button" data-maya-voice>${teacher.voiceStatus === "connected" ? "Disconnect voice" : "Connect voice"}</button>
+            </div>
+          </form>
+          <details class="maya-backend">
+            <summary>${statusLabel}</summary>
+            <label>
+              <span>Backend URL</span>
+              <input id="mayaBackendUrl" type="url" value="${escapeHtml(teacher.backendUrl || "")}" placeholder="https://your-ai-backend.vercel.app">
+            </label>
+            <p class="microcopy">Voice needs the secure backend in <code>ai-teacher-backend</code>. Typed help works locally now.</p>
+          </details>
+          <div class="maya-chat-log">
+            ${(teacher.transcript || []).length ? teacher.transcript.slice(0, 8).map((item) => `
+              <section class="maya-message maya-message--${item.role}">
+                <strong>${item.role === "assistant" ? "Professor Maya" : "You"}</strong>
+                <p>${escapeHtml(item.text).replace(/\n/g, "<br>")}</p>
+                <small>${new Date(item.createdAt).toLocaleString()}</small>
+              </section>
+            `).join("") : `<p class="muted">Ask Maya to explain, quiz you, or break down why an answer trap worked on you.</p>`}
+          </div>
+        </section>
+      ` : ""}
+    </aside>
+  `;
+}
+
+function addMayaMessage(role, text) {
+  state.mayaTeacher.transcript = state.mayaTeacher.transcript || [];
+  state.mayaTeacher.transcript.unshift({
+    id: `maya-${Date.now()}-${role}`,
+    role,
+    text,
+    createdAt: new Date().toISOString(),
+  });
+  state.mayaTeacher.transcript = state.mayaTeacher.transcript.slice(0, 30);
+}
+
+async function connectMayaRealtime(route = routeInfo()) {
+  const backendUrl = String(state.mayaTeacher.backendUrl || "").replace(/\/+$/, "");
+  if (!backendUrl) {
+    state.mayaTeacher.voiceStatus = "offline";
+    addMayaMessage("assistant", "Add your deployed backend URL first. Typed coaching works here right now; voice turns on after the secure backend is deployed.");
+    saveState();
+    renderApp();
+    return;
+  }
+  if (window.mayaRealtime?.pc) {
+    window.mayaRealtime.pc.close();
+    window.mayaRealtime.stream?.getTracks?.().forEach((track) => track.stop());
+    window.mayaRealtime = null;
+    state.mayaTeacher.voiceStatus = "offline";
+    addMayaMessage("assistant", "Voice disconnected. I am still here for typed lesson help.");
+    saveState();
+    renderApp();
+    return;
+  }
+
+  state.mayaTeacher.voiceStatus = "connecting";
+  saveState();
+  renderMayaTeacher(route);
+
+  try {
+    const context = currentMayaContext(route);
+    const sessionResponse = await fetch(`${backendUrl}/api/realtime-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instructions: mayaTeacherInstructions(context),
+        lesson: {
+          id: context.lesson?.id || "",
+          title: context.lesson?.title || "",
+          summary: context.summary,
+          family: context.family,
+        },
+      }),
+    });
+    if (!sessionResponse.ok) throw new Error(`Backend returned ${sessionResponse.status}`);
+    const sessionData = await sessionResponse.json();
+    const ephemeralKey = sessionData.value || sessionData.client_secret?.value || sessionData.clientSecret?.value || sessionData.client_secret || sessionData.clientSecret;
+    if (!ephemeralKey) throw new Error("No ephemeral Realtime key returned");
+
+    const pc = new RTCPeerConnection();
+    const audio = document.createElement("audio");
+    audio.autoplay = true;
+    pc.ontrack = (event) => {
+      audio.srcObject = event.streams[0];
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+    const dc = pc.createDataChannel("oai-events");
+    dc.addEventListener("open", () => {
+      dc.send(JSON.stringify({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: `Start by greeting Jessica and ask what she wants help with in ${context.lesson?.title || context.family}.` }],
+        },
+      }));
+      dc.send(JSON.stringify({ type: "response.create" }));
+    });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
+      method: "POST",
+      body: offer.sdp,
+      headers: {
+        Authorization: `Bearer ${ephemeralKey}`,
+        "Content-Type": "application/sdp",
+      },
+    });
+    if (!sdpResponse.ok) throw new Error(`Realtime call failed with ${sdpResponse.status}`);
+    await pc.setRemoteDescription({ type: "answer", sdp: await sdpResponse.text() });
+
+    window.mayaRealtime = { pc, dc, audio, stream };
+    state.mayaTeacher.voiceStatus = "connected";
+    addMayaMessage("assistant", "Voice is connected. Talk to me out loud while you work through the lesson.");
+    saveState();
+    renderApp();
+  } catch (error) {
+    state.mayaTeacher.voiceStatus = "offline";
+    addMayaMessage("assistant", `I could not connect voice yet: ${error.message}. Check the backend URL, API key, CORS origin, and microphone permission.`);
+    saveState();
+    renderApp();
+  }
+}
+
+function wireMayaTeacher(route = routeInfo()) {
+  if (!mayaTeacherMount) return;
+  mayaTeacherMount.querySelectorAll("[data-maya-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mayaTeacher.open = !state.mayaTeacher.open;
+      saveState();
+      renderApp();
+    });
+  });
+
+  mayaTeacherMount.querySelector("#mayaBackendUrl")?.addEventListener("change", (event) => {
+    state.mayaTeacher.backendUrl = event.target.value.trim();
+    saveState();
+  });
+
+  mayaTeacherMount.querySelectorAll("[data-maya-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const prompt = button.dataset.mayaPreset;
+      addMayaMessage("user", prompt);
+      addMayaMessage("assistant", buildMayaLocalReply(prompt, route));
+      saveState();
+      renderApp();
+    });
+  });
+
+  mayaTeacherMount.querySelector("#mayaTeacherForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const prompt = String(formData.get("mayaPrompt") || "").trim();
+    if (!prompt) return;
+    addMayaMessage("user", prompt);
+    addMayaMessage("assistant", buildMayaLocalReply(prompt, route));
+    saveState();
+    renderApp();
+  });
+
+  mayaTeacherMount.querySelector("[data-maya-voice]")?.addEventListener("click", () => {
+    connectMayaRealtime(route);
+  });
+}
+
 function generatedStudyCalendar() {
   if (state.studyCalendar.length) return state.studyCalendar;
   const weak = weakestFamily().family;
@@ -1146,7 +1447,9 @@ function renderApp() {
   document.body.classList.remove("sidebar-open");
   renderRouteMeta(route);
   renderPage(route);
+  renderMayaTeacher(route);
   wireNoticeLayer();
+  wireMayaTeacher(route);
   animateCountups();
 }
 
@@ -1173,7 +1476,7 @@ function renderNav() {
   navRail.innerHTML = data.navigation
     .map(
       (item) => `
-        <a class="nav__link ${route === item.route ? "is-active" : ""}" href="#/${item.route}">
+        <a class="nav__link ${route === item.route ? "is-active" : ""}" href="#/${item.route}" data-route="${item.route}">
           <span>${item.label}</span>
           <small>${(subitems[item.route] || []).join(" · ")}</small>
         </a>
@@ -1658,13 +1961,92 @@ function scheduleLessonPlayback(lesson) {
   }, duration);
 }
 
+function renderLessonExternalVideos(lesson) {
+  const videos = Array.isArray(lesson.youtubeVideos) ? lesson.youtubeVideos : [];
+  if (!videos.length && !lesson.youtubeEmbedUrl) return "";
+  const primary = videos[0] || {
+    title: `${lesson.title} external video`,
+    embedUrl: lesson.youtubeEmbedUrl,
+    watchUrl: lesson.youtubeEmbedUrl,
+    duration: "",
+    sourceChannel: "YouTube",
+  };
+  const extras = videos.slice(1);
+  return `
+    <section class="lesson-external-video" aria-label="Linked lesson video">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Linked YouTube lesson</p>
+          <h4>${escapeHtml(primary.title)}</h4>
+        </div>
+        ${primary.duration ? `<span class="status-pill">${escapeHtml(primary.duration)}</span>` : ""}
+      </div>
+      <div class="responsive-video">
+        <iframe
+          src="${escapeHtml(primary.embedUrl)}"
+          title="${escapeHtml(primary.title)}"
+          width="100%"
+          height="100%"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen></iframe>
+      </div>
+      <div class="video-status-strip">
+        <span class="status-pill">${escapeHtml(primary.sourceChannel || primary.source || "YouTube")}</span>
+        <span class="muted">External video embedded for practice support; JessiPreps lesson notes and drills stay below.</span>
+        <a class="button button--ghost" href="${escapeHtml(primary.watchUrl || primary.embedUrl)}" target="_blank" rel="noreferrer">Open on YouTube</a>
+      </div>
+      ${extras.length ? `
+        <div class="linked-video-list">
+          ${extras.map((video) => `
+            <a href="${escapeHtml(video.watchUrl)}" target="_blank" rel="noreferrer">
+              <span>${escapeHtml(video.title)}</span>
+              <small>${escapeHtml(video.duration || "YouTube")}</small>
+            </a>
+          `).join("")}
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
+function renderLessonCheckQuestion(lesson, question, checkState) {
+  const answered = checkState?.choice !== undefined;
+  return `
+    <section class="question-card lesson-check-card">
+      <div class="question-card__meta">
+        <p class="mini-card__label">${question.section} · ${question.family} · ${question.difficulty}</p>
+        <span class="status-pill">Lesson example</span>
+      </div>
+      <p>${question.prompt}</p>
+      <h4>${question.question}</h4>
+      <div class="answer-grid">
+        ${question.options.map((option, index) => {
+          const isChoice = checkState?.choice === index;
+          const klass = answered && isChoice ? (index === question.answer ? "is-right" : "is-wrong") : "";
+          return `<button class="answer-button ${klass}" type="button" data-lesson-check-choice="${lesson.id}" data-question="${question.id}" data-choice="${index}">${option}</button>`;
+        }).join("")}
+      </div>
+      <div class="answer-feedback ${answered ? "is-visible" : ""}">
+        ${answered ? `
+          <strong>${checkState.correct ? "Correct." : "Review this."}</strong>
+          <p>${checkState.correct ? question.explanation : `${question.wrongAnswerDiagnostics?.[0] || "This answer changes the job."} ${question.onTheSpotFix || ""}`}</p>
+        ` : `<p class="microcopy">Pick an answer to get feedback. The correct answer is hidden until you choose.</p>`}
+      </div>
+    </section>
+  `;
+}
+
 function renderLessonPlayer(lesson) {
   ensureLessonPlayback(lesson);
-  const progress = state.lessonProgress[lesson.id];
-  const linkedQuestions = questionsForLesson(lesson.id);
+  const progress = ensureLessonProgress(lesson.id);
+  const linkedQuestions = lessonDrillQuestions(lesson, 5);
   const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
   const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
   const quiz = lesson.quiz;
+  const quizState = progress.quiz || {};
+  const checkState = progress.checks?.[linkedQuestions[0]?.id] || null;
   // After this HTML is inserted, mount the rendered MP4 (if present) at
   // the top of the player. If the MP4 isn't on disk yet, this is a silent
   // no-op and the animated lesson UI below remains the visible state.
@@ -1707,12 +2089,13 @@ function renderLessonPlayer(lesson) {
         </div>
         ${lesson.videoPath ? `<video class="lesson-mp4" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>` : ""}
         <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
+        ${renderLessonExternalVideos(lesson)}
         <details id="intro" class="lesson-accordion" open>
           <summary>Intro and video</summary>
           <p>${lesson.summary}</p>
           <div class="video-status-strip">
             <span class="status-pill">${lesson.videoStatus || "script-ready"}</span>
-            <span class="muted">${lesson.videoPath ? "MP4 sample mounts above when available." : "Video-ready script and storyboard are prepared."}</span>
+            <span class="muted">${lesson.youtubeVideos?.length ? `${lesson.youtubeVideos.length} topic video${lesson.youtubeVideos.length === 1 ? "" : "s"} linked to this lesson.` : lesson.videoPath ? "MP4 sample mounts above when available." : "Video-ready script and storyboard are prepared."}</span>
           </div>
           <div class="video-stage">
             <p class="mini-card__label">Now playing</p>
@@ -1765,12 +2148,26 @@ function renderLessonPlayer(lesson) {
               <p class="mini-card__label">Checkpoint</p>
               <h4>${quiz.prompt}</h4>
               <div class="choice-stack">
-                ${quiz.choices.map((choice, index) => `<button class="choice-button ${index === quiz.answer ? "is-correct-preview" : ""}" type="button" title="${index === quiz.answer ? quiz.explanation : "Trap answer: this does not protect the method."}">${String.fromCharCode(65 + index)}. ${choice}</button>`).join("")}
+                ${quiz.choices.map((choice, index) => {
+                  const answered = quizState.choice !== undefined;
+                  const isChoice = quizState.choice === index;
+                  const klass = answered && isChoice ? (index === quiz.answer ? "is-right" : "is-wrong") : "";
+                  const label = answered
+                    ? (index === quiz.answer ? "Correct answer" : "Trap answer: this does not protect the method.")
+                    : `Answer choice ${String.fromCharCode(65 + index)}`;
+                  return `<button class="choice-button ${klass}" type="button" data-lesson-quiz-choice="${lesson.id}" data-choice="${index}" aria-label="${label}">${String.fromCharCode(65 + index)}. ${choice}</button>`;
+                }).join("")}
               </div>
+              ${quizState.choice !== undefined ? `
+                <div class="answer-feedback is-visible">
+                  <strong>${quizState.choice === quiz.answer ? "Correct." : "Not quite."}</strong>
+                  <p>${quizState.choice === quiz.answer ? quiz.explanation : "That answer is a trap because it does not protect the method. Name the task before reading answer choices, then try again."}</p>
+                </div>
+              ` : `<p class="microcopy">Choose an answer to check your method. Nothing is revealed until you click.</p>`}
             </section>
           ` : ""}
-          ${linkedQuestions[0] ? renderQuestionCard(linkedQuestions[0], "lesson-check") : `<p class="muted">Knowledge check will appear after the linked question bank loads.</p>`}
-          <a class="button button--primary" href="#/practice/drill/${adaptiveDrillTarget().preset.id}">Open 3-5 question mastery drill</a>
+          ${linkedQuestions[0] ? renderLessonCheckQuestion(lesson, linkedQuestions[0], checkState) : `<p class="muted">Knowledge check will appear after the linked question bank loads.</p>`}
+          <a class="button button--primary" href="${lessonDrillHref(lesson)}">Open 3-5 question mastery drill</a>
         </details>
         <details class="lesson-accordion">
           <summary>Script and storyboard</summary>
@@ -1786,9 +2183,10 @@ function renderLessonPlayer(lesson) {
         </details>
       </main>
       <aside class="lesson-progress-rail">
-        ${renderDonut(Math.min(100, Math.round((progress.masteryWins / Math.max(1, lesson.masteryThreshold)) * 100)), "lesson", `${progress.masteryWins}/${lesson.masteryThreshold}`)}
+        ${renderDonut(Math.min(100, Math.round((progress.masteryWins / Math.max(1, lesson.masteryThreshold)) * 100)), "mastery wins", `${progress.masteryWins}/${lesson.masteryThreshold}`)}
+        <p class="microcopy">Mastery wins come from the checkpoint, lesson example, and linked drill.</p>
         <a class="button button--ghost" href="${lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed"}">Next lesson</a>
-        <button class="button button--primary" data-complete-lesson="${lesson.id}" ${progress.masteryWins < lesson.masteryThreshold ? "disabled" : ""}>Pass mastery gate</button>
+        <button class="button button--primary" data-complete-lesson="${lesson.id}">${progress.masteryWins < lesson.masteryThreshold ? `Mark complete (${progress.masteryWins}/${lesson.masteryThreshold})` : "Pass mastery gate"}</button>
       </aside>
     </article>
   `;
@@ -2685,15 +3083,22 @@ function renderPracticePage(route) {
   }
 
   if (route.subtype === "drill") {
-    const preset = data.drillPresets.find((item) => item.id === route.id) || data.drillPresets[0];
-    const questions = data.questionBank.filter((question) => preset.families.includes(question.family)).slice(0, preset.count);
+    const lessonDrill = String(route.id || "").startsWith("lesson-")
+      ? data.lessons.find((lesson) => lesson.id === String(route.id).replace(/^lesson-/, ""))
+      : null;
+    const preset = lessonDrill ? null : data.drillPresets.find((item) => item.id === route.id) || data.drillPresets[0];
+    const questions = lessonDrill
+      ? lessonDrillQuestions(lessonDrill, 5)
+      : data.questionBank.filter((question) => preset.families.includes(question.family)).slice(0, preset.count);
+    const title = lessonDrill ? `${lessonDrill.title} Mastery Drill` : preset.title;
+    const focus = lessonDrill ? lessonPracticeFocus(lessonDrill) : preset.families.join(" + ");
     return `
       <article class="panel panel--wide">
         <div class="panel__head">
-          <h3>${preset.title}</h3>
-          <button class="status-pill status-pill--button" type="button" data-bookmark="drill:${preset.id}" data-bookmark-type="drill">${isBookmarked(`drill:${preset.id}`) ? "Bookmarked" : "Bookmark drill"}</button>
+          <h3>${title}</h3>
+          <button class="status-pill status-pill--button" type="button" data-bookmark="drill:${route.id}" data-bookmark-type="drill">${isBookmarked(`drill:${route.id}`) ? "Bookmarked" : "Bookmark drill"}</button>
         </div>
-        <p>Adaptive focus: ${weakestFamily().family}. This preset is chosen because of weak performance plus incomplete mastery.</p>
+        <p>${lessonDrill ? `Lesson focus: ${focus}. These original questions are tied to this lesson, not the generic adaptive queue.` : `Adaptive focus: ${focus}. This preset is chosen because of weak performance plus incomplete mastery.`}</p>
         <div class="commitment-bar">
           <strong>${state.currentBlock.label}</strong>
           <span>${state.currentBlock.unfinished} unfinished items</span>
@@ -3433,6 +3838,7 @@ function renderAnimationUpgradeStrip() {
 function renderLivePage() {
   const sessions = liveClassCatalog();
   const recordings = data.videoSamples || [];
+  const playlistDirectory = (data.youtubePlaylistDirectory || []).slice(0, 18);
   const activeSession = sessions.find((session) => session.id === state.liveClassroom.activeSessionId) || sessions[0];
   const currentStep = Math.min(state.liveClassroom.currentStep || 0, activeSession.agenda.length - 1);
   return `
@@ -3538,6 +3944,26 @@ function renderLivePage() {
           `).join("")}
         </div>
       </article>
+      ${playlistDirectory.length ? `
+        <article class="panel panel--wide">
+          <div class="panel__head">
+            <div>
+              <p class="mini-card__label">External LSAT playlist directory</p>
+              <h3>More LSAT walkthrough playlists</h3>
+            </div>
+            <span class="status-pill">${data.youtubePlaylistDirectory.length} LSAT playlists indexed</span>
+          </div>
+          <div class="linked-video-list playlist-directory">
+            ${playlistDirectory.map((playlist) => `
+              <a href="${escapeHtml(playlist.url)}" target="_blank" rel="noreferrer">
+                <span>${escapeHtml(playlist.title)}</span>
+                <small>${escapeHtml(playlist.sourceChannel)}</small>
+              </a>
+            `).join("")}
+          </div>
+          <p class="microcopy">The highest-fit videos from the two playlists you sent are embedded directly inside the matching lessons; this directory keeps the broader MyGuruEdge LSAT playlist page available without mixing non-LSAT playlists into your study flow.</p>
+        </article>
+      ` : ""}
     </section>
   `;
 }
@@ -3824,6 +4250,58 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-lesson-quiz-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.lessonQuizChoice;
+      const lesson = data.lessons.find((item) => item.id === lessonId);
+      const progress = ensureLessonProgress(lessonId);
+      const choice = Number(button.dataset.choice);
+      const correct = choice === lesson?.quiz?.answer;
+      const wasCorrect = progress.quiz?.correct;
+      progress.quiz = { choice, correct, answeredAt: new Date().toISOString() };
+      if (correct && !wasCorrect) progress.masteryWins = Math.min(lesson.masteryThreshold, (progress.masteryWins || 0) + 1);
+      state.lessonProgress[lessonId] = progress;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-check-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.lessonCheckChoice;
+      const lesson = data.lessons.find((item) => item.id === lessonId);
+      const question = findQuestion(button.dataset.question);
+      if (!question || !lesson) return;
+      const progress = ensureLessonProgress(lessonId);
+      const choice = Number(button.dataset.choice);
+      const correct = choice === question.answer;
+      const prior = progress.checks[question.id];
+      progress.checks[question.id] = {
+        choice,
+        correct,
+        answeredAt: new Date().toISOString(),
+      };
+      if (correct && !prior?.correct) progress.masteryWins = Math.min(lesson.masteryThreshold, (progress.masteryWins || 0) + 1);
+      if (!correct) {
+        state.journal.unshift({
+          questionId: `lesson-check-${question.id}`,
+          family: question.family,
+          trapPattern: question.trapPattern,
+          confidence: "medium",
+          mistakeReason: question.mistakeReason || "Wrong answer trap",
+          blindReviewOutcome: "pending",
+          wrongChoiceText: question.options[choice],
+          whyWrong: buildMissAnalysis(question),
+          note: `Lesson check miss from ${lesson.title}. ${question.onTheSpotFix || question.explanation}`,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      state.lessonProgress[lessonId] = progress;
+      saveState();
+      renderApp();
+    });
+  });
+
   pageMount.querySelectorAll("[data-retry-mistake]").forEach((button) => {
     button.addEventListener("click", () => {
       const entry = state.journal[Number(button.dataset.retryMistake)];
@@ -3994,6 +4472,7 @@ function wireInteractions(route) {
       const lesson = data.lessons.find((item) => item.id === lessonId);
       const note = pageMount.querySelector(`[data-lesson-reflection="${lessonId}"]`)?.value.trim();
       if (!note) return;
+      const progress = ensureLessonProgress(lessonId);
       state.journal.unshift({
         questionId: `lesson-${lessonId}`,
         family: lesson?.linkedQuestionFamilies?.[0] || "Lesson reflection",
@@ -4003,7 +4482,11 @@ function wireInteractions(route) {
         wrongChoiceText: "",
         whyWrong: note,
         note,
+        createdAt: new Date().toISOString(),
       });
+      progress.reflectionSaved = true;
+      progress.masteryWins = Math.min(lesson?.masteryThreshold || 3, (progress.masteryWins || 0) + 1);
+      state.lessonProgress[lessonId] = progress;
       saveState();
       renderApp();
     });
@@ -4072,9 +4555,11 @@ function wireInteractions(route) {
   pageMount.querySelectorAll("[data-complete-lesson]").forEach((button) => {
     button.addEventListener("click", () => {
       const lessonId = button.dataset.completeLesson;
-      state.lessonProgress[lessonId].complete = true;
-      saveState();
       const lesson = data.lessons.find((item) => item.id === lessonId);
+      state.lessonProgress[lessonId] = ensureLessonProgress(lessonId);
+      state.lessonProgress[lessonId].complete = true;
+      state.lessonProgress[lessonId].masteryWins = Math.max(state.lessonProgress[lessonId].masteryWins || 0, lesson?.masteryThreshold || 3);
+      saveState();
       location.hash = lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed";
     });
   });
@@ -4390,6 +4875,7 @@ function findQuestion(questionId) {
 
 function answerQuestion(questionId, choice, context) {
   const question = findQuestion(questionId);
+  if (!question) return;
   const correct = choice === question.answer;
   const wrongChoiceText = correct ? null : question.options[choice];
   const timeSeconds = questionRenderTimes[questionId]
@@ -4423,11 +4909,10 @@ function answerQuestion(questionId, choice, context) {
     state.currentBlock.unfinished = Math.max(0, (state.currentBlock.unfinished || 0) - 1);
   }
 
-  question.lessonIds.forEach((lessonId) => {
+  (question.lessonIds || question.linkedLessonIds || []).forEach((lessonId) => {
     if (correct) {
-      if (state.lessonProgress[lessonId]) {
-        state.lessonProgress[lessonId].masteryWins += 1;
-      }
+      const progress = ensureLessonProgress(lessonId);
+      progress.masteryWins = Math.min(data.lessons.find((lesson) => lesson.id === lessonId)?.masteryThreshold || 3, (progress.masteryWins || 0) + 1);
     } else {
       state.journal.unshift({
         questionId,

@@ -1,0 +1,16 @@
+{
+  "name": "jessipreps-ai-teacher-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check api/realtime-session.js && node --check api/health.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "vercel": "^48.6.0"
+  }
+}

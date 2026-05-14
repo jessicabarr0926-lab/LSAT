@@ -132,10 +132,11 @@ const requestedWebsiteLessonBlueprints = [
 
 function requestedDashboardLessonSummary(title, type, skill) {
   const lowerType = type.toLowerCase();
-  if (lowerType.includes('worked')) return 'Worked example: identify the task, predict the answer job, eliminate traps, and launch a related ' + skill.toLowerCase() + ' drill.';
-  if (lowerType.includes('quick')) return 'Quick guide: the minimum method, the common trap, and the next practice move for this LSAT task.';
-  if (lowerType.includes('video')) return 'Animated video lesson with storyboard frames, transcript-style notes, trap control, and mastery practice.';
-  return 'Original JessiPreps lesson with examples, trap warnings, and a drill handoff for ' + skill.toLowerCase() + '.';
+  const focus = skill.toLowerCase();
+  if (lowerType.includes('worked')) return `Worked example: identify the ${focus} task, predict the answer job, eliminate traps, and launch a targeted drill.`;
+  if (lowerType.includes('quick')) return `Quick guide: the fastest method for ${focus}, its most tempting trap, and the next practice move.`;
+  if (lowerType.includes('video')) return `Animated lesson: Professor Maya walks through ${focus} with storyboard frames, trap analysis, and mastery practice.`;
+  return `Original JessiPreps lesson with examples, trap warnings, and a drill handoff for ${focus}.`;
 }
 
 function requestedDashboardScenes(title, type, skill, topicLabel) {
@@ -346,6 +347,417 @@ const v2VideoSamples = {
 
 const v2FallbackVideoPaths = Object.values(v2VideoSamples).map((sample) => sample.path);
 
+const v2YouTubeLessonVideos = [
+  ['yt-strengthen-1428', 'How To Solve a Strengthen Question | Demon Daily, Ep. 1428', 'eJbG2-Oyyfk', '14:47', ['strengthen'], ['ka-lr-strengthen-video', 'ka-lr-strengthen-worked', 'ka-lr-strengthen-weaken-quick', 'ka-lr-strengthen-weaken-learn']],
+  ['yt-assumptions-1424', 'Sufficient and Necessary Assumptions Made Easy | Demon Daily, Ep. 1424', 'tt109wjSeDE', '10:40', ['assumption', 'assumptions', 'necessary', 'sufficient'], ['ka-lr-necessary-assumptions-video', 'ka-lr-sufficient-assumptions-video', 'ka-lr-necessary-assumptions-quick', 'ka-lr-sufficient-assumptions-quick']],
+  ['yt-flaw-1404', 'Solving Flaw Questions | Demon Daily, Ep. 1404', 'ZNjW-HPC5uM', '16:37', ['flaw', 'flaws'], ['ka-lr-flaw-video', 'ka-lr-flaw-worked', 'ka-lr-flaw-quick']],
+  ['yt-parallel-1388', 'Achieve Parallel Perfection | Demon Daily, Ep. 1388', 'aqYE88KvHyo', '14:10', ['parallel', 'match structure'], ['ka-lr-match-structure-video', 'ka-lr-match-structure-worked']],
+  ['yt-five-stages', 'The Five Stages of Answering a Logical Reasoning Question', '32YBN7DdEpg', '12:37', ['logical reasoning', 'question type', 'core strategy'], ['ka-lr-getting-started', 'ka-lr-catalog-question-types']],
+  ['yt-closed-open', 'LSAT Logical Reasoning: Closed vs. Open Question Types', '2OsCKySYUes', '6:41', ['question type', 'question types'], ['ka-lr-catalog-question-types']],
+  ['yt-dont-diagram', "LSAT Logical Reasoning: Don't Diagram", '1S7_rS6DviE', '10:41', ['diagram', 'conditional'], ['ka-logic-conditional-quick', 'ka-logic-if-then']],
+  ['yt-except-questions', 'LSAT Logical Reasoning: How to Answer "Except" Questions', 'G_xlojiHMm8', '6:46', ['except', 'question type'], ['ka-lr-catalog-question-types']],
+  ['yt-causation-1', 'LSAT Logical Reasoning: Correlation vs. Causation', 'iUQ_lZ1RnqM', '4:04', ['correlation', 'causation', 'cause'], ['ka-lr-types-flaws', 'ka-lr-flaw-video']],
+  ['yt-conclusion-ways', 'LSAT Logical Reasoning: Three Ways to Find the Conclusion of an Argument', 'sPWTRkzjw1k', '6:24', ['conclusion', 'argument'], ['ka-lr-identify-conclusion-video', 'ka-lr-identify-conclusion-quick', 'ka-lr-introduction-arguments']],
+  ['yt-specific-general-predictions', 'Specific and General Predictions', 'ozRbeXj8XuY', '6:06', ['predict', 'prediction'], ['ka-lr-technique-video', 'ka-lr-catalog-question-types']],
+  ['yt-predicting-answers', 'Predicting Answers in LSAT Logical Reasoning', 'yXD9GOKxIqU', '3:17', ['predict', 'prediction'], ['ka-lr-technique-video', 'ka-lr-catalog-question-types']],
+  ['yt-assessing-arguments', 'Assessing Arguments in LSAT Logical Reasoning', 'JVLKjJNFnFo', '8:03', ['argument', 'evidence', 'conclusion'], ['ka-lr-introduction-arguments', 'ka-lr-types-evidence']],
+  ['yt-causation-2', 'Correlation vs. Causation | LSAT Logical Reasoning', 'ANBYwj3IZNA', '3:05', ['correlation', 'causation', 'cause'], ['ka-lr-types-flaws', 'ka-lr-flaw-learn']],
+  ['yt-finding-flaws', 'Finding Flaws in the Argument on LSAT Logical Reasoning', 'Z204XH6xhto', '4:43', ['flaw', 'argument'], ['ka-lr-flaw-video', 'ka-lr-flaw-learn']],
+  ['yt-lr-goal', 'Your #1 Goal on LSAT Logical Reasoning', 'AuOX9y8z9Ao', '4:05', ['logical reasoning', 'core strategy'], ['ka-lr-getting-started', 'ka-lr-introduction-arguments']],
+  ['yt-wrong-conclusion', 'Common Wrong Answers on Conclusion Questions | LSAT Logical Reasoning', 'Pqfh-eqQAMY', '1:55', ['conclusion', 'wrong answer'], ['ka-lr-identify-conclusion-examples', 'ka-lr-identify-conclusion-worked']],
+  ['yt-conclusion-indicators', 'Conclusion Indicators on the LSAT', 'oeJhGmUc7D4', '2:08', ['conclusion', 'indicator'], ['ka-lr-identify-conclusion-video', 'ka-lr-types-conclusions']],
+  ['yt-reasoning-intro', 'Intro to Reasoning Questions | LSAT Logical Reasoning', 'dUeSQF5-4hA', '2:22', ['reasoning', 'question type'], ['ka-lr-getting-started', 'ka-lr-catalog-question-types']],
+  ['yt-two-common-flaws', "LSAT Logical Reasoning's Two Most Common Flaws", 'WF-zfjgLWso', '16:50', ['flaw', 'flaws'], ['ka-lr-types-flaws', 'ka-lr-flaw-video']],
+  ['yt-easy-way', 'Do the LSAT the Easy Way | LSAT Logical Reasoning', 'MBnr9PRf1Dc', '1:44', ['core strategy', 'logical reasoning'], ['ka-lr-getting-started']],
+  ['yt-parallel-approach', 'How to Approach Parallel Questions | LSAT Logical Reasoning', 'wtqj9aMSMSI', '3:36', ['parallel', 'match structure'], ['ka-lr-match-structure-video', 'ka-lr-match-principles-video']],
+  ['yt-parallel-intro', 'Intro to Parallel Questions | LSAT Logical Reasoning', 'Y0g29oXztPQ', '4:42', ['parallel', 'match structure'], ['ka-lr-match-structure-quick', 'ka-lr-match-principles-quick']],
+  ['yt-disagree-intro', 'Intro to Disagree Questions | LSAT Logical Reasoning', 'R1EH2CHhguw', '4:28', ['disagree', 'dispute'], ['ka-lr-disputes-video', 'ka-lr-disputes-quick']],
+  ['yt-paradox-intro', 'Intro to Paradox Questions | LSAT Logical Reasoning', 'yZDldMokOWc', '4:45', ['paradox', 'resolve', 'explain'], ['ka-lr-resolve-video', 'ka-lr-explain-video']],
+  ['yt-dont-skip', "LSAT Logical Reasoning | Don't Skip Questions", 'gJmSZnZoSGI', '0:52', ['strategy', 'pacing'], ['ka-about-lsat-lessons', 'ka-lr-getting-started']],
+  ['yt-predict-short', 'How to Predict Answers in Logical Reasoning | LSAT', 'W_0hEvXkkSo', '2:06', ['predict', 'prediction'], ['ka-lr-technique-video']],
+  ['yt-abstract-answers', 'LSAT Logical Reasoning | Understanding Abstract Answer Choices', 'uWBAIQ8FeHE', '1:05', ['abstract', 'answer choices'], ['ka-lr-match-structure-video', 'ka-lr-technique-video']],
+  ['yt-single-types', "LSAT Logical Reasoning | Why You Shouldn't Drill Single Question Types", 'pBcq9pzMbPY', '1:58', ['drill', 'question types'], ['ka-lr-catalog-question-types']],
+  ['yt-question-types', 'LSAT Logical Reasoning Question Types', 'mZRtAT0iVl0', '3:02', ['question type', 'question types'], ['ka-lr-catalog-question-types']],
+  ['yt-all-rc', 'The Entire LSAT Is a Test of Reading Comprehension', 'xXc3D0LwfrU', '2:10', ['reading comprehension', 'rc'], ['ka-rc-getting-started', 'ka-lr-getting-started']],
+  ['yt-spot-assumptions', 'LSAT Logical Reasoning | Spotting Assumptions in the Argument', 'fDZZ7ftqpW0', '1:11', ['assumption', 'assumptions'], ['ka-lr-necessary-assumptions-video', 'ka-lr-necessary-assumptions-learn']],
+  ['yt-reviewing-specifically', 'Reviewing Specifically-Improving on the LSAT and in Life', 'GzTO1sPwBOk', '2:30', ['review', 'blind review'], ['ka-about-lsat-lessons']],
+  ['yt-core-strategy', 'LSAT Logical Reasoning Core Strategy', 'Em-4IwKyPhI', '4:23', ['core strategy', 'logical reasoning'], ['ka-lr-getting-started', 'ka-lr-introduction-arguments']],
+  ['yt-parallel-strategy', 'LSAT Logical Reasoning | Parallel Reasoning Strategy', '90eU1u58PAQ', '3:54', ['parallel', 'reasoning'], ['ka-lr-match-structure-video']],
+  ['yt-principle', 'LSAT Logical Reasoning | "Principle" Questions', 'kLmWC-krogA', '2:16', ['principle', 'principles'], ['ka-lr-principle-video', 'ka-lr-match-principles-video']],
+  ['yt-inference', 'Tackling LSAT Inference Questions', '4jCeb348bGY', '1:58', ['inference', 'must be true', 'entailment'], ['ka-lr-entailment-video', 'ka-lr-strong-inferences-video']],
+  ['yt-mbt-approach', 'LSAT Logical Reasoning | How to Approach Must Be True Questions', 'RcoPmKgFtHk', '1:02', ['must be true', 'entailment'], ['ka-lr-entailment-video', 'ka-lr-strong-inferences-video']],
+  ['yt-should', 'What Does "Should" Mean on the LSAT?', 'NpKhY94d0d8', '2:15', ['principle', 'should'], ['ka-lr-principle-video']],
+  ['yt-success-depend', 'LSAT Logical Reasoning | What Does Your Success Depend On?', 'pv1gnkQZ2zI', '1:29', ['assumption', 'depend'], ['ka-lr-necessary-assumptions-video']],
+  ['yt-top-down', 'LSAT Logical Reasoning | Top Down vs. Bottom Up Questions', '0SRGbM0UQKQ', '3:49', ['technique', 'question type'], ['ka-lr-technique-video', 'ka-lr-catalog-question-types']],
+  ['yt-mbt', 'LSAT Logical Reasoning | Must Be True Questions', 'xps3otQTf5g', '3:04', ['must be true', 'entailment'], ['ka-lr-entailment-video']],
+  ['yt-fails-takes', 'LSAT Logical Reasoning | Fails to Consider vs. Takes for Granted', 'ttBsSnUZ7DI', '2:20', ['flaw', 'assumption', 'takes for granted'], ['ka-lr-flaw-video', 'ka-lr-necessary-assumptions-video']],
+  ['yt-anxiety', 'LSAT Logical Reasoning Anxiety and Owning the Test', 'iZ0QCB2UeGc', '1:08', ['anxiety', 'pacing'], ['ka-about-lsat-lessons']],
+  ['yt-15-right', "LSAT Logical Reasoning | Help! I'm only getting 15 questions right.", 'U23ykqrAiOo', '1:46', ['strategy', 'logical reasoning'], ['ka-lr-getting-started']],
+  ['yt-down-to-two', 'LSAT Logical Reasoning | Narrowing it Down to Two Answers', 'NH6VqFvb6tA', '2:46', ['wrong answer', 'answer choices'], ['ka-lr-technique-video']],
+  ['yt-quiz-assumption', "LSAT Logical Reasoning Quiz | What's an assumption on the LSAT?", '5rjJMDF_rgI', '5:05', ['assumption', 'quiz'], ['ka-lr-necessary-assumptions-video']],
+  ['yt-quiz-causation', "LSAT Logical Reasoning Quiz | What's the Correlation to Causation Flaw?", 'Ajzviz1ayjQ', '3:31', ['correlation', 'causation', 'flaw'], ['ka-lr-flaw-video']],
+  ['yt-quiz-intermediate-conclusion', "LSAT Logical Reasoning Quiz | What's an Intermediate Conclusion?", '9uZhlIKRV_E', '1:22', ['conclusion', 'intermediate conclusion'], ['ka-lr-types-conclusions', 'ka-lr-identify-conclusion-video']],
+  ['yt-quiz-relative-absolute', "LSAT Logical Reasoning Quiz | What's the Relative to Absolute Flaw?", 'pnxaVTZ7xvc', '1:07', ['flaw', 'relative', 'absolute'], ['ka-lr-types-flaws', 'ka-lr-flaw-video']],
+  ['yt-quiz-suff-nec-flaw', "LSAT Logical Reasoning Quiz | What's the Confusing Sufficient for Necessary Flaw?", 'caepqX4CdtU', '2:48', ['conditional', 'sufficient', 'necessary', 'flaw'], ['ka-logic-if-then', 'ka-lr-types-flaws']],
+  ['yt-predict-not-hyperfocus', "LSAT Logical Reasoning | Predict the Answers but Don't Hyper Focus on Them", 'U3A7r4q02vI', '1:02', ['predict', 'prediction'], ['ka-lr-technique-video']],
+  ['yt-outside-knowledge', 'LSAT Logical Reasoning Using Outside Knowledge on the LSAT', 'mkV1Yr-ohdE', '3:02', ['outside knowledge', 'inference'], ['ka-lr-entailment-video', 'ka-lr-strong-inferences-video']],
+  ['yt-should-diagram', 'Should I Diagram on LSAT Logical Reasoning?', 'AgULtMYNeyk', '3:25', ['diagram', 'conditional'], ['ka-logic-conditional-quick', 'ka-logic-if-only-if']],
+  ['yt-necessary-approach', 'How Should I Approach Necessary Assumption Questions?', '4pirpH2ebk8', '4:20', ['necessary assumption', 'assumption'], ['ka-lr-necessary-assumptions-video', 'ka-lr-necessary-assumptions-worked']],
+  ['yt-do-you-get-it', 'LSAT Logical Reasoning | Do You Get It?', 'RXvga2niWJg', '4:47', ['review', 'understanding'], ['ka-about-lsat-lessons', 'ka-lr-getting-started']],
+  ['yt-rc-reading-between-lines-1407', 'Stop Reading Between the Lines on RC | Demon Daily, Ep. 1407', 'mbp_uPqMd1c', '8:07', ['rc', 'reading comprehension', 'inference', 'supported', 'between the lines'], ['ka-rc-info-inference-quick', 'ka-rc-views-inference-quick', 'ka-rc-attitude-inference-quick', 'ka-rc-getting-started']],
+  ['yt-rc-outside-knowledge', 'Using Outside Knowledge on the LSAT', '3BpG_h2qAu8', '3:04', ['outside knowledge', 'rc', 'reading comprehension'], ['ka-rc-getting-started', 'ka-rc-info-inference-quick', 'ka-rc-new-contexts-quick']],
+  ['yt-rc-main-point-1', 'LSAT Reading Comprehension: Finding the Main Point', '8edED5Tb7gU', '9:56', ['main point', 'primary purpose', 'rc', 'reading comprehension'], ['ka-rc-main-point-quick', 'ka-rc-primary-purpose-quick', 'ka-rc-law-cosmic-main-point', 'ka-rc-law-copyright-main-point']],
+  ['yt-rc-slow-down', 'Slow Down and Understand the Passage', 'zMnqL8RlqgQ', '8:36', ['passage', 'understand', 'slow down', 'rc structure', 'reading structure'], ['ka-rc-getting-started', 'ka-rc-organizing-info-quick', 'rc-structure-map']],
+  ['yt-rc-main-point-2', 'Finding the Main Point on LSAT Reading Comprehension', 'dsJDrHZoCWo', '1:57', ['main point', 'primary purpose', 'rc'], ['ka-rc-main-point-quick', 'ka-rc-primary-purpose-quick']],
+  ['yt-rc-notes', 'Should I take notes on LSAT Reading Comprehension?', 'c8ebYsoeMJs', '2:33', ['notes', 'passage map', 'rc structure', 'reading structure'], ['ka-rc-getting-started', 'ka-rc-organizing-info-quick', 'rc-structure-map']],
+  ['yt-rc-predicting', 'LSAT Reading Comprehension | Predicting Answers', '09tEMct_l7Q', '1:09', ['predict', 'rc', 'reading comprehension'], ['ka-rc-info-inference-quick', 'ka-rc-recognition-quick', 'ka-rc-main-point-quick']],
+  ['yt-rc-meaning', 'LSAT Reading Comprehension | Interpreting Words in the Passage', '2ukbiWSIzOM', '4:43', ['meaning', 'words', 'clarifying', 'reference'], ['ka-rc-clarifying-meaning-quick', 'ka-rc-purpose-reference-quick']],
+  ['yt-rc-slow-speed', 'LSAT Reading Comprehension | Slowing Down to Speed Up', '82Bn0R0Lgfk', '1:54', ['speed', 'slow down', 'pacing', 'rc'], ['ka-rc-getting-started', 'ka-rc-organizing-info-quick']],
+  ['yt-rc-focus', 'LSAT Reading Comprehension | Meditation and Focusing on the Passage', 's5F14yemG5M', '2:18', ['focus', 'passage', 'rc'], ['ka-rc-getting-started', 'rc-structure-map']],
+  ['yt-rc-myth', 'Debunking the LSAT Reading Comprehension Myth', '2bBhNkyOQLU', '2:40', ['myth', 'reading comprehension', 'rc'], ['ka-rc-getting-started', 'ka-rc-catalog-question-types']],
+  ['yt-rc-passage-review', 'LSAT Reading Comprehension | Proper Passage Review', 'I9e7TdS0QnQ', '1:50', ['review', 'passage review', 'rc'], ['ka-rc-getting-started', 'ka-rc-organizing-info-quick', 'rc-structure-map']],
+  ['yt-rc-three-mistakes', "Three Ways You're Messing Up LSAT Reading Comprehension", '-R0sJR2kXKo', '1:42', ['mistake', 'rc', 'reading comprehension'], ['ka-rc-getting-started', 'ka-rc-catalog-question-types']],
+  ['yt-rc-faster', 'How to Get Faster at LSAT Reading Comprehension', 'M7rmRgNC_QE', '1:06', ['speed', 'faster', 'pacing', 'rc'], ['ka-rc-getting-started', 'ka-rc-organizing-info-quick']],
+  ['yt-rc-improve-effective', 'LSAT Reading Comprehension | The Most Effective Way To Improve', 'j0BNIDUsVHk', '2:36', ['improve', 'review', 'rc'], ['ka-rc-getting-started', 'ka-rc-catalog-question-types']],
+  ['yt-rc-101', 'LSAT Reading Comprehension 101 with Ben Olson', 'fwKUrVWASdA', '5:43', ['rc 101', 'reading comprehension', 'start here'], ['ka-rc-getting-started', 'ka-rc-catalog-question-types']],
+  ['yt-rc-approach-questions', 'How to Approach LSAT Reading Comprehension Questions', 'xOcfqoIOVLw', '5:39', ['approach', 'question types', 'rc'], ['ka-rc-catalog-question-types', 'ka-rc-recognition-quick', 'ka-rc-info-inference-quick']],
+  ['yt-rc-number-one-skill', 'The #1 Skill to Work on to Improve on LSAT Reading Comprehension', 'rD_z5Yv5ElM', '2:08', ['skill', 'improve', 'rc'], ['ka-rc-getting-started', 'rc-structure-map']],
+  ['yt-rc-how-to-improve', 'How To Improve on LSAT Reading Comprehension', 'qIKQg1AD2us', '2:39', ['improve', 'rc', 'reading comprehension'], ['ka-rc-getting-started', 'ka-rc-catalog-question-types']],
+  ['yt-rc-predict-main-point', 'LSAT Reading Comprehension | Predict the Answer on Main Point Questions', 'OBuZh7PVsOY', '2:59', ['main point', 'predict', 'primary purpose'], ['ka-rc-main-point-quick', 'ka-rc-primary-purpose-quick']],
+  ['yt-rc-main-point-questions', 'LSAT Reading Comprehension | Main Point Questions', '-2-wB72CWwI', '2:24', ['main point', 'primary purpose'], ['ka-rc-main-point-quick', 'ka-rc-primary-purpose-quick']],
+].map(([id, title, youtubeId, duration, keywords, lessonIds]) => ({
+  id,
+  title,
+  youtubeId,
+  duration,
+  keywords,
+  lessonIds,
+  sourceChannel: 'LSAT Demon',
+  sourcePlaylist: id.startsWith('yt-rc-') ? 'LSAT Reading Comprehension Strategies' : 'LSAT Logical Reasoning Strategies',
+  watchUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
+  embedUrl: `https://www.youtube.com/embed/${youtubeId}`,
+}));
+
+
+const v2MyGuruEdgeVideoRows = [
+  ['yt-myguru-rc-hard-001', "How to Find the Main Idea of a LSAT Passage Using LawHub Reading Comprehension Drill Set 1", '9YK5XWg3__U', '14:44', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-002', "How to Find Details in a LSAT Passage Using LawHub Reading Comprehension Drill Set 1", 'QNvGTJOGXZQ', '5:12', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-003', "How to Identify Author Purpose in a LSAT Passage Using LawHub Reading Comprehension Drill Set 1", '1VfQ6buUj3g', '5:23', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-004', "How to Address Three LSAT Inference Questions Using LawHub Reading Comprehension Drill Set 1", '_tNa89s-uHo', '13:00', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-005', "How to Locate LSAT Passage Details Using the Find Tool of LawHub Reading Comprehension Drill Set 1", 'dqNfIhTbA_k', '4:31', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-006', "How to Address a LSAT Dual Passage RC Question Set Using LawHub Reading Comprehension Drill Set 1", 'vSg_XxJ9bfY', '20:52', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-007', "Up Front Reading & Finding a LSAT Humanities Main Idea w/ LawHub Reading Comprehension Drill Set 5", 'EgqE6G4Xg70', '12:49', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-008', "How to Find a Detail in a LSAT Humanities Passage w/ LawHub Reading Comprehension Drill Set 5", 'DEVhbekiUCY', '3:02', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-009', "Finding a Specific Detail in a LSAT Humanities Passage w/ LawHub Reading Comprehension Drill Set 5", '-yzElGxHpU8', '3:52', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-010', "Describing Organization of a LSAT Humanities Passage w/ LawHub Reading Comprehension Drill Set 5", 'YIqsyXzmVEw', '2:28', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-011', "Inferring a LSAT Humanities Passage Author Perspective w/ LawHub Reading Comprehension Drill Set 5", 'jCUlrXsJybQ', '4:09', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-012', "How to Find a LSAT Humanities Passage Analogy Using LawHub Reading Comprehension Drill Set 5", '6nVnfRekeu0', '4:25', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-013', "How to Weaken a LSAT Humanities Passage Argument Using LawHub Reading Comprehension - Drill Set 5", 'K5SC0pUR5vo', '4:40', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-014', "Full Law Reading Comprehension Walkthrough Using LawHub LSAT PrepTest 157 Section 4 Passage 4", 'oP8oZJyACl4', '21:44', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-015', "How to Up-Front Read a Dual Passage in LawHub LSAT PrepTest 157 Sec. 1, Reading Comprehension", '2uQuRzbOoYI', '12:48', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-016', "Addressing a Detail \"Except\" Task Using LawHub LSAT PrepTest 157 Reading Comp. Sec. 1, Question 13", 'goycffgnWyo', '3:32', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-017', "Finding a Passage \"Hidden Main Idea\" in LawHub LSAT PrepTest 157 Reading Comp. Sec. 1, Question 14", 'QtVcn7N1YIA', '5:16', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-018', "Dual Passage Logical Reasoning in Reading Comp. Using LawHub LSAT PrepTest 157 Sec. 1, Question 15", 'u2u33WjsRrY', '2:56', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-019', "Addressing a Detail \"Except\" Task Using LawHub LSAT PrepTest 157 Reading Comp. Sec. 1, Question 16", 'e_cXeyJ2IPk', '2:35', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-020', "How to ID a Detail in Both Passages Using LawHub LSAT PrepTest 157 Reading Comp. Sec. 1, Question 17", 'O8lrcIBFykg', '3:32', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-021', "Applying One Passage to Another in Reading Comp. Using LawHub LSAT PrepTest 157 Sec. 1, Question 18", 'JiKOXveIyH4', '3:05', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-022', "Finding an Analogous Passage Relationship Using LawHub LSAT PrepTest 157 Sec. 1, Question 19", 'Cdk4_T-75OI', '2:38', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-023', "Up-Front Reading to Find a Law Passage Main Idea Using LawHub LSAT PrepTest 141 Section 3", 'I64kvcNUNXk', '12:46', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-024', "Targeted Re-Reading to Find a Specific Law Passage Detail Using LawHub LSAT PrepTest 141 Section 3", '5defb5wbZis', '2:37', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-025', "Finding a Specific Law Passage Detail Using LawHub LSAT PrepTest 141 Section 3 #readingcomprehension", '8oEtWiiIzM8', '2:33', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-026', "Finding What the Author Would Agree with from a Law Passage Using LawHub LSAT PrepTest 141 Section 3", 'u1FOaJVG1tY', '6:32', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-027', "Targeted Re-Reading to Find a Specific Law Passage Purpose Using LawHub LSAT PrepTest 141 Section 3", 'Q7UVkk-EDgk', '3:54', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-028', "Finding What the Author Would Believe Based on a Law Passage w/ LawHub LSAT PrepTest 141 Section 3", 'A7ZThrQgVic', '5:01', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-029', "Determining the Author Attitude Regarding a Law Passage Using LawHub LSAT PrepTest 141 Section 3", 'uHhX_WrQTe0', '4:09', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-030', "Finding the Primary Concern of a Dual Social Science Passage w/ LawHub LSAT PrepTest 141 Section 3", 'ro_ZCR1gh6w', '14:54', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-031', "What Would a Dual Social Science Passage Author Would Agree to w/ LawHub LSAT PrepTest 141 Section 3", 'f0ub6N9EkQ0', '3:58', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-032', "Making Cross Text Connections in a Dual Social Science Passage w/ LawHub LSAT PrepTest 141 Section 3", 'SAxa3hGKTUg', '3:36', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-033', "Determining the Purpose of Dual Social Science Passage Content w/ LawHub LSAT PrepTest 141 Section 3", 'xc4jOrUDtdM', '3:19', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-034', "Applying Concepts from a Dual Social Science Passage Using LawHub LSAT PrepTest 141 Section 3", 'H-qdqQkda8g', '2:50', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-035', "Identifying Dual Social Science Passage Methods of Argument w/ LawHub LSAT PrepTest 141 Section 3", 'kLgZ4RddwgM', '2:52', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-036', "Up Front Read & Find a LSAT Passage Specific Inference w/ LawHub Reading Comprehension Drill Set 6", 'Fjd93tJZif8', '10:58', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-037', "Identifying a LSAT Passage Comparative Inference Using LawHub Reading Comprehension Drill Set 6", 'tY0kWRqQM-M', '5:18', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-038', "How to ID a LSAT Passage Author's Specific Implication w/ LawHub Reading Comprehension Drill Set 6", 'jw0MnXYCDnU', '4:12', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-039', "How to Identify a LSAT Passage Specific Suggestion Using LawHub Reading Comprehension Drill Set 6", 'Oc7UnqcPoLM', '5:02', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-040', "How to Identify a LSAT Passage Specific Inference Using LawHub Reading Comprehension Drill Set 6", '2AY7uF0SIMA', '5:00', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-041', "Determining What the Use of a LSAT Passage Term Suggests w/ LawHub Reading Comprehension Drill Set 6", 'NpcvwHJ6ZIU', '5:21', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-rc-hard-042', "Social Science Reading Comprehension Walkthrough w/ LawHub LSAT PrepTest 141 Section 1 Passage 3", '6jY_QtUkbP4', '24:11', 'RC', "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-001', "How to Identify a LSAT Logical Reasoning Inference Using LawHub Logical Reasoning Drill Set 1", 'OUN2rECXA4g', '6:40', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-002', "Finding a LSAT Inference without Conditional Logic Using LawHub LSAT Logical Reasoning Drill Set 2", 'ileaOGYN0g4', '7:22', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-003', "How to Address a LSAT Conditional Logic Flaw Using LawHub Logical Reasoning Drill Set 3", 'hzCBetKj9ic', '5:07', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-004', "How to Apply a Principle to Support a LSAT Argument Using LawHub Logical Reasoning Drill Set 3", 'NS7BXQoCCFA', '5:57', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-005', "How to ID an Assumption within a Complex LSAT Argument Using LawHub Logical Reasoning Drill Set 3", '7WrzoO_BBgg', '7:25', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-006', "How to Predict a LSAT Flaw Using Logical Reasoning Drill Set 4", 'ImVZ-5bp6CA', '4:50', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-007', "How to Address a LSAT Conditional Inference Using LawHub Logical Reasoning Drill Set 4", 'IDVbTFagUsM', '5:59', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-008', "How to Predict a Real Life Situation LSAT Flaw Using LawHub Logical Reasoning Drill Set 5", 'Z_F7ooxb2FI', '5:06', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-009', "How to Identify a LSAT Parallel Flaw in an Argument Using LawHub Logical Reasoning Drill Set 5", 'eXeu6WcLoYQ', '8:47', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-010', "How to Justify a LSAT Argument with a Principle Using LawHub Logical Reasoning Drill Set 5", 'pVxQbsFTs7w', '5:15', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-011', "Strengthening a LSAT Argument by Finding a Term Shift Using LawHub Logical Reasoning Drill Set 6", 'O4u3J5Ce75c', '5:38', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-012', "How to Identify a LSAT Justified Inference Using LawHub Logical Reasoning Drill Set 6", '93Pezy0Ovt4', '5:06', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-013', "How to Infer a LSAT Logical Reasoning Statement Using PrepTest 157 Section 2, Question 19", 'M8qfKy7LRbk', '3:52', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-014', "How to Justify LSAT Logical Reasoning with a Principle Using PrepTest 157 Section 2, Question 21", 'dzWRQTGNNbo', '4:34', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-015', "How to Identify a LSAT Logical Reasoning Term Shift Flaw Using PrepTest 157 Section 3, Question 12", 'X2sRELBfIJE', '4:30', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-016', "Identifying a Reasonable LSAT Logical Reasoning Conclusion Using PrepTest 157 Section 3, Question 21", 'frcDw3PIw9g', '5:32', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-017', "Identifying a Supported LSAT Logical Reasoning Inference Using PrepTest 157 Section 3, Question 23", 'M8Knz-Y9fNg', '5:00', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-018', "Identifying a LSAT Similar Pattern of Logical Reasoning Using PrepTest 157 Section 3, Question 24", 'q6U7yjbKQn8', '7:26', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-019', "Using a LSAT Logical Reasoning Biased Sample to Weaken PrepTest 157 Section 3, Question 25", 'lGQTt4jusdA', '4:41', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-020', "How to Criticize a LSAT Logical Reasoning Argument w/ Official PrepTest 158 Section 2, Question 18", 'W9eN9PQiZVU', '5:53', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-021', "How to Identify a LSAT Logical Reasoning Assumption w/ Official PrepTest 158 Section 2, Question 19", 'pfK1tm7Hwbs', '4:47', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-022', "How to Address LSAT Logical Reasoning EXCEPT tasks w/ Official PrepTest 158 Section 2, Question 20", 'QyDdRsmgY3c', '4:28', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-023', "Identifying a Method of LSAT Logical Reasoning w/ Official PrepTest 158 Section 3, Question 22", '9yEGBpnn3Q8', '3:54', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-024', "How to Find a LSAT Logical Reasoning Inference Using Official PrepTest 158 Section 3, Question 23", 'x7Nk0KfLW4A', '4:27', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-025', "Weakening a Technical LSAT Logical Reasoning Claim w/ Official PrepTest 158 Section 4, Question 22", 'bFcpoKOT1Ro', '4:56', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-026', "How to Find What Must be True from a LSAT Prompt Using LawHub Logical Reasoning Drill Set 8", 'lYLVtLnMoHE', '4:49', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-027', "Weakening a LSAT Logical Reasoning Real-Life Claim w/ Official PrepTest 141 Section 2, Question 19", 'TqmfurXNcHY', '4:52', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-028', "Finding a LSAT Logical Reasoning Required Assumption w/ Official PrepTest 141 Section 2, Question 20", 'UxnmmT1h3NE', '4:51', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-029', "Identifying a LSAT Logical Reasoning Inference Using Official PrepTest 141 Section 2, Question 21", 'xYlA-4KZAD4', '5:13', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-030', "Strengthening a LSAT Logical Reasoning Conclusion w/ Official PrepTest 141 Section 2, Question 22", 'Ue5sJFRah0M', '5:40', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-031', "How to Explain a LSAT Logical Reasoning Conflict w/ Official PrepTest 141 Section 2, Question 24", 'fM0liLnGdxU', '4:56', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-032', "How to Identify a LSAT Necessary Assumption w/ Details Using LawHub Logical Reasoning Drill Set 10", 'EFyfj3bis4U', '7:23', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-033', "Identifying LSAT Logical Reasoning Similar Reasoning w/ Official PrepTest 141 Section 4, Question 21", 'Vypkk_rlR4o', '8:30', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-034', "Using a LSAT Logical Reasoning Principle to Justify w/ Official PrepTest 141 Section 4, Question 23", 'oqrP_ypEj1Y', '6:42', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-035', "Identifying a Role Played by a Statement in a LSAT Argument w/ LawHub Logical Reasoning Drill Set 10", 'xkjrl5U4_g4', '6:29', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-036', "Predicting How a LSAT Logical Reasoning \"Proceeds\" Using Official PrepTest 140 Section 1, Question 9", 'qsXvo0yU83A', '5:04', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-037', "Finding a LSAT Logical Reasoning Principle Violation w/ Official PrepTest 140 Section 1, Question 19", 'gnVWpL4z2hg', '8:34', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-038', "How to Resolve a LSAT Logical Reasoning Paradox Using Official PrepTest 140 Section 1, Question 20", 'K3hTfNDOVgE', '7:07', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-039', "How to Find a LSAT Logical Reasoning Assumption Using Official PrepTest 140 Section 1, Question 22", 'Xb1oG2vpxlc', '6:03', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-040', "How to Identify a Point of Disagreement for LSAT Speakers w/ LawHub Logical Reasoning Drill Set 11", 'bqVb0fDkFVA', '7:06', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-041', "Highlight to Find Similar LSAT Logical Reasoning Using Official PrepTest 140 Section 2, Question 17", '6g1jAjynqbI', '8:19', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-042', "How to ID LSAT Logical Reasoning Conditional Logic w/ Official PrepTest 140 Section 2, Question 21", 'DANkQ7wb0dU', '4:34', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-043', "Noting Specific Details to Strengthen a LSAT Argument Using LawHub Logical Reasoning Drill Set 11", 'X-5Ezc1rTi4', '5:41', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-044', "How to Find a Parallel LSAT Logical Reasoning Flaw w/ Official PrepTest 140 Section 2, Question 23", 'gefGlTDf44U', '6:45', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-045', "Identifying How LSAT Logical Reasoning Proceeds Using Official PrepTest 140 Section 2, Question 26", 'NXhTa2dtC3I', '5:16', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-046', "Find What LSAT Logical Reasoning Statements Support w/ Official PrepTest 140 Section 3, Question 17", '_T9AIBbDUAU', '5:22', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-047', "Find What Weakens LSAT Logical Reasoning EXCEPT w/ Official PrepTest 140 Section 3, Question 21", 'RvY_00AP5c0', '4:11', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-048', "Justify LSAT Logical Reasoning Principle Application w/ Official PrepTest 140 Section 3, Question 22", 'LhPLh6_saLs', '5:55', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-049', "Find a LSAT Logical Reasoning Supported Inference w/ Official PrepTest 140 Section 3, Question 23", 'UAJMk6_5oKU', '6:03', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-050', "How to Use the Negation Test to Confirm a LSAT Assumption w/ LawHub Logical Reasoning Drill Set 12", 'XRNBh806ZiY', '4:56', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-051', "How to Find an Application of a Given LSAT Principle Using LawHub Logical Reasoning Drill Set 13", 'y0BwNVDyk0w', '6:40', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-052', "Identifying a Required Assumption for a LSAT Plan of Action w/ LawHub Logical Reasoning Drill Set 13", '-_Tj8TSZq4w', '5:54', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+  ['yt-myguru-lr-hard-053', "How to Find a Most Strongly Supported Statement Using LawHub Logical Reasoning Drill Set 14", 'Ph_xGu8oaqA', '6:16', 'LR', "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests"],
+];
+
+function v2MyGuruKeywords(title, section) {
+  const lower = String(title || '').toLowerCase();
+  const keywords = [section === 'RC' ? 'rc' : 'logical reasoning', section === 'RC' ? 'reading comprehension' : 'lr'];
+  if (/main idea|main point|primary concern/.test(lower)) keywords.push('main point', 'primary purpose');
+  if (/detail|locate|specific/.test(lower)) keywords.push('detail', 'recognition');
+  if (/purpose|author purpose|function/.test(lower)) keywords.push('purpose', 'reference');
+  if (/infer|inference|implication|suggests|supported|must be true/.test(lower)) keywords.push('inference', 'must be true', 'entailment');
+  if (/author perspective|author attitude|agree|believe/.test(lower)) keywords.push('attitude', 'views');
+  if (/organization|methods of argument|proceeds|method/.test(lower)) keywords.push('organization', 'method', 'technique');
+  if (/analogy|analogous|relationship/.test(lower)) keywords.push('analogy', 'principle');
+  if (/dual|both passages|cross text|one passage to another/.test(lower)) keywords.push('dual passage', 'comparative');
+  if (/weaken|weakening|criticize|criticism/.test(lower)) keywords.push('weaken', 'flaw');
+  if (/strengthen|strengthening/.test(lower)) keywords.push('strengthen');
+  if (/assumption|required|negation/.test(lower)) keywords.push('assumption', 'necessary');
+  if (/conditional/.test(lower)) keywords.push('conditional');
+  if (/flaw|parallel flaw|term shift|biased sample/.test(lower)) keywords.push('flaw');
+  if (/parallel|similar pattern|similar reasoning/.test(lower)) keywords.push('parallel', 'match structure');
+  if (/principle|justify|application/.test(lower)) keywords.push('principle');
+  if (/role played|role/.test(lower)) keywords.push('role');
+  if (/resolve|explain|conflict|paradox/.test(lower)) keywords.push('resolve', 'explain');
+  if (/point of disagreement|speakers/.test(lower)) keywords.push('dispute', 'disagree');
+  if (/conclusion/.test(lower)) keywords.push('conclusion');
+  return [...new Set(keywords)];
+}
+
+function v2MyGuruLessonIds(title, section) {
+  const lower = String(title || '').toLowerCase();
+  const ids = [];
+  if (section === 'RC') {
+    ids.push('ka-rc-getting-started');
+    if (/main idea|main point|primary concern/.test(lower)) ids.push('ka-rc-main-point-quick', 'ka-rc-primary-purpose-quick');
+    if (/detail|locate|specific/.test(lower)) ids.push('ka-rc-recognition-quick');
+    if (/purpose|function/.test(lower)) ids.push('ka-rc-purpose-reference-quick');
+    if (/infer|inference|implication|suggests/.test(lower)) ids.push('ka-rc-info-inference-quick', 'ka-rc-views-inference-quick');
+    if (/author perspective|author attitude|agree|believe/.test(lower)) ids.push('ka-rc-attitude-inference-quick', 'ka-rc-views-inference-quick');
+    if (/organization|methods/.test(lower)) ids.push('ka-rc-organizing-info-quick');
+    if (/analogy|analogous|applying concepts/.test(lower)) ids.push('ka-rc-principles-analogies-quick', 'ka-rc-new-contexts-quick');
+    if (/dual|both passages|cross text|one passage to another/.test(lower)) ids.push('ka-rc-principles-analogies-quick');
+    if (/weaken/.test(lower)) ids.push('ka-rc-additional-evidence-quick');
+  } else {
+    ids.push('ka-lr-getting-started');
+    if (/infer|inference|supported|must be true/.test(lower)) ids.push('ka-lr-entailment-video', 'ka-lr-strong-inferences-video');
+    if (/conditional/.test(lower)) ids.push('ka-logic-if-then', 'ka-logic-conditional-quick');
+    if (/flaw|criticize|criticism|biased sample|term shift/.test(lower)) ids.push('ka-lr-flaw-video', 'ka-lr-types-flaws');
+    if (/principle|justify|application/.test(lower)) ids.push('ka-lr-principle-video', 'ka-lr-match-principles-video');
+    if (/assumption|required|negation/.test(lower)) ids.push('ka-lr-necessary-assumptions-video', 'ka-lr-necessary-assumptions-quick');
+    if (/parallel|similar pattern|similar reasoning/.test(lower)) ids.push('ka-lr-match-structure-video', 'ka-lr-match-flaw-video');
+    if (/strengthen|strengthening/.test(lower)) ids.push('ka-lr-strengthen-video', 'ka-lr-strengthen-weaken-quick');
+    if (/weaken|weakening/.test(lower)) ids.push('ka-lr-weaken-video', 'ka-lr-strengthen-weaken-quick');
+    if (/method|proceeds/.test(lower)) ids.push('ka-lr-technique-video');
+    if (/role played|role/.test(lower)) ids.push('ka-lr-role-video');
+    if (/resolve|explain|conflict|paradox/.test(lower)) ids.push('ka-lr-resolve-video', 'ka-lr-explain-video');
+    if (/point of disagreement|speakers/.test(lower)) ids.push('ka-lr-disputes-video');
+    if (/conclusion/.test(lower)) ids.push('ka-lr-identify-conclusion-video');
+  }
+  return [...new Set(ids)];
+}
+
+v2YouTubeLessonVideos.push(...v2MyGuruEdgeVideoRows.map(([id, title, youtubeId, duration, section, playlist]) => ({
+  id,
+  title,
+  youtubeId,
+  duration,
+  keywords: v2MyGuruKeywords(title, section),
+  lessonIds: v2MyGuruLessonIds(title, section),
+  sourceChannel: 'MyGuruEdge',
+  sourcePlaylist: playlist,
+  watchUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
+  embedUrl: `https://www.youtube.com/embed/${youtubeId}`,
+})));
+
+
+const v2MyGuruEdgePlaylistDirectory = [
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 14 Explanations", playlistId: 'PLE39rYnOi8ZrL54qaR7AWvsJ7zHmr57yZ', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrL54qaR7AWvsJ7zHmr57yZ', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 7 Explanations", playlistId: 'PLE39rYnOi8Zq2qITYnHl_p2BzQex_V6We', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zq2qITYnHl_p2BzQex_V6We', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 13 Explanations", playlistId: 'PLE39rYnOi8Zqvf-zBpgg5Ek9siA6p3MOi', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zqvf-zBpgg5Ek9siA6p3MOi', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 140 Section 4 Reading Comprehension Video Explanations", playlistId: 'PLE39rYnOi8ZowsaX9D8o8dSLg0g9FvyB4', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZowsaX9D8o8dSLg0g9FvyB4', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 12 Explanations", playlistId: 'PLE39rYnOi8ZobLalSxbDuqMGH5PjIfstq', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZobLalSxbDuqMGH5PjIfstq', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 140 Section 3 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8Zo-IXTt7zhvGTakqDXc1JLx', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zo-IXTt7zhvGTakqDXc1JLx', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 6 Explanations", playlistId: 'PLE39rYnOi8Zru9HyFgJtk3fGPPCunKEF4', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zru9HyFgJtk3fGPPCunKEF4', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 11 Explanations", playlistId: 'PLE39rYnOi8ZreHmINmpPLAYHozCLYVikk', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZreHmINmpPLAYHozCLYVikk', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 140 Section 2 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZppaeqqB1L1zIFk_8HPqgfg', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZppaeqqB1L1zIFk_8HPqgfg', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 140 Section 1 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZqL-u1r8F2mBUlrLToEZKUt', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqL-u1r8F2mBUlrLToEZKUt', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 10 Explanations", playlistId: 'PLE39rYnOi8Zo5yHAhuvfn-V5iE-ID9d7b', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zo5yHAhuvfn-V5iE-ID9d7b', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 141 Section 4 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZrfdegZ8lP7ryZCPrJpfb0h', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrfdegZ8lP7ryZCPrJpfb0h', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 9 Explanations", playlistId: 'PLE39rYnOi8Zq1lKryPSpw6Q_KslHJBK9i', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zq1lKryPSpw6Q_KslHJBK9i', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 141 Section 3 Reading Comprehension Video Explanations", playlistId: 'PLE39rYnOi8ZpZE_2NsULZ2YE4orVWO-pL', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpZE_2NsULZ2YE4orVWO-pL', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 141 Section 1 Reading Comprehension Full Passage Video Walkthroughs", playlistId: 'PLE39rYnOi8ZrAxdZFt927E2qJz10cmbJ2', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrAxdZFt927E2qJz10cmbJ2', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 141 Section 2 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZofNUnTsQHQEhMO4rEFhdea', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZofNUnTsQHQEhMO4rEFhdea', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension Science Passages & Questions Explained Using Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZrcyzXvIGCUk3289nWkrDq8', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrcyzXvIGCUk3289nWkrDq8', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension Social Science Passages & Questions Explained Using Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZocpAUIpkMuEzWQbt8Bq20E', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZocpAUIpkMuEzWQbt8Bq20E', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension Law Passages & Questions Explained Using Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8Zo_P7LCngN2H9wahRsAdR4p', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zo_P7LCngN2H9wahRsAdR4p', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension Humanities Passages & Questions Explained Using Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8Zq-KFLNza12yUgObMEKj1-2', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zq-KFLNza12yUgObMEKj1-2', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify LSAT Logical Reasoning Argument Main Conclusions Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZrhOZjCf4mtgUSJ4vqHD-37', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrhOZjCf4mtgUSJ4vqHD-37', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify a Point at Issue Between Two LSAT Logical Reasoning Speakers Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8Zq1FCb2BnpxvKCD0oRBn7o1', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zq1FCb2BnpxvKCD0oRBn7o1', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Weaken LSAT Logical Reasoning Arguments Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZoQJtkhkExAbwHFYCjo6UyV', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZoQJtkhkExAbwHFYCjo6UyV', sourceChannel: 'MyGuruEdge' },
+  { title: "Identifying Roles Played by Statements or Argument Methods in LSAT Logical Reasoning w/ Free Questions in Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZqxhuHIc4uP_Zpr67SchIg3', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqxhuHIc4uP_Zpr67SchIg3', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Justify LSAT Logical Reasoning with Principles Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZpqWiHeVn-Ma88q-Ua3yK4y', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpqWiHeVn-Ma88q-Ua3yK4y', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Explain or Resolve a LSAT Logical Reasoning Discrepancy or Paradox Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZrlzEFw5TJ1sRxPPUxBdXCK', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrlzEFw5TJ1sRxPPUxBdXCK', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify LSAT Logical Reasoning Parallel Reasoning or Parallel Flaws Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZpHoSTFvepCtVksklNJXmSB', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpHoSTFvepCtVksklNJXmSB', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify LSAT Logical Reasoning Assumptions Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZrGEOrGWpEQ9jIRc8f-ULuh', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrGEOrGWpEQ9jIRc8f-ULuh', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Strengthen a LSAT Logical Reasoning Argument Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZpZVTGwdOKjyOwcReZ6v6Ag', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpZVTGwdOKjyOwcReZ6v6Ag', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify LSAT Logical Reasoning Inferences Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZrfVcsvvudGJacvmnzWqeVc', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZrfVcsvvudGJacvmnzWqeVc', sourceChannel: 'MyGuruEdge' },
+  { title: "How to Identify LSAT Logical Reasoning Flaws in Arguments Using Free Questions from Official LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8Zq-OxGE5t9hsMY7dlVasVEt', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zq-OxGE5t9hsMY7dlVasVEt', sourceChannel: 'MyGuruEdge' },
+  { title: "Hard LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZqKRXfny0ZQteUqWdWgyx5q', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqKRXfny0ZQteUqWdWgyx5q', sourceChannel: 'MyGuruEdge' },
+  { title: "Easy LSAT Reading Comprehension Passages Explained from Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZpFVn5EqSCUffYkCbkbuBVR', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpFVn5EqSCUffYkCbkbuBVR', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 5 Explanations", playlistId: 'PLE39rYnOi8ZosExiadrJn7pRFqBgL7YI-', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZosExiadrJn7pRFqBgL7YI-', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 8 Explanations", playlistId: 'PLE39rYnOi8Zo8RnR_dbZUAjoUbjJz0O9z', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zo8RnR_dbZUAjoUbjJz0O9z', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 7 Explanations", playlistId: 'PLE39rYnOi8ZqhzW0dpSuyseB2mLIBtwTC', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqhzW0dpSuyseB2mLIBtwTC', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Prep Tips", playlistId: 'PLE39rYnOi8ZqY-3kx0vifhowdUr3GTdOC', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqY-3kx0vifhowdUr3GTdOC', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 157 Section 4 Reading Comprehension Full Passage Video Walkthroughs", playlistId: 'PLE39rYnOi8ZqhmvZLeVu6s8Txlkcj_kXe', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqhmvZLeVu6s8Txlkcj_kXe', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 157 Section 3 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZowGg_r2Ajx0SRVGoyqGng2', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZowGg_r2Ajx0SRVGoyqGng2', sourceChannel: 'MyGuruEdge' },
+  { title: "Easy LSAT Logical Reasoning Questions Explained from Free LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8Zrphg2IyS7qaLVuPP-dCuI-', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zrphg2IyS7qaLVuPP-dCuI-', sourceChannel: 'MyGuruEdge' },
+  { title: "Hard LSAT Logical Reasoning Questions Explained from LSAC LawHub Drill Sets & PrepTests", playlistId: 'PLE39rYnOi8ZpFe5-2EwZ5Hx9LuhowGK3e', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpFe5-2EwZ5Hx9LuhowGK3e', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 157 Section 2 Logical Reasoning Video Explanations", playlistId: 'PLE39rYnOi8ZpRBhn-4cuGrJS7-apJU9wQ', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZpRBhn-4cuGrJS7-apJU9wQ', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 157 Section 1 Reading Comprehension Video Explanations", playlistId: 'PLE39rYnOi8ZoSy5vVJsWYEaOde6tsu79w', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZoSy5vVJsWYEaOde6tsu79w', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 6 Explanations", playlistId: 'PLE39rYnOi8ZoNfuaCXu111kxh-hHcyucy', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZoNfuaCXu111kxh-hHcyucy', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 5 Explanations", playlistId: 'PLE39rYnOi8Zr5kLExlkfwnBttUrLaf6-7', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zr5kLExlkfwnBttUrLaf6-7', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 4 Explanations", playlistId: 'PLE39rYnOi8ZqwIVbSTw9D8Dt4E7lHWjvx', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqwIVbSTw9D8Dt4E7lHWjvx', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 4 Explanations", playlistId: 'PLE39rYnOi8Zqplg6hDXUSkQzjRWf91-rY', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zqplg6hDXUSkQzjRWf91-rY', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 3 Explanations", playlistId: 'PLE39rYnOi8Zpnogxk98rMJ0pOoHVAAui_', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zpnogxk98rMJ0pOoHVAAui_', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 3 Explanations", playlistId: 'PLE39rYnOi8ZqSRSiiXeAvuozY-GPjhdaq', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqSRSiiXeAvuozY-GPjhdaq', sourceChannel: 'MyGuruEdge' },
+  { title: "Official LSAT PrepTest 158 Video Explanations", playlistId: 'PLE39rYnOi8Zqdp6QfGC1auS5cvWniEXi4', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zqdp6QfGC1auS5cvWniEXi4', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 2 Explanations", playlistId: 'PLE39rYnOi8ZqcrwC8Pg8lTjIzdUCEFe4K', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZqcrwC8Pg8lTjIzdUCEFe4K', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 2 Explanations", playlistId: 'PLE39rYnOi8Zo3q64W0d9x7g7VMaduIlsK', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8Zo3q64W0d9x7g7VMaduIlsK', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Reading Comprehension LSAC LawHub - Drill Set 1 Explanations", playlistId: 'PLE39rYnOi8ZoOvek-wffZK69EKEpIuBoU', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZoOvek-wffZK69EKEpIuBoU', sourceChannel: 'MyGuruEdge' },
+  { title: "LSAT Logical Reasoning LSAC LawHub - Drill Set 1 Explanations", playlistId: 'PLE39rYnOi8ZplZMiyS62HHiwloouY4iLl', url: 'https://www.youtube.com/playlist?list=PLE39rYnOi8ZplZMiyS62HHiwloouY4iLl', sourceChannel: 'MyGuruEdge' },
+];
+
+function v2YouTubeMatchScore(video, lesson, family) {
+  const text = `${lesson.id || ''} ${lesson.title || ''} ${lesson.track || ''} ${lesson.summary || ''} ${family || ''}`.toLowerCase();
+  const familyLower = String(family || '').toLowerCase();
+  const explicitLessonMatch = video.lessonIds.includes(lesson.id);
+  const videoTitle = String(video.title || '').toLowerCase();
+  const playlistTitle = String(video.sourcePlaylist || '').toLowerCase();
+  const isRcVideo = video.id.startsWith('yt-rc-') || video.id.startsWith('yt-myguru-rc-') || videoTitle.includes('reading comprehension') || playlistTitle.includes('reading comprehension');
+  const isLrVideo = video.id.startsWith('yt-myguru-lr-') || (videoTitle.includes('logical reasoning') && !videoTitle.includes('reading comprehension')) || playlistTitle.includes('logical reasoning');
+  const isRcLesson = text.includes('reading comprehension') || text.includes('rc ');
+  if (isRcVideo && !isRcLesson && !explicitLessonMatch) return 0;
+  if (isLrVideo && isRcLesson && !explicitLessonMatch) return 0;
+  let score = 0;
+  if (explicitLessonMatch) score += 12;
+  (video.keywords || []).forEach((keyword) => {
+    const normalized = String(keyword || '').toLowerCase();
+    if (normalized && text.includes(normalized)) score += 3;
+  });
+  if (familyLower.includes('flaw') && video.keywords.includes('flaw')) score += 8;
+  if (familyLower.includes('assumption') && video.keywords.includes('assumption')) score += 8;
+  if (familyLower.includes('strengthen') && video.keywords.includes('strengthen')) score += 8;
+  if (familyLower.includes('conditional') && video.keywords.includes('conditional')) score += 8;
+  if (familyLower.includes('must be true') && video.keywords.includes('must be true')) score += 8;
+  if (familyLower.includes('conclusion') && video.keywords.includes('conclusion')) score += 8;
+  if (familyLower.includes('principle') && video.keywords.includes('principle')) score += 8;
+  if (familyLower.includes('resolve') && (video.keywords.includes('resolve') || video.keywords.includes('paradox'))) score += 8;
+  if (familyLower.includes('dispute') && (video.keywords.includes('dispute') || video.keywords.includes('disagree'))) score += 8;
+  if (familyLower.includes('reading') && (video.keywords.includes('rc') || video.keywords.includes('reading comprehension'))) score += 8;
+  if (familyLower.includes('main point') && video.keywords.includes('main point')) score += 8;
+  if (familyLower.includes('primary purpose') && video.keywords.includes('primary purpose')) score += 8;
+  if (familyLower.includes('structure') && (video.keywords.includes('rc structure') || video.keywords.includes('passage map'))) score += 8;
+  if (familyLower.includes('inference') && video.keywords.includes('inference')) score += 8;
+  if (familyLower.includes('function') && (video.keywords.includes('reference') || video.keywords.includes('meaning'))) score += 8;
+  return score;
+}
+
+function v2YouTubeVideosForLesson(lesson, family) {
+  const seen = new Set();
+  return v2YouTubeLessonVideos
+    .map((video) => ({ ...video, matchScore: v2YouTubeMatchScore(video, lesson, family) }))
+    .filter((video) => video.matchScore >= 8)
+    .sort((a, b) => b.matchScore - a.matchScore || a.title.localeCompare(b.title))
+    .filter((video) => {
+      if (seen.has(video.youtubeId)) return false;
+      seen.add(video.youtubeId);
+      return true;
+    })
+    .slice(0, 3)
+    .map(({ matchScore, ...video }) => video);
+}
+
+function v2SyncExternalMedia(lesson) {
+  lesson.youtubeEmbedUrl = lesson.youtubeVideos?.[0]?.embedUrl || lesson.youtubeEmbedUrl || '';
+  lesson.externalMedia = (lesson.youtubeVideos || []).map((video) => ({
+    type: 'youtube',
+    title: video.title,
+    embedUrl: video.embedUrl,
+    watchUrl: video.watchUrl,
+    duration: video.duration,
+    source: video.sourceChannel,
+    playlist: video.sourcePlaylist,
+  }));
+  lesson.youtubeStatus = lesson.youtubeVideos?.length ? 'linked' : 'not-linked';
+}
+
+function v2AttachAllYouTubeVideosToLessons(data) {
+  if (!Array.isArray(data.lessons)) return;
+  const lessonById = new Map(data.lessons.map((lesson) => [lesson.id, lesson]));
+  const usedVideoIds = new Set();
+  data.lessons.forEach((lesson) => {
+    (lesson.youtubeVideos || []).forEach((video) => usedVideoIds.add(video.id));
+  });
+
+  v2YouTubeLessonVideos.forEach((video) => {
+    if (usedVideoIds.has(video.id)) return;
+    const target =
+      (video.lessonIds || []).map((lessonId) => lessonById.get(lessonId)).find(Boolean) ||
+      data.lessons
+        .map((lesson) => ({
+          lesson,
+          score: v2YouTubeMatchScore(video, lesson, lesson.linkedQuestionFamilies?.[0] || lesson.videoTheme || ''),
+        }))
+        .sort((a, b) => b.score - a.score)[0]?.lesson;
+    if (!target) return;
+    target.youtubeVideos = target.youtubeVideos || [];
+    if (!target.youtubeVideos.some((item) => item.id === video.id)) {
+      target.youtubeVideos.push(video);
+      usedVideoIds.add(video.id);
+      v2SyncExternalMedia(target);
+    }
+  });
+}
+
 function v2Slug(value) {
   return String(value || '')
     .toLowerCase()
@@ -440,6 +852,28 @@ function contentBoostQuestionDiagnostics(question) {
   };
 }
 
+function v2LessonSummary(lesson, family) {
+  const title = lesson.title || 'this lesson';
+  if (String(lesson.track || '').includes('RC')) {
+    return `${title} teaches you to map the passage by paragraph job, author viewpoint, and proof boundaries before answering. The goal is to leave with one clean passage map and one trap rule.`;
+  }
+  return `${title} teaches you to identify the argument task, name the missing logical move, and reject answers that sound related but do not perform the job.`;
+}
+
+function v2WorkedExampleForLesson(lesson, family) {
+  const title = lesson.title || 'this lesson';
+  if (String(lesson.track || '').includes('RC')) {
+    return {
+      prompt: `Original passage capsule for ${title}: a first paragraph introduces a familiar interpretation, a second paragraph complicates it with a rival detail, and a final paragraph gives the author's qualified position.`,
+      reasoning: 'The worked example maps each paragraph by job, predicts the answer in plain English, then eliminates choices that describe topic instead of structure, attitude, or textual proof.',
+    };
+  }
+  return {
+    prompt: `Original stimulus for ${title}: evidence is offered for a conclusion, but the support depends on a bridge the author has not fully proven.`,
+    reasoning: `The worked example finds the conclusion, names the gap, predicts the answer's job, and rejects traps that change the force, scope, or role required by ${family}.`,
+  };
+}
+
 function v2PromptForFamily(family, index) {
   const topic = ['public transit', 'museum funding', 'school tutoring', 'workplace scheduling', 'city gardens', 'digital archives'][index % 6];
   if (family.section === 'RC') {
@@ -494,6 +928,57 @@ function buildV2OriginalQuestion(index) {
     trapPattern: family.trap,
     mistakeReason: v2MistakeReasons[index % v2MistakeReasons.length],
     source: 'JessiPreps original V2',
+  };
+  return Object.assign(question, contentBoostQuestionDiagnostics(question));
+}
+
+function v2LessonQuestionStem(family) {
+  if (family === 'RC Main Point') return 'Which one of the following best states the main point of the passage capsule?';
+  if (family === 'RC Inference') return 'Which one of the following is most strongly supported by the passage capsule?';
+  if (family === 'RC Function') return 'The referenced detail primarily functions to';
+  if (family === 'RC Attitude') return 'The author attitude in the passage capsule is best described as';
+  if (family === 'Assumption') return 'Which one of the following is an assumption required by the argument?';
+  if (family === 'Strengthen') return 'Which one of the following, if true, most strengthens the argument?';
+  if (family === 'Weaken') return 'Which one of the following, if true, most weakens the argument?';
+  if (family === 'Flaw') return 'The reasoning is most vulnerable to criticism because it';
+  if (family === 'Conditional Logic') return 'Which one of the following must be true?';
+  if (family === 'Must Be True') return 'Which one of the following is most strongly supported?';
+  if (family === 'Resolve / Explain') return 'Which one of the following most helps resolve the apparent conflict?';
+  return 'Which answer best performs the task?';
+}
+
+function buildV2LessonSpecificQuestion(lesson, index) {
+  const family = lesson.linkedQuestionFamilies?.[index % lesson.linkedQuestionFamilies.length] || requestedQuestionFamily('', lesson.track || '', lesson.title);
+  const isRc = String(lesson.track || '').includes('RC') || family.startsWith('RC');
+  const title = lesson.title;
+  const prompt = isRc
+    ? `Original passage capsule for ${title}: Paragraph 1 introduces a familiar view about the lesson topic. Paragraph 2 complicates that view with a rival explanation or limitation. Paragraph 3 gives the author's qualified final position.`
+    : `Original stimulus for ${title}: A student group adopts a new review method and improves, so the coordinator concludes that the method itself caused the entire improvement.`;
+  const options = isRc
+    ? [
+        'It presents a familiar view, complicates it, and ends with a qualified author position',
+        'It lists unrelated facts without an organizing claim',
+        'It proves every rival interpretation false',
+        'It shifts to a personal story without returning to the issue',
+      ]
+    : v2ChoicesForFamily(v2QuestionFamilies.find((item) => item.family === family) || { family }, index);
+  const question = {
+    id: `lesson-${lesson.id}-q${index + 1}`,
+    section: isRc ? 'RC' : 'LR',
+    family,
+    questionType: family,
+    difficulty: index === 0 ? 'easy' : index === 3 ? 'hard' : 'medium',
+    lessonIds: [lesson.id],
+    linkedLessonIds: [lesson.id],
+    prompt,
+    question: v2LessonQuestionStem(family),
+    options,
+    answer: 0,
+    explanation: `This is a ${title} practice item. The credited answer matches the lesson method: ${contentBoostMethodSteps(family).join(' ')}`,
+    trapPattern: contentBoostTrapWarnings(family)[0] || 'Changes the task',
+    timingTarget: isRc ? 98 : 86,
+    mistakeReason: v2MistakeReasons[index % v2MistakeReasons.length],
+    source: 'JessiPreps original lesson-specific practice',
   };
   return Object.assign(question, contentBoostQuestionDiagnostics(question));
 }
@@ -564,6 +1049,8 @@ function buildV2RcPassage([id, title, topic, summary], index) {
     data.lessons.forEach((lesson, index) => {
       const sample = v2VideoSamples[lesson.id];
       const family = lesson.linkedQuestionFamilies?.[0] || requestedQuestionFamily('', lesson.track || '', lesson.title);
+      const genericSummary = !lesson.summary || /^Worked example: identify the task/.test(lesson.summary) || /^Original JessiPreps lesson/.test(lesson.summary);
+      if (genericSummary) lesson.summary = v2LessonSummary(lesson, family);
       lesson.script = lesson.script || `Professor Maya Brooks opens ${lesson.title} by naming the LSAT job in plain English, models the method on a clean original example, then asks the student to predict before evaluating answer choices. The closing rule is: ${lesson.trapExplanation || 'prove the answer with the task, not familiar wording.'}`;
       lesson.storyboard = lesson.storyboard || (lesson.scenes || []).map((scene, sceneIndex) => ({
         beat: sceneIndex + 1,
@@ -571,7 +1058,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         board: scene.storyboard,
         caption: scene.actionCue,
       }));
-      lesson.conceptSummary = lesson.conceptSummary || lesson.summary;
+      lesson.conceptSummary = genericSummary || !lesson.conceptSummary ? v2LessonSummary(lesson, family) : lesson.conceptSummary;
       lesson.methodSteps = lesson.methodSteps || contentBoostMethodSteps(family);
       lesson.trapWarnings = lesson.trapWarnings || contentBoostTrapWarnings(family);
       lesson.miniDrill = lesson.miniDrill || contentBoostMiniDrill(family);
@@ -586,11 +1073,16 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         explanation: 'Naming the task first keeps the answer choices from steering the process.',
       };
       lesson.masteryDrillId = lesson.masteryDrillId || `mastery-${lesson.id}`;
-      const generatedVideoPath = v2GeneratedVideoPathForLesson(lesson.id);
-      lesson.videoStatus = sample?.status || (generatedVideoPath ? 'mp4-ready' : 'shared-mp4-class');
-      lesson.videoPath = sample?.path || generatedVideoPath || lesson.videoPath || v2FallbackVideoPaths[index % v2FallbackVideoPaths.length];
+      if (!lesson.workedExample || /^A passage uses multiple viewpoints/.test(lesson.workedExample.prompt) || /^A stimulus gives evidence/.test(lesson.workedExample.prompt)) {
+        lesson.workedExample = v2WorkedExampleForLesson(lesson, family);
+      }
+      lesson.videoStatus = sample?.status || 'youtube-linked / script-ready';
+      lesson.videoPath = sample?.path || '';
       lesson.videoTheme = sample?.theme || family;
+      lesson.youtubeVideos = v2YouTubeVideosForLesson(lesson, family);
+      v2SyncExternalMedia(lesson);
     });
+    v2AttachAllYouTubeVideosToLessons(data);
   }
 
   if (Array.isArray(data.questionBank)) {
@@ -603,6 +1095,18 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       Object.assign(question, contentBoostQuestionDiagnostics(question));
     });
     const existingIds = new Set(data.questionBank.map((question) => question.id));
+    if (Array.isArray(data.lessons)) {
+      data.lessons.forEach((lesson) => {
+        const exactCount = data.questionBank.filter((question) => (question.lessonIds || []).includes(lesson.id)).length;
+        for (let index = exactCount; index < 5; index += 1) {
+          const question = buildV2LessonSpecificQuestion(lesson, index);
+          if (!existingIds.has(question.id)) {
+            data.questionBank.push(question);
+            existingIds.add(question.id);
+          }
+        }
+      });
+    }
     let index = 0;
     while (data.questionBank.length < 1000) {
       const question = buildV2OriginalQuestion(index);
@@ -640,8 +1144,12 @@ function buildV2RcPassage([id, title, topic, summary], index) {
   }));
   data.videoCoverage = {
     lessons: Array.isArray(data.lessons) ? data.lessons.length : 0,
-    playableLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.videoPath).length : 0,
+    playableLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.videoPath || lesson.youtubeVideos?.length).length : 0,
+    youtubePlaylistVideos: v2YouTubeLessonVideos.length,
+    youtubeLinkedLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.youtubeVideos?.length).length : 0,
     uniqueRenderedMp4s: 127,
     sharedFallbackSamples: v2FallbackVideoPaths.length,
   };
+  data.youtubeMedia = v2YouTubeLessonVideos;
+  data.youtubePlaylistDirectory = v2MyGuruEdgePlaylistDirectory;
 })();
