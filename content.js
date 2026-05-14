@@ -1804,6 +1804,7 @@ window.JESSI_PREPS_DATA = {
     { route: "plan", label: "Plan", eyebrow: "Study System" },
     { route: "live", label: "Live", eyebrow: "Classes + Recordings" },
     { route: "coach", label: "Coach", eyebrow: "AI Coach + Strategy" },
+    { route: "settings", label: "Settings", eyebrow: "Personalization" },
   ],
   settings: [
     { id: "dyslexiaFont", label: "Dyslexia font", type: "toggle" },
@@ -1813,6 +1814,10 @@ window.JESSI_PREPS_DATA = {
     { id: "uglyMode", label: "Ugly mode", type: "toggle" },
     { id: "predictionMode", label: "Prediction mode", type: "toggle" },
     { id: "reducedMotion", label: "Reduced motion", type: "toggle" },
+    { id: "sidebarAutoHide", label: "Auto-hide sidebar", type: "toggle" },
+    { id: "compactMode", label: "Compact study cards", type: "toggle" },
+    { id: "largeControls", label: "Larger buttons", type: "toggle" },
+    { id: "quietDashboard", label: "Quiet dashboard", type: "toggle" },
   ],
   roadmapSteps: [
     { band: "140-150", focus: "Reading structure, sentence translation, and confidence rebuild" },

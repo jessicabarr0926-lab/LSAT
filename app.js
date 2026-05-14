@@ -85,7 +85,12 @@ window.addEventListener("hashchange", renderApp);
 
 function defaultState() {
   return {
-    settings: Object.fromEntries(data.settings.map((item) => [item.id, false])),
+    settings: {
+      ...Object.fromEntries(data.settings.map((item) => [item.id, false])),
+      sidebarAutoHide: true,
+      colorTheme: "jessi",
+      accentColor: "#8a74e8",
+    },
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
     questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
     rcProgress: Object.fromEntries(
@@ -1505,6 +1510,14 @@ function applySettings() {
   document.body.classList.toggle("theme-dyslexia", state.settings.dyslexiaFont);
   document.body.classList.toggle("theme-spacious", state.settings.focusSpacing);
   document.body.classList.toggle("theme-reduced-motion", state.settings.reducedMotion);
+  document.body.classList.toggle("theme-compact", state.settings.compactMode);
+  document.body.classList.toggle("theme-large-controls", state.settings.largeControls);
+  document.body.classList.toggle("theme-quiet", state.settings.quietDashboard);
+  document.body.classList.toggle("sidebar-auto-hide", state.settings.sidebarAutoHide !== false);
+  document.body.dataset.colorTheme = state.settings.colorTheme || "jessi";
+  const accent = /^#[0-9a-f]{6}$/i.test(state.settings.accentColor || "") ? state.settings.accentColor : "#8a74e8";
+  document.documentElement.style.setProperty("--accent", accent);
+  document.body.style.setProperty("--accent", accent);
 }
 
 function renderNav() {
@@ -1517,6 +1530,7 @@ function renderNav() {
     plan: ["Onboarding", "LawHub", "Import"],
     live: ["30-min classes", "AI teacher", "Recordings"],
     coach: ["Tutor chat", "Admissions", "Strategy"],
+    settings: ["Display", "Colors", "Sidebar"],
   };
   navRail.innerHTML = data.navigation
     .map(
@@ -1573,8 +1587,8 @@ function wireNoticeLayer() {
   });
 }
 
-function renderSettings() {
-  const settingMeta = {
+function settingDescriptions() {
+  return {
     dyslexiaFont: "Switches reading text to a friendlier fallback for letter distinction.",
     focusSpacing: "Adds more breathing room between lines, cards, and study blocks.",
     darkMode: "Uses a darker color system for lower-glare studying.",
@@ -1582,8 +1596,16 @@ function renderSettings() {
     uglyMode: "Uses louder colors so structure stands out over polish.",
     predictionMode: "Keeps the interface focused on anticipating the answer before choices.",
     reducedMotion: "Turns off autoplay-style motion and nonessential transitions.",
+    sidebarAutoHide: "Keeps the side panel tucked away until you move your mouse to the left edge.",
+    compactMode: "Tightens card spacing when you want more study content on screen.",
+    largeControls: "Makes buttons and tap targets easier to hit on touch screens.",
+    quietDashboard: "Reduces decorative dashboard density so the next action stands out.",
   };
-  settingsPanel.innerHTML = data.settings
+}
+
+function renderSettingsControls() {
+  const settingMeta = settingDescriptions();
+  return data.settings
     .map(
       (setting) => `
         <label class="setting-toggle ${state.settings[setting.id] ? "is-on" : ""}">
@@ -1604,34 +1626,151 @@ function renderSettings() {
       `,
     )
     .join("");
+}
 
-  settingsPanel.querySelectorAll("[data-setting]").forEach((input) => {
+function wireSettingsControls(root = document) {
+  root.querySelectorAll("[data-setting]").forEach((input) => {
     input.addEventListener("change", () => {
       state.settings[input.dataset.setting] = input.checked;
       saveState();
       renderApp();
     });
   });
+  root.querySelectorAll("[data-color-theme]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const themeAccents = {
+        jessi: "#8a74e8",
+        forest: "#2f9d68",
+        ocean: "#2577b8",
+        rose: "#d85a8a",
+        ink: "#22223b",
+      };
+      state.settings.colorTheme = button.dataset.colorTheme;
+      state.settings.accentColor = themeAccents[button.dataset.colorTheme] || state.settings.accentColor || "#8a74e8";
+      saveState();
+      renderApp();
+    });
+  });
+  root.querySelector("[data-accent-color]")?.addEventListener("input", (event) => {
+    state.settings.accentColor = event.target.value;
+    saveState();
+    applySettings();
+  });
+}
+
+function renderSettings() {
+  if (!settingsPanel) return;
+  settingsPanel.innerHTML = renderSettingsControls();
+  wireSettingsControls(settingsPanel);
 }
 
 function renderToday() {
   const weak = weakestFamily();
   const lesson = nextLesson();
+  const adaptive = adaptiveDrillTarget();
   todayCard.innerHTML = `
     <section class="today-stack">
-      <div class="today-pill">
+      <a class="today-pill" href="#/learn/${lesson.id}">
         <span>Next lesson</span>
         <strong>${lesson.title}</strong>
-      </div>
-      <div class="today-pill">
+      </a>
+      <a class="today-pill" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
         <span>Weakest skill</span>
         <strong>${weak.family}</strong>
-      </div>
-      <div class="today-pill">
+      </a>
+      <a class="today-pill" href="#/review">
         <span>Blind review gap</span>
         <strong>${data.analyticsSnapshots.blindReviewGap} pts</strong>
-      </div>
-      <a class="button button--ghost sidebar-card__action" href="#/learn/${lesson.id}">Resume study path</a>
+      </a>
+      <a class="today-pill" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
+        <span>Start sprint</span>
+        <strong>Learn → Drill → Review</strong>
+      </a>
+      <a class="today-pill" href="#/plan">
+        <span>Plan</span>
+        <strong>${daysUntilTest()} days to LSAT</strong>
+      </a>
+      <a class="today-pill" href="#/settings">
+        <span>Settings</span>
+        <strong>Colors, display, sidebar</strong>
+      </a>
+    </section>
+  `;
+  todayCard.querySelectorAll("[data-start-adaptive]").forEach((link) => {
+    link.addEventListener("click", () => {
+      state.notifications.unshift({
+        id: `today-${Date.now()}`,
+        title: "Opening today’s practice",
+        body: `Starting ${weak.family}: chosen from your weakest family and current adaptive mode.`,
+        read: true,
+      });
+      saveState();
+    });
+  });
+}
+
+function renderSettingsPage() {
+  const themes = [
+    { id: "jessi", label: "Jessi", colors: ["#8a74e8", "#ffe082", "#2f6f5f"] },
+    { id: "forest", label: "Forest", colors: ["#2f9d68", "#d8f3dc", "#1f4f3a"] },
+    { id: "ocean", label: "Ocean", colors: ["#2577b8", "#d9efff", "#0f3a5a"] },
+    { id: "rose", label: "Rose", colors: ["#d85a8a", "#ffe1ec", "#633047"] },
+    { id: "ink", label: "High focus", colors: ["#22223b", "#f2f2f2", "#f4a261"] },
+  ];
+  const currentTheme = state.settings.colorTheme || "jessi";
+  const accent = /^#[0-9a-f]{6}$/i.test(state.settings.accentColor || "") ? state.settings.accentColor : "#8a74e8";
+  return `
+    <section class="settings-page">
+      <article class="panel panel--wide settings-hero">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h3>Make JessiPreps feel like your study room.</h3>
+          <p>Display modes, colors, accessibility, and sidebar behavior live here now so the side panel can stay focused on today’s next moves.</p>
+        </div>
+        <a class="button button--primary" href="#/dashboard">Back to dashboard</a>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Study display</h3>
+          <span class="status-pill">Saved locally</span>
+        </div>
+        <div class="settings-page-grid">
+          ${renderSettingsControls()}
+        </div>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Color features</h3>
+          <span class="status-pill">Accent: ${accent}</span>
+        </div>
+        <div class="theme-picker">
+          ${themes.map((theme) => `
+            <button class="theme-swatch ${currentTheme === theme.id ? "is-active" : ""}" type="button" data-color-theme="${theme.id}" aria-label="Use ${theme.label} color theme">
+              <span class="theme-swatch__chips">
+                ${theme.colors.map((color) => `<i style="background:${color}"></i>`).join("")}
+              </span>
+              <strong>${theme.label}</strong>
+            </button>
+          `).join("")}
+        </div>
+        <label class="accent-picker">
+          <span>
+            <strong>Custom accent color</strong>
+            <small>Changes buttons, links, rings, and active states.</small>
+          </span>
+          <input type="color" value="${accent}" data-accent-color aria-label="Choose custom accent color" />
+        </label>
+      </article>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Recommended setup</h3>
+        </div>
+        <div class="card-grid card-grid--three">
+          <section class="mini-card"><p class="mini-card__label">Deep work</p><h4>Auto-hide sidebar</h4><p>Keep the drawer tucked away and reveal it from the left edge.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Reading</p><h4>Focus spacing</h4><p>Add line height when passages start feeling dense.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Review</p><h4>Prediction mode</h4><p>Train yourself to name the answer job before choices pull you around.</p></section>
+        </div>
+      </article>
     </section>
   `;
 }
@@ -1674,6 +1813,7 @@ function renderPage(route) {
     plan: renderPlanPage,
     live: renderLivePage,
     coach: renderCoachPage,
+    settings: renderSettingsPage,
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
@@ -4130,6 +4270,8 @@ function renderCoachPage() {
 }
 
 function wireInteractions(route) {
+  wireSettingsControls(pageMount);
+
   pageMount.querySelectorAll("[data-start-adaptive]").forEach((link) => {
     link.addEventListener("click", () => {
       const target = adaptiveDrillTarget();

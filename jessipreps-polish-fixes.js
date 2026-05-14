@@ -164,7 +164,7 @@
       display: none;
     }
     @media (min-width: 1201px) {
-      body:not(.sidebar-collapsed) .sidebar-fab { display: none; }
+      body:not(.sidebar-collapsed):not(.sidebar-auto-hide) .sidebar-fab { display: none; }
     }
   `;
   document.head.appendChild(style);
