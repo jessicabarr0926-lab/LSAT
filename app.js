@@ -141,7 +141,7 @@ function defaultState() {
         { id: "scholarship", label: "Track scholarship positioning notes", done: false },
       ],
     },
-    cookieConsent: "",
+    cookieConsent: "local",
     notificationsOpen: false,
     commandPaletteOpen: false,
     profileMenuOpen: false,
@@ -180,6 +180,17 @@ function defaultState() {
       },
     },
     currentBlock: { id: "daily-sprint", unfinished: 3, label: "Daily sprint block" },
+    drillInterface: {
+      indexByDrill: {},
+      eliminated: {},
+      flagged: {},
+      prefs: {
+        fontSize: "medium",
+        lineSpacing: "normal",
+        viewMode: "split",
+        activeMark: "yellow",
+      },
+    },
     lastSavedAt: "",
   };
 }
@@ -221,7 +232,7 @@ function loadState() {
         tasks: parsed.admissions?.tasks || base.admissions.tasks,
         schools: parsed.admissions?.schools || [],
       },
-      cookieConsent: parsed.cookieConsent || "",
+      cookieConsent: parsed.cookieConsent || base.cookieConsent,
       notificationsOpen: Boolean(parsed.notificationsOpen),
       commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
@@ -230,6 +241,11 @@ function loadState() {
       mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
       answerLog: parsed.answerLog || [],
       testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
+      drillInterface: {
+        ...base.drillInterface,
+        ...(parsed.drillInterface || {}),
+        prefs: { ...base.drillInterface.prefs, ...(parsed.drillInterface?.prefs || {}) },
+      },
       currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
       lastSavedAt: parsed.lastSavedAt || "",
     };
@@ -350,6 +366,52 @@ function studyQualityScore() {
   const logged = state.officialLogs.length;
   const planSaved = state.plan.testDate ? 12 : 0;
   return Math.min(100, Math.round(streakDays() * 4 + Math.min(attempts, 20) * 1.4 + reviewed * 6 + logged * 4 + planSaved));
+}
+
+function dashboardRating() {
+  const hardAttempts = allQuestions().filter((question) =>
+    state.attempts[question.id] &&
+    /hard|advanced/i.test(question.difficulty || "")
+  );
+  const hardCorrect = hardAttempts.filter((question) => state.attempts[question.id]?.correct).length;
+  const hardScore = hardAttempts.length ? (hardCorrect / hardAttempts.length) * 100 : 0;
+  const timing = timeSummary();
+  const speedScore = timing.correct ? Math.max(0, Math.min(100, 140 - timing.correct)) : 35;
+  const reviewScore = Math.min(100, state.journal.filter((entry) => entry.blindReviewOutcome === "complete").length * 12);
+  return Math.round(
+    masteryRating("LR") * 0.28 +
+    masteryRating("RC") * 0.28 +
+    hardScore * 0.18 +
+    speedScore * 0.14 +
+    reviewScore * 0.12
+  );
+}
+
+function smartDrillAccuracy() {
+  const target = adaptiveDrillTarget();
+  const questions = data.questionBank.filter((question) => target.preset.families.includes(question.family));
+  const attempted = questions.filter((question) => state.attempts[question.id]);
+  const correct = attempted.filter((question) => state.attempts[question.id]?.correct).length;
+  return attempted.length ? Math.round((correct / attempted.length) * 100) : null;
+}
+
+function recentSectionRows(limit = 5) {
+  return (state.answerLog || []).slice(0, limit).map((attempt) => {
+    const question = findQuestion(attempt.questionId);
+    return {
+      date: attempt.answeredAt ? new Date(attempt.answeredAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Today",
+      type: question?.section || attempt.family || "Practice",
+      family: attempt.family,
+      score: attempt.correct ? "1/1" : "0/1",
+      accuracy: attempt.correct ? "100%" : "0%",
+      href: "#/review",
+    };
+  });
+}
+
+function latestExplanationQuestion() {
+  const latest = (state.answerLog || []).map((item) => findQuestion(item.questionId)).find(Boolean);
+  return latest || allQuestions()[0];
 }
 
 function officialTestCount() {
@@ -708,6 +770,26 @@ function lessonDrillQuestions(lesson, limit = 5) {
 
 function lessonPracticeFocus(lesson) {
   return lesson.linkedQuestionFamilies?.join(" + ") || lesson.videoTheme || "Lesson practice";
+}
+
+function findPassageForQuestion(questionId) {
+  return (data.rcPassages || []).find((passage) => passage.questions?.some((question) => question.id === questionId)) || null;
+}
+
+function drillSessionKey(routeId) {
+  return String(routeId || "adaptive-drill");
+}
+
+function drillQuestionIndex(routeId, questions) {
+  const key = drillSessionKey(routeId);
+  const saved = Number(state.drillInterface?.indexByDrill?.[key] || 0);
+  return Math.max(0, Math.min(saved, Math.max(questions.length - 1, 0)));
+}
+
+function questionStatus(question) {
+  const answered = Boolean(state.attempts[question.id]);
+  const flagged = Boolean(state.drillInterface?.flagged?.[question.id]);
+  return { answered, flagged };
 }
 
 function findQuestionTypeLesson(id) {
@@ -1908,111 +1990,141 @@ function renderDashboardPage() {
   const weak = weakestFamily();
   const adaptive = adaptiveDrillTarget();
   const lesson = nextLesson();
-  const trend = scoreTrend();
-  const testDays = daysUntilTest();
-  const profile = activeProfile();
   const dueEntries = state.journal.filter(
     (entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending"
   );
   const dueCount = dueEntries.length;
-  const lrBank = allQuestions().filter((question) => question.section === "LR");
-  const rcBank = allQuestions().filter((question) => question.section === "RC");
+  const recentRows = recentSectionRows();
+  const tests = (state.officialLogs || []).slice(0, 4);
+  const rating = dashboardRating();
+  const drillAccuracy = smartDrillAccuracy();
+  const explanation = latestExplanationQuestion();
+  const liveSessions = liveClassCatalog().slice(0, 3);
+  const predictionOn = Boolean(state.settings.predictionMode);
+  const ratingHref = "#/review";
   return `
-    <section class="dashboard-overview">
-      <article class="dashboard-card dashboard-card--hero interactive-card">
-        <div class="dashboard-card__head">
-          <div>
-            <p class="mini-card__label">Next best move</p>
-            <h3>Start today's 12-minute LSAT sprint.</h3>
-          </div>
-          <span class="status-pill">${lastSavedLabel()}</span>
-        </div>
-        <p>6 ${weak.family} questions -> Blind Review misses -> journal one rule. One rule per miss.</p>
-        <div class="dashboard-actions">
-          <a class="button button--primary sprint-cta" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>Start today's sprint</a>
-          <a class="button button--ghost" href="#/plan">Set goal/test date</a>
-          <a class="button button--ghost" href="#/practice/timed">Timed section</a>
-        </div>
-        <div class="hero-illustration" aria-hidden="true"><span>LR</span><span>RC</span><span>BR</span></div>
-      </article>
+    <section class="demon-dashboard">
+      <a class="demon-rating demon-rating--overall" href="${ratingHref}">
+        <strong data-countup-value="${rating}">${rating}</strong>
+        <span>Dashboard rating</span>
+        <small>Accuracy + speed + harder-question control</small>
+      </a>
+      <a class="demon-rating" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
+        <strong data-countup-value="${masteryRating("LR")}">${masteryRating("LR")}</strong>
+        <span>Arguments</span>
+        <small>Logical Reasoning</small>
+      </a>
+      <a class="demon-rating" href="#/practice/rc">
+        <strong data-countup-value="${masteryRating("RC")}">${masteryRating("RC")}</strong>
+        <span>Reading</span>
+        <small>Reading Comprehension</small>
+      </a>
 
-      <article class="metric-tile metric-tile--green interactive-card">
-        <p class="mini-card__label">Readiness</p>
-        <h3 data-countup-value="${data.appMeta.readinessScore}" data-countup-suffix="%">${data.appMeta.readinessScore}%</h3>
-        <p title="Study quality combines streak, answered questions, Blind Review, journal rules, and saved plan setup.">Study quality ${studyQualityScore()}/100 · streak + review habits</p>
-        ${renderSparkline([{ score: 58 }, { score: 64 }, { score: 61 }, { score: data.appMeta.readinessScore }])}
-      </article>
-      <article class="metric-tile metric-tile--gold interactive-card">
-        <p class="mini-card__label">Scaled score</p>
-        <h3 data-countup-value="${profile.currentScore}">${profile.currentScore}</h3>
-        <p>${hasScoreTrendData() ? `Range ${profile.currentScore - scoreVariance()}-${profile.currentScore + scoreVariance()}` : "Log 2+ PrepTests to show range"}</p>
-        ${renderSparkline(trend)}
-      </article>
-      <article class="metric-tile metric-tile--navy interactive-card">
-        <p class="mini-card__label">Blind Review gap</p>
-        <h3 data-countup-value="${data.analyticsSnapshots.blindReviewGap}" data-countup-suffix=" pts">${data.analyticsSnapshots.blindReviewGap} pts</h3>
-        <p title="Estimated spread between first-try performance and second-pass Blind Review performance. Lower is better.">${dueCount} due today · first try vs second pass</p>
-        ${renderDonut(Math.max(8, 100 - data.analyticsSnapshots.blindReviewGap * 3), "recovered", `${Math.max(0, 100 - data.analyticsSnapshots.blindReviewGap * 3)}%`)}
-      </article>
+      <a class="demon-action demon-action--primary" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
+        <p class="mini-card__label">Smart drilling</p>
+        <h3>${weak.family}</h3>
+        <p>${drillAccuracy == null ? "Start here. JessiPreps will calibrate difficulty as you answer." : `${drillAccuracy}% recent accuracy. Aim for the 75-80% challenge zone.`}</p>
+        <strong>Start next smart drill →</strong>
+      </a>
+      <a class="demon-action" href="#/review">
+        <p class="mini-card__label">Review inbox</p>
+        <h3>${dueCount}</h3>
+        <p>Blind Review item${dueCount === 1 ? "" : "s"} waiting before explanations unlock.</p>
+        <strong>Open review inbox →</strong>
+      </a>
+      <a class="demon-action" href="#/learn/${lesson.id}">
+        <p class="mini-card__label">Continue lesson</p>
+        <h3>${lesson.title}</h3>
+        <p>Merged lesson, drill, explanation, and journal handoff.</p>
+        <strong>Resume lesson →</strong>
+      </a>
 
-      <article class="dashboard-card dashboard-card--flow interactive-card">
+      <article class="demon-panel demon-panel--sections">
         <div class="dashboard-card__head">
-          <h3>Today Flow</h3>
-          <span class="status-pill">Learn · Drill · Review · Log · Stop</span>
+          <h3>Sections</h3>
+          <a class="status-pill" href="#/practice/timed">New</a>
         </div>
-        <div class="today-flow-grid today-stepper">
-          <a href="#/learn/${lesson.id}" data-flow-step="learn"><i>1</i><strong>Learn</strong><span>${lesson.title}</span></a>
-          <a href="#/practice/drill/${adaptive.preset.id}" data-flow-step="drill" data-start-adaptive><i>2</i><strong>Drill</strong><span>6 ${weak.family} questions</span></a>
-          <a href="#/review" data-flow-step="review"><i>3</i><strong>Review</strong><span>Blind Review misses</span></a>
-          <a href="#/review" data-flow-step="log"><i>4</i><strong>Log</strong><span>One reusable rule</span></a>
-          <a href="#/plan" data-flow-step="stop"><i>5</i><strong>Stop</strong><span>Set tomorrow's target</span></a>
-        </div>
-      </article>
-
-      <article class="dashboard-card dashboard-card--mix interactive-card">
-        <div class="dashboard-card__head">
-          <h3>Question mix</h3>
-          <a class="text-link" href="#/practice">Practice</a>
-        </div>
-        <div class="donut-row">
-          ${renderDonut(Math.round((lrBank.length / allQuestions().length) * 100), "LR", lrBank.length)}
-          ${renderDonut(Math.round((rcBank.length / allQuestions().length) * 100), "RC", rcBank.length)}
-        </div>
-        <div class="donut-legend"><span><i></i>Colored arc = share of ${allQuestions().length} total questions</span></div>
-        <p class="microcopy">Original practice only. Official LSAT question text stays in LawHub.</p>
-      </article>
-
-      <article class="dashboard-card dashboard-card--activity interactive-card">
-        <div class="dashboard-card__head">
-          <h3>Learning Activity</h3>
-          <span class="status-pill">This week</span>
-        </div>
-        ${renderActivityBars()}
-        <p class="microcopy">${Object.keys(state.attempts || {}).length || completedLessons() || state.journal.length ? "" : "No study activity logged this week. "}Daily target: ${profile.dailyMinutes} min from Plan. Next LSAT: ${testDays === null ? "set a date in Plan" : `${testDays} days from saved date`}.</p>
-      </article>
-
-      <article class="dashboard-card dashboard-card--accuracy interactive-card">
-        <div class="dashboard-card__head">
-          <h3>Accuracy grids</h3>
-          <span class="status-pill">7Sage-style</span>
-        </div>
-        <div class="grid-stack">
-          <section><strong>Logical Reasoning</strong>${renderAccuracyGrid(lrBank, 32)}</section>
-          <section><strong>Reading Comprehension</strong>${renderAccuracyGrid(rcBank, 32)}</section>
+        <div class="demon-table">
+          <header><span>Date</span><span>Type</span><span>Family</span><span>Score</span><span>Accuracy</span></header>
+          ${recentRows.length ? recentRows.map((row) => `
+            <a href="${row.href}">
+              <span>${row.date}</span><span>${row.type}</span><span>${row.family}</span><span>${row.score}</span><span>${row.accuracy}</span>
+            </a>
+          `).join("") : `
+            <a href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
+              <span>Today</span><span>LR/RC</span><span>${weak.family}</span><span>--</span><span>Start drill</span>
+            </a>
+          `}
         </div>
       </article>
 
-      <article class="dashboard-card dashboard-card--recent interactive-card">
+      <article class="demon-panel demon-panel--live">
         <div class="dashboard-card__head">
-          <h3>Recent activity</h3>
-          <a class="text-link" href="#/review/preptest/pt130">PrepTest results</a>
+          <h3>Live classes</h3>
+          <a class="text-link" href="#/live">See all</a>
         </div>
-        <div class="activity-feed">
-          <a href="#/learn/${lesson.id}"><strong>Continue</strong><span>${lesson.title}</span></a>
-          <a href="#/practice/drill/${adaptive.preset.id}"><strong>Adaptive drill</strong><span>${adaptive.weak.family}</span></a>
-          <a href="#/review"><strong>Blind Review</strong><span>${dueCount} item${dueCount === 1 ? "" : "s"} due</span></a>
+        <div class="demon-schedule">
+          ${liveSessions.map((session) => `
+            <a href="#/live">
+              <span>${session.time}</span>
+              <strong>${session.title}</strong>
+              <i>${session.level}</i>
+            </a>
+          `).join("")}
         </div>
       </article>
+
+      <article class="demon-panel demon-panel--tests">
+        <div class="dashboard-card__head">
+          <h3>Tests</h3>
+          <a class="status-pill" href="#/plan">Log</a>
+        </div>
+        <div class="demon-table">
+          <header><span>Date</span><span>Test</span><span>Score</span><span>Notes</span></header>
+          ${tests.length ? tests.map((test) => `
+            <a href="#/review">
+              <span>${test.loggedAt ? new Date(test.loggedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Saved"}</span>
+              <span>${test.ptSection || "PrepTest"}</span>
+              <span>${test.scaledScore || test.rawScore || "--"}</span>
+              <span>${test.timingNotes || "Review"}</span>
+            </a>
+          `).join("") : `
+            <a href="#/plan">
+              <span>--</span><span>No official logs yet</span><span>--</span><span>Add LawHub result</span>
+            </a>
+          `}
+        </div>
+      </article>
+
+      <a class="demon-panel demon-panel--analytics" href="#/review">
+        <div class="dashboard-card__head">
+          <h3>Smart analytics</h3>
+          <span class="status-pill">${studyQualityScore()}/100 quality</span>
+        </div>
+        <div class="demon-analytics-strip">
+          <span><strong>${Object.keys(state.attempts).length}</strong> answered</span>
+          <span><strong>${timeSummary().correct || "--"}s</strong> avg correct</span>
+          <span><strong>${data.analyticsSnapshots.blindReviewGap}</strong> BR gap</span>
+          <span><strong>${streakDays()}</strong> day streak</span>
+        </div>
+      </a>
+
+      <a class="demon-panel demon-panel--explanation" href="#/review">
+        <div class="dashboard-card__head">
+          <h3>Merged explanations</h3>
+          <span class="status-pill">${explanation.family}</span>
+        </div>
+        <p>${explanation.question}</p>
+        <strong>Open written explanation + fix →</strong>
+      </a>
+
+      <a class="demon-panel demon-panel--prediction ${predictionOn ? "is-on" : ""}" href="#/settings">
+        <div class="dashboard-card__head">
+          <h3>Prediction mode</h3>
+          <span class="status-pill">${predictionOn ? "On" : "Off"}</span>
+        </div>
+        <p>${predictionOn ? "Answer choices stay secondary while you predict the task first." : "Turn it on to practice before answer choices pull you around."}</p>
+      </a>
     </section>
   `;
 }
@@ -3276,21 +3388,7 @@ function renderPracticePage(route) {
       : data.questionBank.filter((question) => preset.families.includes(question.family)).slice(0, preset.count);
     const title = lessonDrill ? `${lessonDrill.title} Mastery Drill` : preset.title;
     const focus = lessonDrill ? lessonPracticeFocus(lessonDrill) : preset.families.join(" + ");
-    return `
-      <article class="panel panel--wide">
-        <div class="panel__head">
-          <h3>${title}</h3>
-          <button class="status-pill status-pill--button" type="button" data-bookmark="drill:${route.id}" data-bookmark-type="drill">${isBookmarked(`drill:${route.id}`) ? "Bookmarked" : "Bookmark drill"}</button>
-        </div>
-        <p>${lessonDrill ? `Lesson focus: ${focus}. These original questions are tied to this lesson, not the generic adaptive queue.` : `Adaptive focus: ${focus}. This preset is chosen because of weak performance plus incomplete mastery.`}</p>
-        <div class="commitment-bar">
-          <strong>${state.currentBlock.label}</strong>
-          <span>${state.currentBlock.unfinished} unfinished items in this daily practice set</span>
-          <button class="button button--ghost" type="button" data-skip-block>Skip block</button>
-        </div>
-        <div class="practice-list">${questions.map((question) => renderQuestionCard(question, "drill")).join("")}</div>
-      </article>
-    `;
+    return renderDigitalDrillPage({ routeId: route.id || "adaptive", title, focus, questions, lessonDrill });
   }
 
   if (route.subtype === "timed") {
@@ -3958,6 +4056,131 @@ function renderQuestionCard(question, context) {
   `;
 }
 
+function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill }) {
+  if (!questions.length) {
+    return `
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>${title}</h3>
+          <span class="status-pill">No questions matched</span>
+        </div>
+        <p>No original questions matched this drill yet. Try the adaptive drill engine or open the full question bank.</p>
+        <div class="dashboard-actions">
+          <a class="button button--primary" href="#/practice">Back to Practice</a>
+          <a class="button button--ghost" href="#/practice/drill/${adaptiveDrillTarget().preset.id}">Open adaptive drill</a>
+        </div>
+      </article>
+    `;
+  }
+  const key = drillSessionKey(routeId);
+  const index = drillQuestionIndex(routeId, questions);
+  const question = questions[index];
+  const attempt = state.attempts[question.id];
+  const passage = findPassageForQuestion(question.id);
+  const isRc = question.section === "RC";
+  const eliminated = new Set(state.drillInterface?.eliminated?.[question.id] || []);
+  const flagged = Boolean(state.drillInterface?.flagged?.[question.id]);
+  const prefs = state.drillInterface?.prefs || {};
+  const letters = ["A", "B", "C", "D", "E"];
+  const answeredCount = questions.filter((item) => state.attempts[item.id]).length;
+  const passageText = passage
+    ? passage.paragraphs.map((paragraph) => `<p><strong>${paragraph.label}.</strong> ${paragraph.text}</p>`).join("")
+    : `<p>${question.prompt || "Read the stimulus carefully, name the task, then choose the answer that does the exact job."}</p>`;
+
+  return `
+    <section class="digital-drill-shell" data-drill-key="${key}">
+      <header class="digital-drill-topbar">
+        <div>
+          <p class="mini-card__label">${lessonDrill ? "Mastery drill" : "Adaptive drill"}</p>
+          <h3>${title}</h3>
+        </div>
+        <div class="digital-tool-row" aria-label="Digital LSAT-style tools">
+          <button type="button" class="tool-button ${prefs.activeMark === "underline" ? "is-active" : ""}" data-drill-highlight="underline" title="Underline selected text"><u>U</u></button>
+          <button type="button" class="tool-button mark-yellow ${prefs.activeMark === "yellow" ? "is-active" : ""}" data-drill-highlight="yellow" title="Highlight selected text yellow"></button>
+          <button type="button" class="tool-button mark-blue ${prefs.activeMark === "blue" ? "is-active" : ""}" data-drill-highlight="blue" title="Highlight selected text blue"></button>
+          <button type="button" class="tool-button mark-orange ${prefs.activeMark === "orange" ? "is-active" : ""}" data-drill-highlight="orange" title="Highlight selected text orange"></button>
+          <button type="button" class="tool-button" data-drill-highlight="erase" title="Remove selected formatting">⌫</button>
+          <button type="button" class="tool-button" data-drill-pref="fontSize" data-value="${prefs.fontSize === "large" ? "medium" : "large"}" title="Toggle text size">Aᵃ</button>
+          <button type="button" class="tool-button" data-drill-pref="lineSpacing" data-value="${prefs.lineSpacing === "wide" ? "normal" : "wide"}" title="Toggle line spacing">☰</button>
+        </div>
+        <div class="digital-timer">
+          <span>${answeredCount}/${questions.length} answered</span>
+          <strong>Practice</strong>
+        </div>
+      </header>
+
+      <div class="digital-drill-meta">
+        <span>${question.section} · ${question.family} · ${question.difficulty}</span>
+        <span>Question ${index + 1} of ${questions.length}</span>
+        <span>${focus}</span>
+      </div>
+
+      <main class="digital-question-screen ${isRc ? "is-rc" : "is-lr"} font-${prefs.fontSize || "medium"} spacing-${prefs.lineSpacing || "normal"}">
+        ${isRc ? `
+          <aside class="digital-passage-panel">
+            <div class="panel__head">
+              <h4>${passage?.title || "Reading passage"}</h4>
+              <button class="status-pill status-pill--button" type="button" data-drill-pref="viewMode" data-value="${prefs.viewMode === "passage" ? "split" : "passage"}">${prefs.viewMode === "passage" ? "Passage + Question" : "Passage Only"}</button>
+            </div>
+            <div class="digital-readable">${passageText}</div>
+            ${passage?.modelMap ? `<div class="scratch-note"><strong>Scratch map idea:</strong>${passage.modelMap.map((line) => `<span>${line}</span>`).join("")}</div>` : ""}
+          </aside>
+        ` : `
+          <aside class="digital-passage-panel stimulus-panel">
+            <h4>Stimulus</h4>
+            <div class="digital-readable">${passageText}</div>
+          </aside>
+        `}
+        <section class="digital-question-panel ${isRc && prefs.viewMode === "passage" ? "is-muted" : ""}">
+          <div class="question-card__meta">
+            <p class="mini-card__label">Question ${index + 1}</p>
+            <button class="bookmark-button ${isBookmarked(question.id) ? "is-on" : ""}" type="button" data-bookmark="${question.id}" data-bookmark-type="question">${isBookmarked(question.id) ? "Saved" : "Save"}</button>
+          </div>
+          <h4>${question.question}</h4>
+          <div class="digital-answer-list">
+            ${question.options.map((option, choiceIndex) => {
+              const selected = attempt && attempt.choice === choiceIndex;
+              const correct = attempt && choiceIndex === question.answer;
+              const wrongSelected = attempt && selected && !attempt.correct;
+              return `
+                <div class="digital-answer-row ${eliminated.has(choiceIndex) ? "is-eliminated" : ""} ${selected ? "is-selected" : ""} ${correct ? "is-right" : ""} ${wrongSelected ? "is-wrong" : ""}">
+                  <button class="eliminate-button" type="button" data-drill-eliminate="${choiceIndex}" data-question="${question.id}" aria-label="${eliminated.has(choiceIndex) ? "Restore" : "Eliminate"} answer ${letters[choiceIndex]}">${eliminated.has(choiceIndex) ? "↺" : "✕"}</button>
+                  <button class="digital-answer-button" type="button" data-question="${question.id}" data-choice="${choiceIndex}" data-context="drill:${key}" ${attempt ? "disabled" : ""}>
+                    <span>${letters[choiceIndex]}</span>
+                    <strong>${option}</strong>
+                  </button>
+                </div>
+              `;
+            }).join("")}
+          </div>
+          ${attempt ? `
+            <div class="answer-feedback is-visible">
+              <strong>${attempt.correct ? "Correct." : "Review this before moving on."}</strong>
+              <p>${question.explanation}</p>
+              ${question.explanationSteps ? `<ol class="explanation-steps">${question.explanationSteps.map((step) => `<li>${step}</li>`).join("")}</ol>` : ""}
+              <p class="microcopy">Trap pattern: ${question.trapPattern}</p>
+              ${!attempt.correct && question.onTheSpotFix ? `<p class="microcopy"><strong>Fix on the spot:</strong> ${question.onTheSpotFix}</p>` : ""}
+            </div>
+          ` : `<p class="microcopy">Use the X buttons to eliminate choices. Flag hard-but-possible questions, then jump with the lineup below.</p>`}
+        </section>
+      </main>
+
+      <footer class="digital-drill-bottom">
+        <button class="button button--ghost" type="button" data-drill-prev="${key}" ${index === 0 ? "disabled" : ""}>← Previous</button>
+        <button class="button ${flagged ? "button--primary" : "button--ghost"}" type="button" data-drill-flag="${question.id}">${flagged ? "Flagged" : "Flag"}</button>
+        <nav class="question-lineup" aria-label="Question lineup">
+          ${questions.map((item, itemIndex) => {
+            const status = questionStatus(item);
+            return `<button class="question-dot ${itemIndex === index ? "is-current" : ""} ${status.answered ? "is-answered" : ""} ${status.flagged ? "is-flagged" : ""}" type="button" data-drill-nav="${itemIndex}" data-drill-key="${key}" aria-label="Question ${itemIndex + 1}${status.answered ? ", answered" : ", unanswered"}${status.flagged ? ", flagged" : ""}">${itemIndex + 1}</button>`;
+          }).join("")}
+        </nav>
+        <button class="button button--ghost" type="button" data-drill-next="${key}" ${index === questions.length - 1 ? "disabled" : ""}>Next →</button>
+        <a class="button button--primary" href="#/review">Review answers</a>
+      </footer>
+    </section>
+  `;
+}
+
 function liveClassCatalog() {
   return [
     {
@@ -4271,6 +4494,72 @@ function renderCoachPage() {
 
 function wireInteractions(route) {
   wireSettingsControls(pageMount);
+
+  pageMount.querySelectorAll("[data-drill-nav]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.drillKey;
+      state.drillInterface.indexByDrill[key] = Number(button.dataset.drillNav);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-drill-prev], [data-drill-next]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.drillPrev || button.dataset.drillNext;
+      const direction = button.dataset.drillNext ? 1 : -1;
+      state.drillInterface.indexByDrill[key] = Math.max(0, Number(state.drillInterface.indexByDrill[key] || 0) + direction);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-drill-flag]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.drillFlag;
+      state.drillInterface.flagged[id] = !state.drillInterface.flagged[id];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-drill-eliminate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const questionId = button.dataset.question;
+      const choice = Number(button.dataset.drillEliminate);
+      const eliminated = new Set(state.drillInterface.eliminated[questionId] || []);
+      if (eliminated.has(choice)) eliminated.delete(choice);
+      else eliminated.add(choice);
+      state.drillInterface.eliminated[questionId] = [...eliminated];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-drill-pref]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.drillInterface.prefs[button.dataset.drillPref] = button.dataset.value;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-drill-highlight]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.drillHighlight;
+      state.drillInterface.prefs.activeMark = mode;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        if (mode === "erase") document.execCommand("removeFormat", false, null);
+        else if (mode === "underline") document.execCommand("underline", false, null);
+        else document.execCommand("backColor", false, mode === "blue" ? "#cfe8ff" : mode === "orange" ? "#ffd7b5" : "#fff3a6");
+        saveState();
+        return;
+      }
+      saveState();
+      renderApp();
+    });
+  });
 
   pageMount.querySelectorAll("[data-start-adaptive]").forEach((link) => {
     link.addEventListener("click", () => {
@@ -4741,7 +5030,7 @@ function wireInteractions(route) {
     });
   }
 
-  pageMount.querySelectorAll("[data-question]").forEach((button) => {
+  pageMount.querySelectorAll("[data-question][data-choice]").forEach((button) => {
     button.addEventListener("click", () => answerQuestion(button.dataset.question, Number(button.dataset.choice), button.dataset.context));
   });
 
