@@ -2335,6 +2335,54 @@ body.sidebar-collapsed .topbar {
   margin-bottom: 18px;
 }
 
+.focus-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(138, 116, 232, 0.14), rgba(47, 157, 104, 0.1)),
+    rgba(255, 255, 255, 0.72);
+}
+
+.focus-banner div {
+  display: grid;
+  gap: 4px;
+}
+
+.focus-banner strong,
+.focus-banner span {
+  display: block;
+}
+
+.focus-banner label {
+  display: grid;
+  gap: 6px;
+  min-width: min(280px, 100%);
+  font-weight: 700;
+}
+
+.focus-banner label span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.focus-banner select {
+  width: 100%;
+}
+
+.continue-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
 .syllabus-layout,
 .lesson-detail-shell,
 .section-review-detail {
@@ -2371,8 +2419,24 @@ body.sidebar-collapsed .topbar {
   padding: 13px;
 }
 
+.syllabus-units > .mini-card__label {
+  margin-bottom: -2px;
+}
+
 .syllabus-units a.is-active {
   background: var(--accent-soft);
+}
+
+.syllabus-units a:hover {
+  border-color: rgba(124, 55, 92, 0.22);
+  transform: translateX(2px);
+}
+
+.syllabus-units a em {
+  color: var(--accent);
+  font-style: normal;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .lesson-toc button.is-active,
@@ -2384,6 +2448,19 @@ body.sidebar-collapsed .topbar {
 .syllabus-units span,
 .lesson-row small {
   color: var(--muted);
+}
+
+.repeat-chip {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(138, 116, 232, 0.12);
 }
 
 .unit-block {
@@ -2580,6 +2657,24 @@ body.sidebar-collapsed .topbar {
 .lesson-flow-topbar nav {
   display: flex;
   gap: 8px;
+}
+
+.lesson-flow-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -4px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.lesson-flow-breadcrumb a {
+  color: inherit;
+}
+
+.lesson-flow-breadcrumb a:hover {
+  color: var(--accent);
 }
 
 .lesson-reader {
@@ -4649,6 +4744,12 @@ body.test-day-active .page-grid {
   .topbar__actions .icon-button,
   .topbar__actions .profile-chip {
     width: 100%;
+  }
+
+  .focus-banner,
+  .continue-banner {
+    align-items: start;
+    display: grid;
   }
 
   .syllabus-units,

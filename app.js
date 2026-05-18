@@ -111,6 +111,7 @@ function defaultState() {
     },
     officialLogs: [],
     bookmarks: {},
+    studyFocus: "auto",
     adaptiveMode: "weakness",
     studyCalendar: [],
     mistakeTags: {},
@@ -221,6 +222,7 @@ function loadState() {
       onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
       officialLogs: parsed.officialLogs || [],
       bookmarks: parsed.bookmarks || {},
+      studyFocus: parsed.studyFocus || base.studyFocus,
       adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
       studyCalendar: parsed.studyCalendar || [],
       mistakeTags: parsed.mistakeTags || {},
@@ -641,6 +643,41 @@ function lessonUnits() {
   });
 }
 
+function activeStudyUnit() {
+  if (!state.studyFocus || state.studyFocus === "auto") return null;
+  return lessonUnits().find((unit) => unit.id === state.studyFocus) || null;
+}
+
+function studyFocusOptions() {
+  return [{ id: "auto", title: "Automatic recommendation" }, ...lessonUnits().map((unit) => ({ id: unit.id, title: unit.title }))];
+}
+
+function lessonUnitMemberships(lessonId, units = lessonUnits()) {
+  return units.filter((unit) => unit.lessons.some((lesson) => lesson.id === lessonId));
+}
+
+function primaryUnitForLesson(lesson) {
+  const memberships = lessonUnitMemberships(lesson.id);
+  const focused = activeStudyUnit();
+  if (focused && memberships.some((unit) => unit.id === focused.id)) return focused;
+  return memberships[0] || null;
+}
+
+function focusedFamilyPool() {
+  const unit = activeStudyUnit();
+  if (!unit) return null;
+  return [...new Set(unit.lessons.flatMap((lesson) => lesson.linkedQuestionFamilies || []))];
+}
+
+function focusAwareWeakestFamily() {
+  const pool = focusedFamilyPool();
+  if (!pool?.length) return weakestFamily();
+  const ranked = pool
+    .map((family) => ({ family, score: accuracyForFamily(family) || 0 }))
+    .sort((a, b) => a.score - b.score);
+  return ranked[0] || weakestFamily();
+}
+
 function unitProgress(lessons) {
   if (!lessons.length) return 0;
   const done = lessons.filter((lesson) => state.lessonProgress[lesson.id]?.complete).length;
@@ -664,12 +701,15 @@ function daysUntilTest() {
 
 function adaptiveDrillTarget() {
   const mode = state.adaptiveMode || "weakness";
+  const focusPool = focusedFamilyPool();
   const journalFamilies = state.journal.reduce((acc, entry) => {
     if (entry.family) acc[entry.family] = (acc[entry.family] || 0) + 1;
     return acc;
   }, {});
-  const journalFamily = Object.entries(journalFamilies).sort((a, b) => b[1] - a[1])[0]?.[0];
-  let weak = journalFamily ? { family: journalFamily, score: accuracyForFamily(journalFamily) || 0 } : weakestFamily();
+  const journalFamily = Object.entries(journalFamilies)
+    .filter(([family]) => !focusPool?.length || focusPool.includes(family))
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+  let weak = journalFamily ? { family: journalFamily, score: accuracyForFamily(journalFamily) || 0 } : focusAwareWeakestFamily();
   if (mode === "speed") {
     const slow = familyAnalytics()
       .filter((item) => item.avgTime)
@@ -709,6 +749,10 @@ function activeProfile() {
 }
 
 function nextLesson() {
+  const focused = activeStudyUnit();
+  if (focused) {
+    return focused.lessons.find((lesson) => !state.lessonProgress[lesson.id]?.complete) || focused.lessons[0];
+  }
   return data.lessons.find((lesson) => !state.lessonProgress[lesson.id]?.complete) || data.lessons[0];
 }
 
@@ -1785,11 +1829,16 @@ function renderSettings() {
 }
 
 function renderToday() {
-  const weak = weakestFamily();
+  const weak = focusAwareWeakestFamily();
   const lesson = nextLesson();
   const adaptive = adaptiveDrillTarget();
+  const focus = activeStudyUnit();
   todayCard.innerHTML = `
     <section class="today-stack">
+      <a class="today-pill" href="${focus ? `#/learn/unit/${focus.id}` : "#/dashboard"}">
+        <span>Current focus</span>
+        <strong>${focus?.title || "Automatic"}</strong>
+      </a>
       <a class="today-pill" href="#/learn/${lesson.id}">
         <span>Next lesson</span>
         <strong>${lesson.title}</strong>
@@ -1916,7 +1965,7 @@ function renderRouteMeta(route) {
   routeEyebrow.textContent = nav.eyebrow;
   const questionTypeLesson = route.id ? findQuestionTypeLesson(route.id) : null;
   routeTitle.textContent =
-    route.page === "learn" && route.id && route.subtype !== "content"
+    route.page === "learn" && route.id && !["content", "unit"].includes(route.subtype)
       ? questionTypeLesson?.title || (data.lessons.find((lesson) => lesson.id === route.id) || {}).title || "Learn"
       : nav.label;
 }
@@ -2025,9 +2074,10 @@ function renderDashboardHero() {
 }
 
 function renderDashboardPage() {
-  const weak = weakestFamily();
+  const weak = focusAwareWeakestFamily();
   const adaptive = adaptiveDrillTarget();
   const lesson = nextLesson();
+  const focus = activeStudyUnit();
   const dueEntries = state.journal.filter(
     (entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending"
   );
@@ -2041,6 +2091,19 @@ function renderDashboardPage() {
   const predictionOn = Boolean(state.settings.predictionMode);
   const ratingHref = "#/review";
   return `
+    <section class="focus-banner">
+      <div>
+        <p class="mini-card__label">Study focus</p>
+        <strong>${focus?.title || "Automatic recommendation"}</strong>
+        <span>${focus ? "Dashboard lesson and drill suggestions stay inside this track until you switch it." : "JessiPreps chooses the next lesson and weakest family automatically."}</span>
+      </div>
+      <label>
+        <span>Switch focus</span>
+        <select data-study-focus>
+          ${studyFocusOptions().map((option) => `<option value="${option.id}" ${state.studyFocus === option.id ? "selected" : ""}>${option.title}</option>`).join("")}
+        </select>
+      </label>
+    </section>
     <section class="demon-dashboard">
       <a class="demon-rating demon-rating--overall" href="${ratingHref}">
         <strong data-countup-value="${rating}">${rating}</strong>
@@ -2073,7 +2136,7 @@ function renderDashboardPage() {
       <a class="demon-action" href="#/learn/${lesson.id}">
         <p class="mini-card__label">Continue lesson</p>
         <h3>${lesson.title}</h3>
-        <p>Merged lesson, drill, explanation, and journal handoff.</p>
+        <p>${focus ? `${focus.title} focus is pinned for this week.` : "Merged lesson, drill, explanation, and journal handoff."}</p>
         <strong>Resume lesson →</strong>
       </a>
 
@@ -2172,12 +2235,14 @@ function renderLearnPage(route) {
   if (questionTypeLesson) {
     return renderQuestionTypeLesson(questionTypeLesson);
   }
-  if (route.id && route.id !== "content") {
+  if (route.id && route.id !== "content" && route.subtype !== "unit") {
     const lesson = data.lessons.find((item) => item.id === route.id) || nextLesson();
     return renderLessonPlayer(lesson);
   }
   const units = lessonUnits();
   const featured = nextLesson();
+  const requestedUnit = route.subtype === "unit" ? units.find((unit) => unit.id === route.id) : null;
+  const selectedUnitId = requestedUnit?.id || activeStudyUnit()?.id || units[0]?.id;
   return `
     <article class="panel panel--wide syllabus-shell">
       <div class="syllabus-header">
@@ -2198,33 +2263,45 @@ function renderLearnPage(route) {
       <div class="continue-banner">
         <strong>${featured.title}</strong>
         <span>Ready to start · ${data.lessons.length} lessons available · ${featured.statusLabel}</span>
-        <a class="text-link" href="#/learn/${featured.id}">Resume</a>
+        <div class="continue-banner__actions">
+          <a class="text-link" href="#/learn/${featured.id}">Resume</a>
+          <a class="text-link" href="#lesson-picker">Pick a different lesson</a>
+        </div>
       </div>
-      <div class="syllabus-layout">
+      <div class="syllabus-layout" id="lesson-picker">
         <aside class="syllabus-units">
-          ${units.map((unit, index) => `
-            <a href="#unit-${unit.id}" class="${index === 0 ? "is-active" : ""}">
+          <p class="mini-card__label">Jump to unit</p>
+          ${units.map((unit) => `
+            <a href="#/learn/unit/${unit.id}" class="${unit.id === selectedUnitId ? "is-active" : ""}">
               <strong>${unit.title}</strong>
               <span>${unitProgress(unit.lessons)}% · ${unit.lessons.length} lessons</span>
+              <em>Jump →</em>
             </a>
           `).join("")}
         </aside>
         <div class="syllabus-lessons">
           ${units.map((unit, index) => `
-            <details id="unit-${unit.id}" class="unit-block" ${index < 2 ? "open" : ""}>
+            <details id="unit-${unit.id}" class="unit-block" ${unit.id === selectedUnitId || (!selectedUnitId && index < 2) ? "open" : ""}>
               <summary>
                 <strong>${unit.title}</strong>
                 <span>${unitProgress(unit.lessons)}% complete</span>
               </summary>
               <div class="lesson-row-list">
-                ${unit.lessons.map((lesson) => `
-                  <a class="lesson-row interactive-card" href="#/learn/${lesson.id}">
-                    <span class="lesson-row__status">${lessonStatusIcon(lesson)}</span>
-                    <span><strong>${lesson.title}</strong><small>${lesson.summary}</small></span>
-                    <em>${Math.max(8, lesson.scenes?.length * 6 || 18)}m</em>
-                    <b>↗</b>
-                  </a>
-                `).join("")}
+                ${unit.lessons.map((lesson) => {
+                  const memberships = lessonUnitMemberships(lesson.id, units);
+                  return `
+                    <a class="lesson-row interactive-card" href="#/learn/${lesson.id}">
+                      <span class="lesson-row__status">${lessonStatusIcon(lesson)}</span>
+                      <span>
+                        <strong>${lesson.title}</strong>
+                        <small>${lesson.summary}</small>
+                        ${memberships.length > 1 ? `<i class="repeat-chip" title="This lesson also appears in ${memberships.map((item) => item.title).join(", ")} because it supports more than one study path.">Why repeated?</i>` : ""}
+                      </span>
+                      <em>${Math.max(8, lesson.scenes?.length * 6 || 18)}m</em>
+                      <b>↗</b>
+                    </a>
+                  `;
+                }).join("")}
               </div>
             </details>
           `).join("")}
@@ -2452,6 +2529,7 @@ function renderLessonPlayer(lesson) {
   const progress = ensureLessonProgress(lesson.id);
   const linkedQuestions = lessonDrillQuestions(lesson, 5);
   const neighbors = lessonNeighbors(lesson);
+  const unit = primaryUnitForLesson(lesson);
   return `
     <article class="lesson-flow-shell">
       <header class="lesson-flow-topbar">
@@ -2465,6 +2543,13 @@ function renderLessonPlayer(lesson) {
       </header>
       ${renderLessonMenuPanel()}
       <main class="lesson-reader">
+        ${unit ? `
+          <nav class="lesson-flow-breadcrumb" aria-label="Breadcrumb">
+            <a href="#/learn">Learn</a>
+            <span>/</span>
+            <a href="#/learn/unit/${unit.id}">${unit.title}</a>
+          </nav>
+        ` : ""}
         <header class="lesson-reader__title">
           <h2>${lesson.title}</h2>
           <button class="bookmark-button ${isBookmarked(lesson.id) ? "is-on" : ""}" type="button" data-bookmark="${lesson.id}" data-bookmark-type="lesson">${isBookmarked(lesson.id) ? "Saved" : "Save"}</button>
@@ -4565,6 +4650,22 @@ function renderCoachPage() {
 
 function wireInteractions(route) {
   wireSettingsControls(pageMount);
+
+  pageMount.querySelectorAll("[data-study-focus]").forEach((select) => {
+    select.addEventListener("change", () => {
+      state.studyFocus = select.value || "auto";
+      state.notifications.unshift({
+        id: `focus-${Date.now()}`,
+        title: "Study focus updated",
+        body: state.studyFocus === "auto"
+          ? "JessiPreps is choosing lessons and drills automatically again."
+          : `${activeStudyUnit()?.title || "Your selected track"} is now pinned for dashboard lessons and drill recommendations.`,
+        read: true,
+      });
+      saveState();
+      renderApp();
+    });
+  });
 
   pageMount.querySelectorAll("[data-drill-nav]").forEach((button) => {
     button.addEventListener("click", () => {
