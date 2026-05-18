@@ -2679,7 +2679,7 @@ body.sidebar-collapsed .topbar {
   gap: 10px;
 }
 
-.lesson-practice-links button {
+.lesson-practice-links a {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
@@ -2691,7 +2691,6 @@ body.sidebar-collapsed .topbar {
   border: 0;
   border-top: 1px solid var(--line);
   background: transparent;
-  cursor: pointer;
 }
 
 .lesson-practice-links span {
@@ -2723,6 +2722,12 @@ body.sidebar-collapsed .topbar {
   box-shadow: 0 18px 44px rgba(33, 22, 39, 0.16);
   transform: translateX(-50%);
   backdrop-filter: blur(16px);
+}
+
+.lesson-flow-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .lesson-done-toggle {
@@ -2831,6 +2836,35 @@ body.sidebar-collapsed .topbar {
   padding: 14px;
   font: inherit;
   resize: vertical;
+}
+
+.maya-tabs {
+  display: inline-flex;
+  width: max-content;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.maya-tabs button {
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.maya-tabs button.is-active {
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+
+.maya-how {
+  display: grid;
+  gap: 10px;
+}
+
+.maya-how p {
+  margin: 0;
 }
 
 .section-card-row {
@@ -3713,7 +3747,32 @@ body.test-day-active #heroMount,
 body.test-day-active .app-footer,
 body.test-day-active .sidebar-fab,
 body.test-day-active .cookie-panel {
-  display: none;
+  display: none !important;
+}
+
+body.challenge-active .sidebar,
+body.challenge-active .topbar,
+body.challenge-active #heroMount,
+body.challenge-active .app-footer,
+body.challenge-active .sidebar-fab,
+body.challenge-active .cookie-panel {
+  display: none !important;
+}
+
+body.challenge-active .main {
+  padding: 0;
+}
+
+body.challenge-active .page-grid {
+  display: block;
+  gap: 0;
+}
+
+body.challenge-active .digital-drill-shell {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .maya-teacher {
@@ -4609,7 +4668,7 @@ body.test-day-active .page-grid {
   }
 
   .lesson-flow-walkthrough li,
-  .lesson-practice-links button {
+  .lesson-practice-links a {
     grid-template-columns: 1fr;
   }
 

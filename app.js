@@ -18,7 +18,7 @@ const commandPaletteButton = document.querySelector("#commandPaletteButton");
 const profileChip = document.querySelector("#profileChip");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
-let lessonFlowState = { lessonId: null, notesOpen: false, menuOpen: false, challengeQuestionId: null, challengeViewOnly: false };
+let lessonFlowState = { lessonId: null, notesOpen: false, menuOpen: false };
 let qtPlaybackTimer = null;
 let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
 let testDayTimer = null;
@@ -151,6 +151,7 @@ function defaultState() {
     coachMessages: [],
     mayaTeacher: {
       open: false,
+      tab: "ask",
       backendUrl: "",
       voiceStatus: "offline",
       transcript: [],
@@ -1231,18 +1232,31 @@ function renderMayaTeacher(route = routeInfo()) {
           </div>
           <p class="microcopy">Typed answers use your local lesson library, attempts, and journal. Voice uses the optional backend only after you connect it.</p>
           <p class="maya-context">${escapeHtml(lesson ? `Using lesson: ${lesson.title}` : `Using current focus: ${context.family}`)}</p>
-          <div class="maya-actions">
-            <button class="button button--ghost" type="button" data-maya-preset="Explain this lesson in plain English.">Explain this</button>
-            <button class="button button--ghost" type="button" data-maya-preset="Quiz me with one original question and wait for my answer.">Quiz me</button>
-            <button class="button button--ghost" type="button" data-maya-preset="Why do I keep missing this type, and how do I fix it on the spot?">Fix my misses</button>
+          <div class="maya-tabs" role="tablist" aria-label="Professor Maya tabs">
+            <button class="${teacher.tab !== "how" ? "is-active" : ""}" type="button" data-maya-tab="ask">Ask</button>
+            <button class="${teacher.tab === "how" ? "is-active" : ""}" type="button" data-maya-tab="how">How</button>
           </div>
-          <form id="mayaTeacherForm" class="maya-form">
-            <textarea name="mayaPrompt" rows="3" placeholder="Ask Professor Maya anything about this lesson..."></textarea>
-            <div class="maya-form__actions">
-              <button class="button button--primary" type="submit">Ask</button>
-              <button class="button button--ghost" type="button" data-maya-voice>${teacher.voiceStatus === "connected" ? "Disconnect voice" : "Connect voice"}</button>
+          ${teacher.tab === "how" ? `
+            <section class="maya-how">
+              <p><strong>Take the lead.</strong> Ask about the exact sentence, answer choice, or move that confused you.</p>
+              <p><strong>Be specific.</strong> “Why is B wrong?” gets a better answer than “help.”</p>
+              <p><strong>Be succinct.</strong> Use Maya when you need a nudge, then return to the work.</p>
+              <p><strong>Use support for bugs.</strong> Maya explains LSAT work; she is not the place for technical issues.</p>
+            </section>
+          ` : `
+            <div class="maya-actions">
+              <button class="button button--ghost" type="button" data-maya-preset="Explain this lesson in plain English.">Explain this</button>
+              <button class="button button--ghost" type="button" data-maya-preset="Quiz me with one original question and wait for my answer.">Quiz me</button>
+              <button class="button button--ghost" type="button" data-maya-preset="Why do I keep missing this type, and how do I fix it on the spot?">Fix my misses</button>
             </div>
-          </form>
+            <form id="mayaTeacherForm" class="maya-form">
+              <textarea name="mayaPrompt" rows="3" placeholder="Ask Professor Maya anything about this lesson..."></textarea>
+              <div class="maya-form__actions">
+                <button class="button button--primary" type="submit">Ask</button>
+                <button class="button button--ghost" type="button" data-maya-voice>${teacher.voiceStatus === "connected" ? "Disconnect voice" : "Connect voice"}</button>
+              </div>
+            </form>
+          `}
           <details class="maya-backend">
             <summary>${statusLabel}</summary>
             <label>
@@ -1383,6 +1397,14 @@ function wireMayaTeacher(route = routeInfo()) {
   mayaTeacherMount.querySelector("#mayaBackendUrl")?.addEventListener("change", (event) => {
     state.mayaTeacher.backendUrl = event.target.value.trim();
     saveState();
+  });
+
+  mayaTeacherMount.querySelectorAll("[data-maya-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mayaTeacher.tab = button.dataset.mayaTab;
+      saveState();
+      renderApp();
+    });
   });
 
   mayaTeacherMount.querySelectorAll("[data-maya-preset]").forEach((button) => {
@@ -1577,6 +1599,7 @@ function renderApp() {
   const route = routeInfo();
   document.body.dataset.route = route.page;
   document.body.classList.toggle("test-day-active", route.page === "practice" && route.subtype === "test-day");
+  document.body.classList.toggle("challenge-active", route.page === "practice" && route.subtype === "challenge");
   document.body.classList.toggle("lesson-reading-active", route.page === "learn" && route.id && route.id !== "content" && !findQuestionTypeLesson(route.id));
   if (notificationBell) {
     const unread = unreadNotifications();
@@ -2374,66 +2397,17 @@ function renderLessonPracticeLinks(lesson, linkedQuestions) {
   return `
     <section class="lesson-flow-section lesson-flow-practice">
       <h3>Practice Questions</h3>
-      <p>Open one original JessiPreps challenge, then keep going through the linked drill when you are ready.</p>
+      <p>Open one original JessiPreps question in the full practice view, then return to the lesson when you are done.</p>
       <div class="lesson-practice-links">
         ${linkedQuestions.map((question, index) => `
-          <button type="button" data-lesson-challenge-question="${question.id}">
-            <span>Challenge ${index + 1}</span>
+          <a href="#/practice/challenge/${question.id}">
+            <span>${question.family} - Q${index + 1}</span>
             <strong>${question.family}</strong>
             <small>${question.difficulty} · ${question.timingTarget || 90}s target</small>
-          </button>
+          </a>
         `).join("")}
       </div>
     </section>
-  `;
-}
-
-function renderLessonChallengeModal(lesson, question) {
-  if (!question) return "";
-  if (lessonFlowState.challengeViewOnly) {
-    return `
-      <aside class="lesson-flow-overlay" role="dialog" aria-label="View practice question">
-        <section class="lesson-flow-modal lesson-flow-modal--wide">
-          <div class="panel__head">
-            <div>
-              <p class="mini-card__label">${question.section} · ${question.family}</p>
-              <h3>${question.question}</h3>
-            </div>
-            <button class="icon-button" type="button" data-close-lesson-challenge aria-label="Close practice question">×</button>
-          </div>
-          <p>${question.prompt}</p>
-          <ol class="lesson-preview-choices">${question.options.map((choice) => `<li>${choice}</li>`).join("")}</ol>
-          <div class="lesson-flow-modal__actions">
-            <button class="button button--ghost" type="button" data-close-lesson-challenge>Back</button>
-            <a class="button button--primary" href="${lessonDrillHref(lesson)}">Start challenge</a>
-          </div>
-        </section>
-      </aside>
-    `;
-  }
-  return `
-    <aside class="lesson-flow-overlay" role="dialog" aria-label="Start practice challenge">
-      <section class="lesson-flow-modal">
-        <div class="panel__head">
-          <div>
-            <p class="mini-card__label">${question.section} · ${question.family}</p>
-            <h3>${question.family} challenge</h3>
-          </div>
-          <button class="icon-button" type="button" data-close-lesson-challenge aria-label="Close challenge">×</button>
-        </div>
-        <p>Start this challenge to track your performance, eliminations, flag, timing, and review.</p>
-        <div class="lesson-flow-modal__meta">
-          <span>${question.difficulty}</span>
-          <span>${question.timingTarget || 90}s target</span>
-          <span>${lessonPracticeFocus(lesson)}</span>
-        </div>
-        <div class="lesson-flow-modal__actions">
-          <a class="button button--primary" href="${lessonDrillHref(lesson)}">Start challenge</a>
-          <button class="button button--ghost" type="button" data-view-lesson-question>View only</button>
-          <button class="button button--ghost" type="button" data-close-lesson-challenge>Cancel</button>
-        </div>
-      </section>
-    </aside>
   `;
 }
 
@@ -2473,11 +2447,10 @@ function renderLessonMenuPanel() {
 function renderLessonPlayer(lesson) {
   ensureLessonPlayback(lesson);
   if (lessonFlowState.lessonId !== lesson.id) {
-    lessonFlowState = { lessonId: lesson.id, notesOpen: false, menuOpen: false, challengeQuestionId: null, challengeViewOnly: false };
+    lessonFlowState = { lessonId: lesson.id, notesOpen: false, menuOpen: false };
   }
   const progress = ensureLessonProgress(lesson.id);
   const linkedQuestions = lessonDrillQuestions(lesson, 5);
-  const challengeQuestion = linkedQuestions.find((question) => question.id === lessonFlowState.challengeQuestionId);
   const neighbors = lessonNeighbors(lesson);
   return `
     <article class="lesson-flow-shell">
@@ -2535,16 +2508,17 @@ function renderLessonPlayer(lesson) {
         </section>
       </main>
       <footer class="lesson-flow-footer">
-        <a class="icon-button ${neighbors.previous ? "" : "is-disabled"}" href="${neighbors.previous ? `#/learn/${neighbors.previous.id}` : "#/learn"}" aria-label="Previous lesson">←</a>
+        <div class="lesson-flow-arrows">
+          <a class="icon-button ${neighbors.previous ? "" : "is-disabled"}" href="${neighbors.previous ? `#/learn/${neighbors.previous.id}` : "#/learn"}" aria-label="Previous lesson">←</a>
+          <a class="icon-button ${neighbors.next ? "" : "is-disabled"}" href="${neighbors.next ? `#/learn/${neighbors.next.id}` : "#/practice/timed"}" aria-label="Next lesson">→</a>
+        </div>
         <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}">
           <span>${progress.complete ? "✓" : ""}</span>
           <strong>${progress.complete ? "Done" : "Mark done"}</strong>
         </button>
-        <a class="icon-button ${neighbors.next ? "" : "is-disabled"}" href="${neighbors.next ? `#/learn/${neighbors.next.id}` : "#/practice/timed"}" aria-label="Next lesson">→</a>
       </footer>
     </article>
     ${renderLessonNotesPanel(lesson)}
-    ${renderLessonChallengeModal(lesson, challengeQuestion)}
   `;
 }
 
@@ -3430,6 +3404,29 @@ function renderPracticePage(route) {
     return renderTestDayPage(route);
   }
 
+  if (route.subtype === "challenge") {
+    const question = findQuestion(route.id);
+    const originLessonId = question?.linkedLessonIds?.[0] || question?.lessonIds?.[0];
+    const originLesson = data.lessons.find((lesson) => lesson.id === originLessonId) || null;
+    if (!question) {
+      return `
+        <article class="panel panel--wide">
+          <h3>Practice question not found</h3>
+          <a class="button button--primary" href="#/learn">Back to lessons</a>
+        </article>
+      `;
+    }
+    return renderDigitalDrillPage({
+      routeId: `challenge-${question.id}`,
+      title: originLesson ? `${originLesson.title} Practice` : `${question.family} Practice`,
+      focus: originLesson ? lessonPracticeFocus(originLesson) : question.family,
+      questions: [question],
+      lessonDrill: originLesson,
+      returnHref: originLesson ? `#/learn/${originLesson.id}` : "#/learn",
+      singleChallenge: true,
+    });
+  }
+
   if (route.subtype === "rc") {
     if (!route.id || route.id === "rc") {
       return renderRCPassageList();
@@ -4128,7 +4125,7 @@ function answerChoiceReview(question, choiceIndex) {
   return fallback[choiceIndex % fallback.length];
 }
 
-function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill }) {
+function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill, returnHref = "", singleChallenge = false }) {
   if (!questions.length) {
     return `
       <article class="panel panel--wide">
@@ -4162,8 +4159,9 @@ function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill 
   return `
     <section class="digital-drill-shell" data-drill-key="${key}">
       <header class="digital-drill-topbar">
+        ${returnHref ? `<a class="icon-button" href="${returnHref}" aria-label="Close practice question">×</a>` : ""}
         <div>
-          <p class="mini-card__label">${lessonDrill ? "Mastery drill" : "Adaptive drill"}</p>
+          <p class="mini-card__label">${singleChallenge ? "Practice question" : lessonDrill ? "Mastery drill" : "Adaptive drill"}</p>
           <h3>${title}</h3>
         </div>
         <div class="digital-tool-row" aria-label="Digital LSAT-style tools">
@@ -4248,7 +4246,7 @@ function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill 
           }).join("")}
         </nav>
         <button class="button button--ghost" type="button" data-drill-next="${key}" ${index === questions.length - 1 ? "disabled" : ""}>Next →</button>
-        <a class="button button--primary" href="#/review">Review answers</a>
+        <a class="button button--primary" href="${singleChallenge && returnHref ? returnHref : "#/review"}">${singleChallenge ? "Continue" : "Review answers"}</a>
       </footer>
     </section>
   `;
@@ -5127,29 +5125,6 @@ function wireInteractions(route) {
       if (document.fullscreenElement) await document.exitFullscreen?.();
       else await document.documentElement.requestFullscreen?.();
       lessonFlowState.menuOpen = false;
-      renderApp();
-    });
-  });
-
-  pageMount.querySelectorAll("[data-lesson-challenge-question]").forEach((button) => {
-    button.addEventListener("click", () => {
-      lessonFlowState.challengeQuestionId = button.dataset.lessonChallengeQuestion;
-      lessonFlowState.challengeViewOnly = false;
-      renderApp();
-    });
-  });
-
-  pageMount.querySelectorAll("[data-view-lesson-question]").forEach((button) => {
-    button.addEventListener("click", () => {
-      lessonFlowState.challengeViewOnly = true;
-      renderApp();
-    });
-  });
-
-  pageMount.querySelectorAll("[data-close-lesson-challenge]").forEach((button) => {
-    button.addEventListener("click", () => {
-      lessonFlowState.challengeQuestionId = null;
-      lessonFlowState.challengeViewOnly = false;
       renderApp();
     });
   });
