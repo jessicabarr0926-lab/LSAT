@@ -2288,9 +2288,9 @@ function renderLearnPage(route) {
       </div>
       <div class="progress-ring-row">
         ${units.slice(0, 4).map((unit) => `
-          <section>
+          <a href="#/learn/unit/${unit.id}" aria-label="Open ${unit.title}">
             ${renderDonut(unitProgress(unit.lessons), unit.title, `${unitProgress(unit.lessons)}%`)}
-          </section>
+          </a>
         `).join("")}
       </div>
       <div class="continue-banner">
