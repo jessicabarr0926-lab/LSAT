@@ -4114,6 +4114,20 @@ function renderQuestionCard(question, context) {
   `;
 }
 
+function answerChoiceReview(question, choiceIndex) {
+  if (choiceIndex === question.answer) {
+    return question.explanation || "This choice performs the exact job the question asks for.";
+  }
+  const trap = question.trapPattern || "changes the task";
+  const fallback = [
+    "This choice sounds related, but it does not perform the exact answer job.",
+    `This is a trap because it ${trap.charAt(0).toLowerCase()}${trap.slice(1)}.`,
+    "This answer shifts force, scope, or role away from what the stimulus actually proves.",
+    "This choice may be tempting, but it is not the cleanest match for the question burden.",
+  ];
+  return fallback[choiceIndex % fallback.length];
+}
+
 function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill }) {
   if (!questions.length) {
     return `
@@ -4207,6 +4221,7 @@ function renderDigitalDrillPage({ routeId, title, focus, questions, lessonDrill 
                     <span>${letters[choiceIndex]}</span>
                     <strong>${option}</strong>
                   </button>
+                  ${attempt ? `<p class="answer-choice-review">${answerChoiceReview(question, choiceIndex)}</p>` : ""}
                 </div>
               `;
             }).join("")}

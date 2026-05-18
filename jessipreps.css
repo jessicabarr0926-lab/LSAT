@@ -2112,6 +2112,15 @@ body.sidebar-collapsed .topbar {
   text-decoration: line-through;
 }
 
+.answer-choice-review {
+  grid-column: 2;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.74);
+}
+
 .scratch-note {
   display: grid;
   gap: 8px;
