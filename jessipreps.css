@@ -971,6 +971,16 @@ body.sidebar-collapsed .topbar {
   transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
 }
 
+.clickthrough-card {
+  display: block;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .interactive-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 22px 42px rgba(48, 28, 46, 0.12);
@@ -1388,6 +1398,12 @@ body.sidebar-collapsed .topbar {
 
 .text-link:hover {
   opacity: 0.82;
+}
+
+.text-link--button {
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .settings-page {
@@ -3102,6 +3118,9 @@ body.sidebar-collapsed .topbar {
   border-radius: 18px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .section-result-card > div:first-child {
@@ -3122,6 +3141,7 @@ body.sidebar-collapsed .topbar {
   padding: 9px 13px;
   background: transparent;
   color: inherit;
+  cursor: pointer;
 }
 
 .segmented-control .is-active {

@@ -148,6 +148,7 @@ function defaultState() {
     notificationsOpen: false,
     commandPaletteOpen: false,
     profileMenuOpen: false,
+    prepTestView: "questions",
     liveReservations: {},
     coachMessages: [],
     mayaTeacher: {
@@ -242,6 +243,7 @@ function loadState() {
       notificationsOpen: Boolean(parsed.notificationsOpen),
       commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
       profileMenuOpen: Boolean(parsed.profileMenuOpen),
+      prepTestView: parsed.prepTestView || base.prepTestView,
       liveReservations: parsed.liveReservations || {},
       coachMessages: parsed.coachMessages || [],
       mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
@@ -730,6 +732,10 @@ function adaptiveDrillTarget() {
     data.drillPresets.find((item) => item.id === "gap-work") ||
     data.drillPresets[0];
   return { weak, preset, mode };
+}
+
+function drillPresetForFamily(family) {
+  return data.drillPresets.find((item) => item.families.includes(family)) || adaptiveDrillTarget().preset;
 }
 
 function lastSavedLabel() {
@@ -1953,9 +1959,9 @@ function renderSettingsPage() {
           <h3>Recommended setup</h3>
         </div>
         <div class="card-grid card-grid--three">
-          <section class="mini-card"><p class="mini-card__label">Deep work</p><h4>Auto-hide sidebar</h4><p>Keep the drawer tucked away and reveal it from the left edge.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Reading</p><h4>Focus spacing</h4><p>Add line height when passages start feeling dense.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Review</p><h4>Prediction mode</h4><p>Train yourself to name the answer job before choices pull you around.</p></section>
+          <button class="mini-card clickthrough-card" type="button" data-setting-shortcut="sidebarAutoHide"><p class="mini-card__label">Deep work</p><h4>Auto-hide sidebar</h4><p>${state.settings.sidebarAutoHide ? "On now. Click to turn off." : "Click to keep the drawer tucked away and reveal it from the left edge."}</p></button>
+          <button class="mini-card clickthrough-card" type="button" data-setting-shortcut="focusSpacing"><p class="mini-card__label">Reading</p><h4>Focus spacing</h4><p>${state.settings.focusSpacing ? "On now. Click to return to standard spacing." : "Click to add line height when passages start feeling dense."}</p></button>
+          <button class="mini-card clickthrough-card" type="button" data-setting-shortcut="predictionMode"><p class="mini-card__label">Review</p><h4>Prediction mode</h4><p>${state.settings.predictionMode ? "On now. Click to turn off." : "Click to train yourself to name the answer job before choices pull you around."}</p></button>
         </div>
       </article>
     </section>
@@ -2298,7 +2304,7 @@ function renderLearnPage(route) {
         <span>Ready to start · ${data.lessons.length} lessons available · ${featured.statusLabel}</span>
         <div class="continue-banner__actions">
           <a class="text-link" href="#/learn/${featured.id}">Resume</a>
-          <a class="text-link" href="#lesson-picker">Pick a different lesson</a>
+          <button class="text-link text-link--button" type="button" data-page-scroll="lesson-picker">Pick a different lesson</button>
         </div>
       </div>
       <div class="syllabus-layout" id="lesson-picker">
@@ -2328,7 +2334,7 @@ function renderLearnPage(route) {
                       <span>
                         <strong>${lesson.title}</strong>
                         <small>${lesson.summary}</small>
-                        ${memberships.length > 1 ? `<i class="repeat-chip" title="This lesson also appears in ${memberships.map((item) => item.title).join(", ")} because it supports more than one study path.">Why repeated?</i>` : ""}
+                        ${memberships.length > 1 ? `<i class="repeat-chip" title="This lesson also appears in ${memberships.map((item) => item.title).join(", ")} because it supports more than one study path.">Also in ${memberships.filter((item) => item.id !== unit.id).map((item) => item.title).join(", ")}</i>` : ""}
                       </span>
                       <em>${Math.max(8, lesson.scenes?.length * 6 || 18)}m</em>
                       <b>↗</b>
@@ -2777,7 +2783,7 @@ function renderQuestionTypeLesson(lesson) {
           <section class="transcript-block">
             <p class="mini-card__label">Trap chips</p>
             <div class="tag-stack">
-              ${lesson.traps.map((trap) => `<span class="chip-link">${trap}</span>`).join("")}
+              ${lesson.traps.map((trap) => `<a class="chip-link" href="#/practice/drill/${drillPresetForFamily(lesson.family).id}" title="Practice ${lesson.family} while watching for this trap">${trap}</a>`).join("")}
             </div>
           </section>
         </div>
@@ -3702,10 +3708,10 @@ function renderPracticePage(route) {
         <span class="status-pill">${Object.keys(state.attempts).length} attempts</span>
       </div>
       <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Resume</p><h4>${state.currentBlock.label}</h4><p>${state.currentBlock.unfinished} unfinished items before this daily practice set clears.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Correct avg</p><h4>${time.correct || "1:24"}</h4><p>Seconds per correct question.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Wrong avg</p><h4>${time.wrong || "1:58"}</h4><p>Seconds per missed question.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Bookmarks</p><h4>${bookmarkCount()}</h4><p>Saved questions, drills, sections, and lessons.</p></section>
+        <a class="mini-card clickthrough-card" href="#/practice/drill/${adaptive.preset.id}"><p class="mini-card__label">Resume</p><h4>${state.currentBlock.label}</h4><p>${state.currentBlock.unfinished} unfinished items before this daily practice set clears.</p></a>
+        <a class="mini-card clickthrough-card" href="#/review"><p class="mini-card__label">Correct avg</p><h4>${time.correct || "1:24"}</h4><p>Open analytics for correct-answer timing.</p></a>
+        <a class="mini-card clickthrough-card" href="#/review"><p class="mini-card__label">Wrong avg</p><h4>${time.wrong || "1:58"}</h4><p>Open analytics for missed-question timing.</p></a>
+        <a class="mini-card clickthrough-card" href="#/review"><p class="mini-card__label">Bookmarks</p><h4>${bookmarkCount()}</h4><p>Open saved questions, sections, and lessons.</p></a>
       </div>
     </article>
     <article class="panel panel--wide">
@@ -3719,12 +3725,12 @@ function renderPracticePage(route) {
             const questions = data.questionBank.filter((question) => question.family === family);
             const lesson = data.lessons.find((item) => questions[0].lessonIds.includes(item.id));
             return `
-              <section class="mini-card">
+              <a class="mini-card clickthrough-card" href="#/learn/${lesson.id}">
                 <p class="mini-card__label">${questions[0].section}</p>
                 <h4>${family}</h4>
                 <p>${questions.length} questions across easy, medium, and hard.</p>
-                <a class="text-link" href="#/learn/${lesson.id}">Open linked lesson</a>
-              </section>
+                <strong class="text-link">Open linked lesson</strong>
+              </a>
             `;
           })
           .join("")}
@@ -3745,12 +3751,12 @@ function renderPracticePage(route) {
       </div>
       <div class="journal-list">
         ${familyAnalytics().slice(0, 4).map((item) => `
-          <section class="journal-card">
+          <a class="journal-card clickthrough-card" href="#/practice/drill/${drillPresetForFamily(item.family).id}">
             <p class="mini-card__label">${item.family}</p>
             <strong>${item.family.includes("Assumption") ? "Find the missing bridge." : item.family.includes("RC") ? "Name the passage job before details." : "Classify the task first."}</strong>
             <p>Spot it, use the core method, avoid the common trap, then launch a 5-question mini drill.</p>
-            <a class="text-link" href="#/practice/drill/${adaptive.preset.id}">Mini drill</a>
-          </section>
+            <span class="text-link">Mini drill</span>
+          </a>
         `).join("")}
       </div>
     </article>
@@ -3783,6 +3789,7 @@ function renderPrepTestResults(id) {
   const totalScore = sections.slice(0, 3).reduce((sum, section) => sum + section.score, 0);
   const totalQuestions = sections.slice(0, 3).reduce((sum, section) => sum + section.total, 0);
   const percent = Math.round((totalScore / totalQuestions) * 100);
+  const activeView = state.prepTestView || "questions";
   return `
     <article class="panel panel--wide preptest-results">
       <header class="preptest-header">
@@ -3799,18 +3806,21 @@ function renderPrepTestResults(id) {
       </section>
       <div class="section-card-row">
         ${sections.map((section, index) => `
-          <a class="section-result-card interactive-card" href="#section-${index + 1}">
+          <button class="section-result-card interactive-card" type="button" data-page-scroll="section-${index + 1}">
             <div><strong>${section.label}</strong><span>${section.type}</span></div>
             <h4>${section.score}/${section.total}</h4>
             ${renderResultGrid(section.questions, section.total, index + 4)}
-          </a>
+          </button>
         `).join("")}
       </div>
     </article>
     <article class="panel panel--wide preptest-tabs">
       <div class="panel__head">
         <h3>Sections</h3>
-        <div class="segmented-control"><button class="is-active" type="button">Question list</button><button type="button">Timing</button></div>
+        <div class="segmented-control">
+          <button class="${activeView === "questions" ? "is-active" : ""}" type="button" data-preptest-view="questions">Question list</button>
+          <button class="${activeView === "timing" ? "is-active" : ""}" type="button" data-preptest-view="timing">Timing</button>
+        </div>
       </div>
       <div class="section-review-list">
         ${sections.map((section, index) => `
@@ -3821,7 +3831,7 @@ function renderPrepTestResults(id) {
               ${renderResultGrid(section.questions, 14, index + 4)}
             </summary>
             <div class="section-review-detail">
-              <section>
+              ${activeView === "questions" ? `<section>
                 <p class="mini-card__label">Question list</p>
                 ${section.questions.slice(0, 12).map((question, qIndex) => `
                   <a class="question-jump" href="#/review">
@@ -3830,11 +3840,11 @@ function renderPrepTestResults(id) {
                     <em>${question.family}</em>
                   </a>
                 `).join("")}
-              </section>
-              <section>
+              </section>` : ""}
+              ${activeView === "timing" ? `<section>
                 <p class="mini-card__label">Timing</p>
                 <div class="activity-bars">${section.questions.slice(0, 8).map((question, qIndex) => `<section><i style="height:${35 + (qIndex % 5) * 10}%"></i><span>Q${qIndex + 1}</span></section>`).join("")}</div>
-              </section>
+              </section>` : ""}
             </div>
           </details>
         `).join("")}
@@ -3867,7 +3877,7 @@ function renderReviewPage(route = {}) {
   const spacedQueue = spacedReviewQueue();
   const dueSpaced = spacedQueue.filter((item) => item.due);
   return `
-    <article class="panel panel--wide">
+    <article id="blind-review" class="panel panel--wide">
       <div class="panel__head">
         <h3>Forced Blind Review</h3>
         <span class="status-pill">${dueEntries.length} due today</span>
@@ -3943,16 +3953,16 @@ function renderReviewPage(route = {}) {
         </section>
       </div>
       <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy</p></section>
-        <section class="mini-card"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>Estimated first-try vs second-pass score spread. Lower is better.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Recent score stability</p></section>
-        <section class="mini-card"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></section>
+        <a class="mini-card clickthrough-card" href="#/practice/drill/${drillPresetForFamily(weak.family).id}"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy · open focused drill</p></a>
+        <button class="mini-card clickthrough-card" type="button" data-page-scroll="blind-review"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>Estimated first-try vs second-pass spread · jump to review queue</p></button>
+        <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Log more official results to improve stability tracking.</p></a>
+        <a class="mini-card clickthrough-card" href="#/learn/${nextLesson().id}"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></a>
       </div>
       <div class="card-grid card-grid--four">
-        <section class="mini-card"><p class="mini-card__label">Changed right → wrong</p><h4>${changed.rightToWrong}</h4><p>Second-guessing risk.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Changed wrong → right</p><h4>${changed.wrongToRight}</h4><p>Knowledge exists; speed is the issue.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Flagged accuracy</p><h4>${renderFlaggedAccuracyLabel()}</h4><p>How well flags predict risk.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Mistake reasons</p><h4>${Object.keys(state.mistakeTags || {}).length}</h4><p>Tagged misses in the bank.</p></section>
+        <a class="mini-card clickthrough-card" href="#/practice/test-day"><p class="mini-card__label">Changed right → wrong</p><h4>${changed.rightToWrong}</h4><p>Practice stricter answer control in the simulator.</p></a>
+        <a class="mini-card clickthrough-card" href="#/practice/timed"><p class="mini-card__label">Changed wrong → right</p><h4>${changed.wrongToRight}</h4><p>Knowledge exists; use timed sections for speed.</p></a>
+        <a class="mini-card clickthrough-card" href="#/practice/test-day"><p class="mini-card__label">Flagged accuracy</p><h4>${renderFlaggedAccuracyLabel()}</h4><p>Open the simulator and practice flag discipline.</p></a>
+        <button class="mini-card clickthrough-card" type="button" data-page-scroll="mistake-bank"><p class="mini-card__label">Mistake reasons</p><h4>${Object.keys(state.mistakeTags || {}).length}</h4><p>Jump to tagged misses in the bank.</p></button>
       </div>
       <div class="analytics-detail-grid">
         <section class="transcript-block">
@@ -4046,7 +4056,7 @@ function renderReviewPage(route = {}) {
         <button class="bookmark-button" type="button" data-bookmark="review:current-section" data-bookmark-type="section">Bookmark</button>
       </div>
     </article>
-    <article class="panel panel--wide">
+    <article id="mistake-bank" class="panel panel--wide">
       <div class="panel__head">
         <h3>Mistake Bank</h3>
         <span class="status-pill">${state.journal.length} saved misses</span>
@@ -4276,9 +4286,9 @@ function renderPlanPage() {
         <span class="status-pill">All tools included</span>
       </div>
       <div class="card-grid card-grid--three">
-        <section class="mini-card"><p class="mini-card__label">Study</p><h4>Self-study loop</h4><p>Dashboard, lessons, drills, Blind Review, mistake bank, analytics, and plan.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Classroom</p><h4>Live tools</h4><p>Professor Maya agenda chat, voice read, class reservations, and recordings.</p></section>
-        <section class="mini-card"><p class="mini-card__label">Coach</p><h4>Personal strategy</h4><p>Coach chat, common-mistake analysis, next drill, school tracker, and scholarship notes.</p></section>
+        <a class="mini-card clickthrough-card" href="#/dashboard"><p class="mini-card__label">Study</p><h4>Self-study loop</h4><p>Open dashboard, lessons, drills, Blind Review, mistake bank, analytics, and plan.</p></a>
+        <a class="mini-card clickthrough-card" href="#/live"><p class="mini-card__label">Classroom</p><h4>Live tools</h4><p>Open Professor Maya agenda chat, voice read, class reservations, and recordings.</p></a>
+        <a class="mini-card clickthrough-card" href="#/coach"><p class="mini-card__label">Coach</p><h4>Personal strategy</h4><p>Open coach chat, common-mistake analysis, next drill, school tracker, and scholarship notes.</p></a>
       </div>
     </article>
   `;
@@ -4764,10 +4774,10 @@ function renderCoachPage() {
           <a class="status-pill status-pill--button" href="#/plan">Open CRM</a>
         </div>
         <div class="card-grid card-grid--four">
-          <section class="mini-card"><p class="mini-card__label">Schools</p><h4>${admStats.total}</h4><p>Tracked in the local CRM.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Reach</p><h4>${admStats.reach}</h4><p>Stretch list for score upside.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Target</p><h4>${admStats.target}</h4><p>Core fit schools.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Submitted</p><h4>${admStats.submitted}</h4><p>Applications past draft stage.</p></section>
+          <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Schools</p><h4>${admStats.total}</h4><p>Open the local CRM.</p></a>
+          <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Reach</p><h4>${admStats.reach}</h4><p>Review stretch schools for score upside.</p></a>
+          <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Target</p><h4>${admStats.target}</h4><p>Review core-fit schools.</p></a>
+          <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Submitted</p><h4>${admStats.submitted}</h4><p>Review applications past draft stage.</p></a>
         </div>
         <div class="class-agenda-grid">
           <section><i>1</i><strong>Score target</strong><span>Use current score, goal score, and test date from Plan.</span></section>
@@ -4785,6 +4795,33 @@ function renderCoachPage() {
 
 function wireInteractions(route) {
   wireSettingsControls(pageMount);
+
+  pageMount.querySelectorAll("[data-setting-shortcut]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const setting = button.dataset.settingShortcut;
+      if (!(setting in state.settings)) return;
+      state.settings[setting] = !state.settings[setting];
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-page-scroll]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.pageScroll);
+      if (!target) return;
+      if (target.tagName === "DETAILS") target.open = true;
+      target.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "start" });
+    });
+  });
+
+  pageMount.querySelectorAll("[data-preptest-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.prepTestView = button.dataset.preptestView;
+      saveState();
+      renderApp();
+    });
+  });
 
   pageMount.querySelectorAll("[data-study-focus]").forEach((select) => {
     select.addEventListener("change", () => {
