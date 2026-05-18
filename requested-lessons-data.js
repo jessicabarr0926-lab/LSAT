@@ -845,6 +845,337 @@ function contentBoostMiniDrill(family) {
   };
 }
 
+function contentDepthProfile(family, lesson) {
+  const title = lesson.title || family;
+  const generic = {
+    learningObjectives: [
+      `Name the exact job ${title} asks you to perform before reading answers.`,
+      'Separate proof from familiar wording so tempting traps lose their shine.',
+      'Leave with one repeatable rule you can use under time pressure.',
+    ],
+    whyItMatters: 'Score jumps come from recognizing the task early enough that answer choices stop steering your reasoning.',
+    coreIdea: 'The credited answer does one precise job. Your first move is to name that job, your second is to predict what would satisfy it, and your third is to reject anything merely related.',
+    coldReadPrompts: ['What is the task?', 'What would a right answer have to do?', 'What kind of tempting wrong answer should I expect?'],
+    decisionTree: ['Classify the task.', 'Locate the proof or gap.', 'Predict the answer job.', 'Compare each choice to that job only.'],
+    exampleWalkthrough: [
+      { label: '1. Read', text: 'Translate the stem into a plain-English burden before looking down.' },
+      { label: '2. Predict', text: 'Say what the credited answer must accomplish in one sentence.' },
+      { label: '3. Compare', text: 'Keep the answer that performs the burden; cut answers that only echo words from the prompt.' },
+    ],
+    errorClinic: [
+      { symptom: 'Two answers both feel close.', cause: 'You are comparing topic overlap instead of answer job.', fix: 'Restate the burden, then ask which choice actually completes it.' },
+      { symptom: 'You changed from right to wrong.', cause: 'A flashy trap overrode your first clean prediction.', fix: 'Before changing, state the exact reason the original answer fails.' },
+    ],
+    timingPlan: ['0-20 sec: classify the task.', '20-55 sec: find the proof or gap and prephrase.', 'Final pass: compare contenders against the burden, not each other.'],
+    masteryCriteria: ['You can define the task without jargon.', 'You can predict a right-answer job before choices.', 'You can explain one attractive wrong answer in plain English.'],
+    journalPrompt: `What trap does ${title} make you most likely to fall for, and what sentence will you say to yourself next time to stop it?`,
+  };
+
+  const profiles = {
+    Flaw: {
+      learningObjectives: [
+        'Find the conclusion before judging the argument.',
+        'Name the leap the evidence fails to justify.',
+        'Match the credited answer to the same broken move, not merely a criticism that is true.',
+      ],
+      whyItMatters: 'Flaw questions reward diagnosis. If you can name the bad move before choices, the right answer often feels almost boring.',
+      coreIdea: 'A flaw is not “something imperfect.” It is the exact reason the evidence does not earn the conclusion.',
+      coldReadPrompts: ['What did the author conclude?', 'What evidence was offered?', 'Why does that evidence not quite get there?'],
+      decisionTree: ['Underline the conclusion.', 'Describe the support in one line.', 'Name the missing bridge or invalid move.', 'Choose the answer that criticizes that same move.'],
+      exampleWalkthrough: [
+        { label: 'Stimulus', text: 'A tutoring group improved after using a new planner, so the planner must have caused the improvement.' },
+        { label: 'Diagnosis', text: 'The author treats improvement after adoption as proof of cause without ruling out another explanation.' },
+        { label: 'Credited answer', text: 'Choose the choice that says the argument confuses correlation with causation, not one that merely says tutoring matters.' },
+      ],
+      errorClinic: [
+        { symptom: 'You pick an answer that sounds negative.', cause: 'You are criticizing the topic instead of the reasoning.', fix: 'Ask, “Would this answer still hurt if the conclusion were different?” If yes, it may be too generic.' },
+        { symptom: 'Causal flaws keep slipping by.', cause: 'You are reading chronology as proof.', fix: 'Whenever you see “after,” ask what else could have changed.' },
+      ],
+      timingPlan: ['15 sec: find conclusion.', '25 sec: name support.', '20 sec: say the bad move.', 'Use the rest to match wording, not rediscover the argument.'],
+      masteryCriteria: ['You can label the flaw before choices.', 'You can reject a true-but-wrong criticism.', 'You can explain why the conclusion is not yet earned.'],
+      journalPrompt: 'Which bad move fooled you here, and what signal word or argument pattern will alert you next time?',
+    },
+    Assumption: {
+      learningObjectives: [
+        'Find the gap between evidence and conclusion.',
+        'Separate a required bridge from a merely helpful fact.',
+        'Use negation to test whether the argument collapses.',
+      ],
+      whyItMatters: 'Assumption questions expose the hidden beam holding up the argument. If you confuse “helps” with “required,” you donate points.',
+      coreIdea: 'A necessary assumption is something the author must believe. If it is false, the conclusion can no longer stand as argued.',
+      coldReadPrompts: ['What new idea appears in the conclusion?', 'What must be true for the evidence to reach it?', 'What happens if that candidate is false?'],
+      decisionTree: ['Find conclusion and evidence.', 'Name the bridge.', 'Test contenders by negating them.', 'Keep the answer whose negation wrecks the argument.'],
+      exampleWalkthrough: [
+        { label: 'Stimulus', text: 'Students who attended office hours improved, so office hours caused the improvement.' },
+        { label: 'Gap', text: 'The author assumes the attendees were not already more likely to improve for another reason.' },
+        { label: 'Negation test', text: 'If they were already stronger or more motivated, the causal conclusion weakens badly; that bridge is required.' },
+      ],
+      errorClinic: [
+        { symptom: 'You choose a very helpful answer.', cause: 'Helpful is not the same as necessary.', fix: 'Negate it. If the argument merely becomes less impressive, keep looking.' },
+        { symptom: 'You freeze between two bridges.', cause: 'You have not identified which one the conclusion actually depends on.', fix: 'Point to the exact word in the conclusion that needs support.' },
+      ],
+      timingPlan: ['20 sec: map evidence and conclusion.', '20 sec: prephrase the gap.', '30 sec: negate close contenders.'],
+      masteryCriteria: ['You can state the bridge in your own words.', 'You use negation only after predicting the gap.', 'You distinguish required from merely useful information.'],
+      journalPrompt: 'What was the hidden bridge, and how did the tempting wrong answer strengthen without being required?',
+    },
+    Strengthen: {
+      learningObjectives: [
+        'Identify the weak bridge in the argument.',
+        'Predict the kind of new fact that would support that bridge.',
+        'Prefer direct reinforcement over interesting background facts.',
+      ],
+      whyItMatters: 'Strengthen rewards disciplined targeting. You are not looking for “good news”; you are repairing the one link the author needs most.',
+      coreIdea: 'The right answer makes the argument more likely by supporting its weakest connection.',
+      coldReadPrompts: ['Where is the gap?', 'What fact would make that gap less worrying?', 'Which answers merely sound favorable?'],
+      decisionTree: ['Find the conclusion.', 'Name the weak bridge.', 'Imagine what evidence would help.', 'Choose the answer that most directly supports the bridge.'],
+      exampleWalkthrough: [
+        { label: 'Stimulus', text: 'A school claims a new reading program caused score gains because participating classes improved.' },
+        { label: 'Bridge', text: 'We need to know whether the participating classes were comparable before the program.' },
+        { label: 'Credited answer', text: 'Evidence that classes started at similar levels strengthens the causal claim more than praise for the program.' },
+      ],
+      errorClinic: [
+        { symptom: 'You choose a positive-sounding fact.', cause: 'You are helping the topic, not the argument.', fix: 'Say the gap aloud before evaluating choices.' },
+        { symptom: 'You overvalue extreme answers.', cause: 'You think stronger wording means stronger support.', fix: 'Choose the answer that touches the gap most directly, even if modest.' },
+      ],
+      timingPlan: ['20 sec: conclusion + gap.', '20 sec: predict support.', 'Final pass: rank by directness to the bridge.'],
+      masteryCriteria: ['You can name the bridge.', 'You can say why the credited answer helps.', 'You can explain why a flattering answer is still irrelevant.'],
+      journalPrompt: 'What exact bridge needed support, and which tempting answer sounded good without touching it?',
+    },
+    Weaken: {
+      learningObjectives: [
+        'Identify the argument bridge before attacking it.',
+        'Predict what kind of fact would make the conclusion less likely.',
+        'Distinguish weakening the support from merely discussing the topic.',
+      ],
+      whyItMatters: 'Weaken questions become much easier when you attack the bridge instead of spraying skepticism everywhere.',
+      coreIdea: 'The right answer does not need to prove the conclusion false. It only needs to make the author’s route to that conclusion less trustworthy.',
+      coldReadPrompts: ['What does the author need to be true?', 'What alternative explanation or missing condition would hurt that route?', 'Which answers are side issues?'],
+      decisionTree: ['Find the conclusion.', 'Name the support relationship.', 'Imagine the best rival explanation.', 'Choose the answer that damages the relationship most directly.'],
+      exampleWalkthrough: [
+        { label: 'Stimulus', text: 'A city concludes bike lanes reduced traffic because congestion fell after lanes opened.' },
+        { label: 'Bridge', text: 'The claim assumes nothing else caused the drop.' },
+        { label: 'Credited answer', text: 'A simultaneous bridge closure that diverted cars elsewhere weakens more than a complaint about bike-lane cost.' },
+      ],
+      errorClinic: [
+        { symptom: 'You attack a premise that is already given.', cause: 'You are trying to disprove facts instead of the inference.', fix: 'Ask what the premises still fail to prove even if they are true.' },
+        { symptom: 'You reject subtle weakeners.', cause: 'You expect demolition rather than damage.', fix: 'Remember: a weakener only needs to lower confidence.' },
+      ],
+      timingPlan: ['20 sec: isolate the bridge.', '20 sec: imagine a rival explanation.', 'Use remaining time to compare damage, not drama.'],
+      masteryCriteria: ['You can state the author’s vulnerable bridge.', 'You can invent one possible weakener before choices.', 'You can explain why a side issue is not enough.'],
+      journalPrompt: 'What bridge did you attack, and what kind of weaker would you predict faster next time?',
+    },
+    'Conditional Logic': {
+      learningObjectives: [
+        'Translate English rules into clean if-then form.',
+        'Build valid contrapositives without reversing terms.',
+        'Use only what the rule licenses.',
+      ],
+      whyItMatters: 'Conditional logic questions punish tiny direction mistakes. One arrow pointed the wrong way can contaminate the whole set.',
+      coreIdea: 'If X then Y means X is sufficient and Y is necessary. The contrapositive is valid; the reverse is not.',
+      coldReadPrompts: ['What triggers the rule?', 'What must follow?', 'What happens when the necessary condition is absent?'],
+      decisionTree: ['Underline indicator words.', 'Write X -> Y.', 'Write not Y -> not X.', 'Reject reverse and mistaken-negation answers.'],
+      exampleWalkthrough: [
+        { label: 'Rule', text: 'Only applicants with references receive interviews.' },
+        { label: 'Translation', text: 'Interview -> references. References are necessary, not sufficient.' },
+        { label: 'Use', text: 'If someone lacks references, they cannot receive an interview. Having references alone proves nothing about receiving one.' },
+      ],
+      errorClinic: [
+        { symptom: 'You reverse “only if.”', cause: 'You are reading English order instead of logical role.', fix: 'Ask which thing is required, then put that on the right side of the arrow.' },
+        { symptom: 'You infer too much from satisfying the necessary term.', cause: 'Necessary is not sufficient.', fix: 'Say, “needed does not mean enough.”' },
+      ],
+      timingPlan: ['10 sec: mark indicators.', '20 sec: diagram.', '15 sec: write contrapositive.', 'Then test answers one by one.'],
+      masteryCriteria: ['You can diagram only if correctly.', 'You can produce the contrapositive instantly.', 'You do not treat necessary conditions as guarantees.'],
+      journalPrompt: 'Which direction mistake are you most prone to, and what translation phrase will prevent it?',
+    },
+    'Must Be True': {
+      learningObjectives: [
+        'Collect only facts that are actually given.',
+        'Favor the weakest fully supported answer.',
+        'Reject attractive claims that add new assumptions.',
+      ],
+      whyItMatters: 'Must Be True is where discipline pays. The right answer is often less exciting because it stays inside the proof.',
+      coreIdea: 'You are not choosing what seems likely. You are choosing what the stimulus forces.',
+      coldReadPrompts: ['What do I know for sure?', 'Which relationships can be combined safely?', 'Which answer adds something new?'],
+      decisionTree: ['List facts.', 'Combine only licensed relationships.', 'Test each answer against the facts.', 'Keep the answer with zero extra assumptions.'],
+      exampleWalkthrough: [
+        { label: 'Facts', text: 'Every archived document is indexed. Some museum letters are archived.' },
+        { label: 'Inference', text: 'At least some museum letters are indexed.' },
+        { label: 'Trap', text: 'Do not conclude every indexed item is archived; that reverses the rule.' },
+      ],
+      errorClinic: [
+        { symptom: 'You pick the “most reasonable” answer.', cause: 'You are solving a real-world question, not a proof question.', fix: 'Demand a line-by-line path from the stimulus to the answer.' },
+        { symptom: 'Extreme answers scare you automatically.', cause: 'You are using tone instead of logic.', fix: 'If the stimulus earns “all,” then “all” can be right.' },
+      ],
+      timingPlan: ['20 sec: list facts.', '20 sec: connect them.', 'Final pass: ask whether each answer is forced or merely plausible.'],
+      masteryCriteria: ['You can separate forced from likely.', 'You can combine rules without reversing them.', 'You can prove the credited answer aloud.'],
+      journalPrompt: 'What unsupported extra idea tempted you, and what exact proof chain earns the right answer?',
+    },
+    'Role / Method / Technique': {
+      learningObjectives: [
+        'Separate what a sentence says from what it does.',
+        'Label claims as evidence, conclusion, objection, example, concession, or background.',
+        'Choose function language over content summary.',
+      ],
+      whyItMatters: 'Role questions are a reading-comprehension test inside LR. Once you see the structure, the content becomes much less distracting.',
+      coreIdea: 'The answer must describe the sentence’s job in the argument, not merely repeat its topic.',
+      coldReadPrompts: ['Is this claim supporting, opposing, conceding, or concluding?', 'What would disappear from the argument if this sentence vanished?', 'Does the answer describe function or just content?'],
+      decisionTree: ['Find the main conclusion.', 'Mark the target sentence.', 'Ask how it relates to the conclusion.', 'Choose the answer that names that relationship.'],
+      exampleWalkthrough: [
+        { label: 'Argument', text: 'The city should fund the library expansion because circulation rose 20 percent last year.' },
+        { label: 'Target claim', text: '“Circulation rose 20 percent last year” is evidence.' },
+        { label: 'Trap', text: 'An answer saying the sentence “discusses library use” is content summary, not argumentative role.' },
+      ],
+      errorClinic: [
+        { symptom: 'You like an answer because it mentions the same subject.', cause: 'You are tracking nouns instead of structure.', fix: 'Replace the sentence with a blank and ask what argumentative job is missing.' },
+        { symptom: 'You confuse objection with concession.', cause: 'You missed whether the author accepts or rejects the point.', fix: 'Check the sentence immediately before and after the target claim.' },
+      ],
+      timingPlan: ['15 sec: find conclusion.', '15 sec: locate the target.', '20 sec: name its relation to the conclusion.'],
+      masteryCriteria: ['You can label the target sentence’s job.', 'You reject topic-summary answers.', 'You can distinguish concession from objection.'],
+      journalPrompt: 'What function label did you miss, and what nearby words should have revealed it?',
+    },
+    'Resolve / Explain': {
+      learningObjectives: [
+        'Hold both facts true at once.',
+        'Identify what makes the pair surprising.',
+        'Choose the answer that removes the surprise without denying either fact.',
+      ],
+      whyItMatters: 'Resolve questions reward flexibility. The right answer often introduces a distinction you had not noticed yet.',
+      coreIdea: 'You are not choosing a side. You are finding a world in which both facts can coexist.',
+      coldReadPrompts: ['What two facts must stay true?', 'Why do they seem to conflict?', 'What distinction could make both sensible?'],
+      decisionTree: ['State fact A.', 'State fact B.', 'Name the tension.', 'Choose the answer that explains both facts together.'],
+      exampleWalkthrough: [
+        { label: 'Facts', text: 'Fewer people started an online application, yet more people completed it.' },
+        { label: 'Tension', text: 'A drop in starts seems like it should lower completions too.' },
+        { label: 'Resolution', text: 'A shorter form may deter casual starts while helping serious applicants finish, explaining both facts.' },
+      ],
+      errorClinic: [
+        { symptom: 'You choose an answer that explains one side beautifully.', cause: 'You forgot the other side must remain true too.', fix: 'After each choice, say “Does this explain both?”' },
+        { symptom: 'You treat the paradox as a flaw question.', cause: 'You are trying to attack rather than reconcile.', fix: 'Picture both facts on the board with a plus sign between them, not an X.' },
+      ],
+      timingPlan: ['15 sec: write A / B.', '15 sec: state the surprise.', 'Use the rest to hunt for a distinction that preserves both.'],
+      masteryCriteria: ['You can restate both facts precisely.', 'You reject one-sided explanations.', 'You can articulate the resolving distinction.'],
+      journalPrompt: 'What distinction made the paradox dissolve, and how could you have looked for that sooner?',
+    },
+    'RC Structure': {
+      learningObjectives: [
+        'Read each paragraph for job rather than detail.',
+        'Track the passage turn from old view to complication to author position.',
+        'Choose structure answers that describe movement, not topic.',
+      ],
+      whyItMatters: 'Structure is the skeleton of RC. If you can see the skeleton, main point, function, and attitude questions all become easier.',
+      coreIdea: 'A passage map is a sequence of paragraph jobs. Facts matter because of the role they play in that sequence.',
+      coldReadPrompts: ['What job does this paragraph do?', 'Where does the passage turn?', 'What is the author doing by the end?'],
+      decisionTree: ['Tag each paragraph in 3-6 words.', 'Mark the major turn.', 'State the author final move.', 'Match the answer to the sequence of jobs.'],
+      exampleWalkthrough: [
+        { label: 'P1', text: 'Introduces a familiar interpretation of a musical movement.' },
+        { label: 'P2', text: 'Complicates that interpretation with archival evidence.' },
+        { label: 'P3', text: 'Offers the author’s narrower, qualified account.' },
+      ],
+      errorClinic: [
+        { symptom: 'You remember details but cannot answer organization questions.', cause: 'You read for facts without labeling jobs.', fix: 'After each paragraph, force a 3-word margin note such as “old view challenged.”' },
+        { symptom: 'You choose a topic summary.', cause: 'The answer has the right nouns but no movement.', fix: 'Look for verbs: introduces, challenges, qualifies, defends.' },
+      ],
+      timingPlan: ['During reading: one paragraph tag each.', 'After passage: one-line map.', 'On questions: return to the map before rereading details.'],
+      masteryCriteria: ['You can summarize every paragraph by role.', 'You can identify the passage turn.', 'You reject topic-only answers.'],
+      journalPrompt: 'What was the passage map, and which paragraph job did you fail to name quickly enough?',
+    },
+    'RC Inference': {
+      learningObjectives: [
+        'Locate textual proof before evaluating answers.',
+        'Choose the answer that is safest, not most interesting.',
+        'Control force words so you do not overread the passage.',
+      ],
+      whyItMatters: 'RC inference points are often lost through overconfidence, not ignorance. The safest answer wins.',
+      coreIdea: 'The right answer is boring because the passage already earns it. Your job is to stay inside the text.',
+      coldReadPrompts: ['Where is the proof?', 'How strong can the answer safely be?', 'What extra idea would overreach?'],
+      decisionTree: ['Find the relevant lines.', 'Translate them literally.', 'Prefer softer supported wording.', 'Reject any answer that needs a new assumption.'],
+      exampleWalkthrough: [
+        { label: 'Text', text: 'The author says one account is “useful but incomplete.”' },
+        { label: 'Inference', text: 'The author sees some value in that account but does not accept it fully.' },
+        { label: 'Trap', text: 'An answer claiming the author rejects the account entirely goes beyond the text.' },
+      ],
+      errorClinic: [
+        { symptom: 'You pick a vivid answer.', cause: 'You are rewarding plausibility or memorability.', fix: 'Ask which answer you could underline back to the passage.' },
+        { symptom: 'You miss force shifts.', cause: 'You are reading nouns and ignoring qualifiers.', fix: 'Circle words like some, often, may, all, never, proves.' },
+      ],
+      timingPlan: ['15 sec: locate lines.', '20 sec: paraphrase proof.', 'Final pass: choose the least-strong fully supported answer.'],
+      masteryCriteria: ['You can point to proof lines.', 'You soften claims appropriately.', 'You explain why a stronger choice overreaches.'],
+      journalPrompt: 'Which force word changed the answer, and what exact passage phrase should have controlled you?',
+    },
+    'RC Main Point': {
+      learningObjectives: [
+        'Separate the passage subject from the author’s claim about it.',
+        'Track how the final paragraph changes the earlier material.',
+        'Choose an answer broad enough for the whole passage but specific enough to show the author’s position.',
+      ],
+      whyItMatters: 'Main point is the north star of RC. When you miss it, every later detail becomes harder to place.',
+      coreIdea: 'Main point equals subject plus author claim plus the reason that claim matters.',
+      coldReadPrompts: ['What issue is the passage about?', 'What does the author want me to believe about it?', 'Which paragraph contains the final turn?'],
+      decisionTree: ['Map the paragraphs.', 'Find the author’s final position.', 'Blend the whole passage, not one paragraph.', 'Reject detail-only and topic-only answers.'],
+      exampleWalkthrough: [
+        { label: 'Topic', text: 'How scholars preserve jazz improvisation.' },
+        { label: 'Author claim', text: 'Recordings alone are insufficient because process matters too.' },
+        { label: 'Main point', text: 'Preservation should document improvisational process, not merely finished performances.' },
+      ],
+      errorClinic: [
+        { symptom: 'You choose a true detail.', cause: 'You mistook importance within one paragraph for the whole-passage claim.', fix: 'Ask whether the answer explains why all paragraphs are here.' },
+        { symptom: 'Your answer is too vague.', cause: 'You captured the subject but not the author’s stance.', fix: 'Add a verb: argues, qualifies, challenges, proposes.' },
+      ],
+      timingPlan: ['During reading: notice the turn.', 'Before choices: state the passage in one sentence.', 'Use choices to refine, not discover, the claim.'],
+      masteryCriteria: ['You can state subject and stance separately.', 'Your answer covers the whole passage.', 'You reject major-detail traps.'],
+      journalPrompt: 'What was the author actually arguing, and which tempting answer gave only the subject or a detail?',
+    },
+    'RC Function': {
+      learningObjectives: [
+        'Identify the local claim or detail.',
+        'Ask why the author included it in the passage architecture.',
+        'Match the detail to its job: example, contrast, support, concession, or qualification.',
+      ],
+      whyItMatters: 'Function questions test whether you see the passage as built, not merely read.',
+      coreIdea: 'A detail matters because of the work it performs in the author’s larger plan.',
+      coldReadPrompts: ['What is this detail doing here?', 'What sentence before or after gives it purpose?', 'Is the answer naming job or just content?'],
+      decisionTree: ['Locate the reference.', 'Read one sentence before and after.', 'Name the local job.', 'Connect that job to the passage map.'],
+      exampleWalkthrough: [
+        { label: 'Detail', text: 'The author cites an archival letter from a composer.' },
+        { label: 'Local job', text: 'The letter complicates the familiar interpretation introduced earlier.' },
+        { label: 'Passage job', text: 'It supports the author’s broader claim that the conventional account is incomplete.' },
+      ],
+      errorClinic: [
+        { symptom: 'You answer with what the detail says.', cause: 'You are summarizing content, not function.', fix: 'Start your answer with “to…”' },
+        { symptom: 'You miss why the example appears.', cause: 'You read it in isolation.', fix: 'Check the sentence before and after every cited detail.' },
+      ],
+      timingPlan: ['10 sec: locate.', '20 sec: reread the neighborhood.', '20 sec: name the job before choices.'],
+      masteryCriteria: ['You can answer with a verb phrase.', 'You connect local job to whole passage.', 'You reject content-summary traps.'],
+      journalPrompt: 'What did the referenced detail do, not merely say, and where did you see that in the passage map?',
+    },
+    'RC Attitude': {
+      learningObjectives: [
+        'Spot evaluative wording without exaggerating it.',
+        'Translate tone into ordinary language.',
+        'Distinguish qualification from hostility or endorsement.',
+      ],
+      whyItMatters: 'Attitude questions are often lost by emotional inflation. The LSAT usually prefers precise, restrained tone words.',
+      coreIdea: 'Author attitude is earned by evaluative language plus structure, not by your reaction to the topic.',
+      coldReadPrompts: ['Which words reveal evaluation?', 'How strong is the author really?', 'Is the author qualifying, endorsing, doubting, or rejecting?'],
+      decisionTree: ['Underline evaluative words.', 'Translate tone plainly.', 'Check the final paragraph.', 'Reject emotional overstatements.'],
+      exampleWalkthrough: [
+        { label: 'Text', text: 'The author calls one model “useful but incomplete.”' },
+        { label: 'Tone', text: 'That is qualified approval, not enthusiasm and not contempt.' },
+        { label: 'Credited answer', text: 'Choose “measured” or “qualified,” not “dismissive” or “celebratory.”' },
+      ],
+      errorClinic: [
+        { symptom: 'You choose a dramatic tone word.', cause: 'You are substituting your feeling for the author’s language.', fix: 'Point to the exact evaluative phrase that earns the emotion.' },
+        { symptom: 'Neutral passages feel impossible.', cause: 'You expect every author to sound emotional.', fix: 'Remember that analytical, measured, and qualified are real attitudes too.' },
+      ],
+      timingPlan: ['While reading: underline tone words.', 'At question time: reread the final turn.', 'Choose the narrowest tone label that fits all evidence.'],
+      masteryCriteria: ['You can cite the tone words.', 'You avoid emotional inflation.', 'You distinguish qualified support from rejection.'],
+      journalPrompt: 'Which word carried the author’s attitude, and how did the tempting answer overstate it?',
+    },
+  };
+
+  return { ...generic, ...(profiles[family] || {}) };
+}
+
 function contentBoostQuestionDiagnostics(question) {
   const steps = contentBoostMethodSteps(question.family);
   const traps = contentBoostTrapWarnings(question.family);
@@ -873,6 +1204,61 @@ function v2LessonSummary(lesson, family) {
 
 function v2WorkedExampleForLesson(lesson, family) {
   const title = lesson.title || 'this lesson';
+  const examples = {
+    Flaw: {
+      prompt: 'Original stimulus: after a neighborhood installed new streetlights, reported thefts fell, so a council member concludes the lights caused the entire drop.',
+      reasoning: 'Find the causal conclusion, notice that timing alone is the evidence, then prephrase the gap: another change may have caused the decline. The credited answer should criticize the causal leap, not merely mention crime policy.',
+    },
+    Assumption: {
+      prompt: 'Original stimulus: students who used a new review checklist improved more than classmates who did not, so the teacher concludes the checklist caused the gains.',
+      reasoning: 'The conclusion depends on the two groups being otherwise comparable. Negating that bridge -- for example, if checklist users were already more prepared -- makes the causal claim collapse.',
+    },
+    Strengthen: {
+      prompt: 'Original stimulus: a clinic claims reminder texts reduced missed appointments because no-show rates fell after the texts began.',
+      reasoning: 'The argument needs support for its causal bridge. Evidence that appointment mix, staffing, and patient population stayed similar would strengthen more directly than praise for the clinic.',
+    },
+    Weaken: {
+      prompt: 'Original stimulus: a museum says a new exhibit increased attendance because visitor counts rose after opening week.',
+      reasoning: 'Attack the bridge, not the topic. If the city also launched a free-admission festival that week, the exhibit is no longer the cleanest explanation for the rise.',
+    },
+    'Conditional Logic': {
+      prompt: 'Original rule set: only applicants with references receive interviews; every interviewed applicant receives a schedule notice.',
+      reasoning: 'Translate carefully: interview -> references and interview -> notice. Lacking references proves no interview; having references alone does not prove an interview.',
+    },
+    'Must Be True': {
+      prompt: 'Original fact set: every archived letter is indexed, and some jazz manuscripts are archived letters.',
+      reasoning: 'Only combine what is forced. At least some jazz manuscripts are indexed; it would overreach to say every indexed item is archived.',
+    },
+    'Role / Method / Technique': {
+      prompt: 'Original stimulus: because circulation rose sharply last year, the library should extend weekend hours.',
+      reasoning: 'The circulation claim is evidence offered in support of the recommendation. The credited answer describes that function, not merely the topic of library use.',
+    },
+    'Resolve / Explain': {
+      prompt: 'Original facts: after a university shortened its application, fewer students began it, yet a larger share completed it successfully.',
+      reasoning: 'Keep both facts true. A shorter form could deter casual starts while helping committed applicants finish, resolving the apparent conflict without denying either side.',
+    },
+    'RC Structure': {
+      prompt: `Original passage capsule for ${title}: paragraph 1 presents a familiar interpretation, paragraph 2 complicates it with archival evidence, and paragraph 3 offers the author's narrower final view.`,
+      reasoning: 'Map paragraph jobs before answer choices. The correct structure answer should describe the movement from old view to complication to qualified conclusion, not simply list the topic.',
+    },
+    'RC Inference': {
+      prompt: `Original passage capsule for ${title}: the author says a common explanation is useful but incomplete because it misses one recurring pattern in the evidence.`,
+      reasoning: 'A safe inference is that the author sees some value in the common explanation while rejecting it as a complete account. Answers saying the author dismisses it entirely go too far.',
+    },
+    'RC Main Point': {
+      prompt: `Original passage capsule for ${title}: scholars often preserve only finished performances, but the author argues that documenting process is also necessary to understand the art form.`,
+      reasoning: `Blend the subject with the author's claim. The main point is not merely “preservation matters”; it is that preservation should include process, not only finished products.`,
+    },
+    'RC Function': {
+      prompt: `Original passage capsule for ${title}: the author cites a composer's letter immediately after introducing a familiar interpretation of the work.`,
+      reasoning: `Read locally and globally. The letter functions as evidence that complicates the earlier interpretation and supports the author's later qualification.`,
+    },
+    'RC Attitude': {
+      prompt: `Original passage capsule for ${title}: the author calls one model “useful but incomplete” before proposing a narrower alternative.`,
+      reasoning: 'The author is measured and qualified, not hostile or celebratory. Tone answers must match the actual evaluative language used in the passage.',
+    },
+  };
+  if (examples[family]) return examples[family];
   if (String(lesson.track || '').includes('RC')) {
     return {
       prompt: `Original passage capsule for ${title}: a first paragraph introduces a familiar interpretation, a second paragraph complicates it with a rival detail, and a final paragraph gives the author's qualified position.`,
@@ -1073,6 +1459,17 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       lesson.methodSteps = lesson.methodSteps || contentBoostMethodSteps(family);
       lesson.trapWarnings = lesson.trapWarnings || contentBoostTrapWarnings(family);
       lesson.miniDrill = lesson.miniDrill || contentBoostMiniDrill(family);
+      const depth = contentDepthProfile(family, lesson);
+      lesson.learningObjectives = lesson.learningObjectives || depth.learningObjectives;
+      lesson.whyItMatters = lesson.whyItMatters || depth.whyItMatters;
+      lesson.coreIdea = lesson.coreIdea || depth.coreIdea;
+      lesson.coldReadPrompts = lesson.coldReadPrompts || depth.coldReadPrompts;
+      lesson.decisionTree = lesson.decisionTree || depth.decisionTree;
+      lesson.exampleWalkthrough = lesson.exampleWalkthrough || depth.exampleWalkthrough;
+      lesson.errorClinic = lesson.errorClinic || depth.errorClinic;
+      lesson.timingPlan = lesson.timingPlan || depth.timingPlan;
+      lesson.masteryCriteria = lesson.masteryCriteria || depth.masteryCriteria;
+      lesson.journalPrompt = lesson.journalPrompt || depth.journalPrompt;
       lesson.professorNotes = lesson.professorNotes || [
         `Professor Maya framing: ${lesson.title} is not about memorizing labels; it is about knowing what job the answer must do.`,
         `Relatable check: if two answers feel close, slow down and ask which one actually proves the task instead of sounding familiar.`,

@@ -2464,6 +2464,73 @@ body.sidebar-collapsed .topbar {
   font-size: 1.05rem;
 }
 
+.lesson-depth-grid,
+.error-clinic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.lesson-depth-card,
+.error-clinic-card,
+.walkthrough-step {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.lesson-depth-card,
+.error-clinic-card {
+  padding: 16px;
+}
+
+.lesson-depth-card--accent {
+  background:
+    linear-gradient(135deg, rgba(239, 216, 119, 0.2), rgba(255, 255, 255, 0.8)),
+    rgba(255, 255, 255, 0.76);
+}
+
+.lesson-depth-card strong {
+  display: block;
+  margin-top: 10px;
+  line-height: 1.45;
+}
+
+.lesson-depth-card ul,
+.lesson-depth-card ol,
+.content-boost-card ol {
+  margin-bottom: 0;
+}
+
+.walkthrough-stack {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.walkthrough-step {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px;
+}
+
+.walkthrough-step span {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.walkthrough-step p,
+.error-clinic-card p:last-child {
+  margin-bottom: 0;
+}
+
+.error-clinic-card h4 {
+  margin-bottom: 10px;
+}
+
 .lesson-progress-rail {
   gap: 14px;
 }
@@ -4231,6 +4298,12 @@ body.test-day-active .page-grid {
   .lesson-toc,
   .lesson-progress-rail {
     position: static;
+  }
+
+  .lesson-depth-grid,
+  .error-clinic-grid,
+  .walkthrough-step {
+    grid-template-columns: 1fr;
   }
 
   .page-grid {

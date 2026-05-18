@@ -2413,10 +2413,39 @@ function renderLessonPlayer(lesson) {
           <summary>Concept</summary>
           <div class="scene-stack">${lesson.scenes.slice(0, 2).map((scene) => `<section class="scene-card"><h4>${scene.title}</h4><p>${scene.explanation}</p><div class="scene-card__cue">${scene.actionCue}</div></section>`).join("")}</div>
           ${lesson.conceptSummary ? `<div class="recommendation-box"><strong>Concept summary:</strong> ${lesson.conceptSummary}</div>` : ""}
+          ${lesson.learningObjectives?.length ? `
+            <section class="lesson-depth-grid">
+              <article class="lesson-depth-card">
+                <p class="mini-card__label">Learning targets</p>
+                <ul>${lesson.learningObjectives.map((objective) => `<li>${objective}</li>`).join("")}</ul>
+              </article>
+              <article class="lesson-depth-card lesson-depth-card--accent">
+                <p class="mini-card__label">Why this matters</p>
+                <p>${lesson.whyItMatters}</p>
+                <strong>${lesson.coreIdea}</strong>
+              </article>
+            </section>
+          ` : ""}
           ${lesson.methodSteps ? `
             <section class="content-boost-card">
               <p class="mini-card__label">Professor Maya method</p>
               <ol>${lesson.methodSteps.map((step) => `<li>${step}</li>`).join("")}</ol>
+            </section>
+          ` : ""}
+          ${lesson.coldReadPrompts?.length || lesson.decisionTree?.length ? `
+            <section class="lesson-depth-grid">
+              ${lesson.coldReadPrompts?.length ? `
+                <article class="lesson-depth-card">
+                  <p class="mini-card__label">Ask yourself first</p>
+                  <ul>${lesson.coldReadPrompts.map((prompt) => `<li>${prompt}</li>`).join("")}</ul>
+                </article>
+              ` : ""}
+              ${lesson.decisionTree?.length ? `
+                <article class="lesson-depth-card">
+                  <p class="mini-card__label">Decision tree</p>
+                  <ol>${lesson.decisionTree.map((step) => `<li>${step}</li>`).join("")}</ol>
+                </article>
+              ` : ""}
             </section>
           ` : ""}
         </details>
@@ -2424,12 +2453,34 @@ function renderLessonPlayer(lesson) {
           <summary>Worked Example</summary>
           <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
           <p>${lesson.workedExample.reasoning}</p>
+          ${lesson.exampleWalkthrough?.length ? `
+            <section class="walkthrough-stack">
+              ${lesson.exampleWalkthrough.map((step) => `
+                <article class="walkthrough-step">
+                  <span>${step.label}</span>
+                  <p>${step.text}</p>
+                </article>
+              `).join("")}
+            </section>
+          ` : ""}
           ${lesson.professorNotes ? `<div class="scene-stack">${lesson.professorNotes.map((note) => `<section class="scene-card"><h4>Teaching note</h4><p>${note}</p></section>`).join("")}</div>` : ""}
         </details>
         <details id="traps" class="lesson-accordion">
           <summary>Trap Warnings</summary>
           <p>${lesson.trapExplanation}</p>
           ${lesson.trapWarnings ? `<ul class="trap-list">${lesson.trapWarnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>` : ""}
+          ${lesson.errorClinic?.length ? `
+            <section class="error-clinic-grid">
+              ${lesson.errorClinic.map((entry) => `
+                <article class="error-clinic-card">
+                  <p class="mini-card__label">If this happens</p>
+                  <h4>${entry.symptom}</h4>
+                  <p><strong>Why:</strong> ${entry.cause}</p>
+                  <p><strong>Fix now:</strong> ${entry.fix}</p>
+                </article>
+              `).join("")}
+            </section>
+          ` : ""}
         </details>
         <details id="mastery" class="lesson-accordion" open>
           <summary>Knowledge check + mastery drill</summary>
@@ -2439,6 +2490,22 @@ function renderLessonPlayer(lesson) {
               <h4>${lesson.miniDrill.prompt}</h4>
               <ol>${lesson.miniDrill.steps.map((step) => `<li>${step}</li>`).join("")}</ol>
               <p class="microcopy">${lesson.miniDrill.successRule}</p>
+            </section>
+          ` : ""}
+          ${lesson.timingPlan?.length || lesson.masteryCriteria?.length ? `
+            <section class="lesson-depth-grid">
+              ${lesson.timingPlan?.length ? `
+                <article class="lesson-depth-card">
+                  <p class="mini-card__label">Timing plan</p>
+                  <ol>${lesson.timingPlan.map((step) => `<li>${step}</li>`).join("")}</ol>
+                </article>
+              ` : ""}
+              ${lesson.masteryCriteria?.length ? `
+                <article class="lesson-depth-card lesson-depth-card--accent">
+                  <p class="mini-card__label">You own it when</p>
+                  <ul>${lesson.masteryCriteria.map((criterion) => `<li>${criterion}</li>`).join("")}</ul>
+                </article>
+              ` : ""}
             </section>
           ` : ""}
           ${quiz ? `
@@ -2476,7 +2543,7 @@ function renderLessonPlayer(lesson) {
         </details>
         <details id="reflection" class="lesson-accordion">
           <summary>Reflection</summary>
-          <label class="br-field br-field--wide"><span>What is one trap you would now recognize?</span><textarea rows="4" data-lesson-reflection="${lesson.id}" placeholder="Write one reusable rule."></textarea></label>
+          <label class="br-field br-field--wide"><span>${lesson.journalPrompt || "What is one trap you would now recognize?"}</span><textarea rows="4" data-lesson-reflection="${lesson.id}" placeholder="Write one reusable rule you will use next time."></textarea></label>
           <button class="button button--primary" type="button" data-save-lesson-reflection="${lesson.id}">Save to journal</button>
         </details>
       </main>
