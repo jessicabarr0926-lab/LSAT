@@ -201,65 +201,86 @@ function defaultState() {
 }
 
 function loadState() {
-  const raw = [APP_KEY, ...LEGACY_APP_KEYS]
-    .map((key) => localStorage.getItem(key))
-    .find(Boolean);
+  const storedCandidates = [APP_KEY, ...LEGACY_APP_KEYS]
+    .map((key) => ({ key, raw: localStorage.getItem(key) }))
+    .filter((item) => item.raw);
   const base = defaultState();
-  if (!raw) return base;
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      ...base,
-      ...parsed,
-      settings: { ...base.settings, ...(parsed.settings || {}) },
-      lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
-      lessonNotes: { ...base.lessonNotes, ...(parsed.lessonNotes || {}) },
-      questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
-      rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
-      attempts: parsed.attempts || {},
-      journal: parsed.journal || parsed.journalEntries || [],
-      support: parsed.support || base.support,
-      plan: { ...base.plan, ...(parsed.plan || {}) },
-      onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
-      officialLogs: parsed.officialLogs || [],
-      bookmarks: parsed.bookmarks || {},
-      studyFocus: parsed.studyFocus || base.studyFocus,
-      adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
-      studyCalendar: parsed.studyCalendar || [],
-      mistakeTags: parsed.mistakeTags || {},
-      mistakeRetries: parsed.mistakeRetries || {},
-      notifications: parsed.notifications || base.notifications,
-      imports: parsed.imports || [],
-      bookQuestionLogs: parsed.bookQuestionLogs || [],
-      localAccount: { ...base.localAccount, ...(parsed.localAccount || {}) },
-      liveClassroom: { ...base.liveClassroom, ...(parsed.liveClassroom || {}) },
-      admissions: {
-        ...base.admissions,
-        ...(parsed.admissions || {}),
-        tasks: parsed.admissions?.tasks || base.admissions.tasks,
-        schools: parsed.admissions?.schools || [],
-      },
-      cookieConsent: parsed.cookieConsent || base.cookieConsent,
-      notificationsOpen: Boolean(parsed.notificationsOpen),
-      commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
-      profileMenuOpen: Boolean(parsed.profileMenuOpen),
-      prepTestView: parsed.prepTestView || base.prepTestView,
-      liveReservations: parsed.liveReservations || {},
-      coachMessages: parsed.coachMessages || [],
-      mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
-      answerLog: parsed.answerLog || [],
-      testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
-      drillInterface: {
-        ...base.drillInterface,
-        ...(parsed.drillInterface || {}),
-        prefs: { ...base.drillInterface.prefs, ...(parsed.drillInterface?.prefs || {}) },
-      },
-      currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
-      lastSavedAt: parsed.lastSavedAt || "",
-    };
-  } catch {
-    return base;
+  if (!storedCandidates.length) return base;
+  const parsedCandidates = storedCandidates
+    .map((stored) => {
+      try {
+        return { ...stored, parsed: JSON.parse(stored.raw) };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aTime = Date.parse(a.parsed.lastSavedAt || "") || 0;
+      const bTime = Date.parse(b.parsed.lastSavedAt || "") || 0;
+      if (aTime !== bTime) return bTime - aTime;
+      return a.key === APP_KEY ? -1 : b.key === APP_KEY ? 1 : 0;
+    });
+  for (const stored of parsedCandidates) {
+    try {
+      const parsed = stored.parsed;
+      const nextState = {
+        ...base,
+        ...parsed,
+        settings: { ...base.settings, ...(parsed.settings || {}) },
+        lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
+        lessonNotes: { ...base.lessonNotes, ...(parsed.lessonNotes || {}) },
+        questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
+        rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
+        attempts: parsed.attempts || {},
+        journal: parsed.journal || parsed.journalEntries || [],
+        support: parsed.support || base.support,
+        plan: { ...base.plan, ...(parsed.plan || {}) },
+        onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
+        officialLogs: parsed.officialLogs || [],
+        bookmarks: parsed.bookmarks || {},
+        studyFocus: parsed.studyFocus || base.studyFocus,
+        adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
+        studyCalendar: parsed.studyCalendar || [],
+        mistakeTags: parsed.mistakeTags || {},
+        mistakeRetries: parsed.mistakeRetries || {},
+        notifications: parsed.notifications || base.notifications,
+        imports: parsed.imports || [],
+        bookQuestionLogs: parsed.bookQuestionLogs || [],
+        localAccount: { ...base.localAccount, ...(parsed.localAccount || {}) },
+        liveClassroom: { ...base.liveClassroom, ...(parsed.liveClassroom || {}) },
+        admissions: {
+          ...base.admissions,
+          ...(parsed.admissions || {}),
+          tasks: parsed.admissions?.tasks || base.admissions.tasks,
+          schools: parsed.admissions?.schools || [],
+        },
+        cookieConsent: parsed.cookieConsent || base.cookieConsent,
+        notificationsOpen: Boolean(parsed.notificationsOpen),
+        commandPaletteOpen: Boolean(parsed.commandPaletteOpen),
+        profileMenuOpen: Boolean(parsed.profileMenuOpen),
+        prepTestView: parsed.prepTestView || base.prepTestView,
+        liveReservations: parsed.liveReservations || {},
+        coachMessages: parsed.coachMessages || [],
+        mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
+        answerLog: parsed.answerLog || [],
+        testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
+        drillInterface: {
+          ...base.drillInterface,
+          ...(parsed.drillInterface || {}),
+          prefs: { ...base.drillInterface.prefs, ...(parsed.drillInterface?.prefs || {}) },
+        },
+        currentBlock: { ...base.currentBlock, ...(parsed.currentBlock || {}) },
+        lastSavedAt: parsed.lastSavedAt || "",
+      };
+      localStorage.setItem(APP_KEY, JSON.stringify(nextState));
+      LEGACY_APP_KEYS.forEach((key) => localStorage.removeItem(key));
+      return nextState;
+    } catch {
+      // Try the next saved schema before falling back to a blank workspace.
+    }
   }
+  return base;
 }
 
 function ensureLessonProgress(lessonId) {
@@ -281,8 +302,6 @@ function saveState() {
   state.journalEntries = state.journal;
   const serialized = JSON.stringify(state);
   localStorage.setItem(APP_KEY, serialized);
-  localStorage.setItem("jessipreps-study-state-v2", serialized);
-  localStorage.setItem("lexiprep-study-state-v2", serialized);
 }
 
 function completedLessons() {
@@ -307,13 +326,14 @@ function weakestFamily() {
 function sectionAccuracy(section) {
   const questions = data.questionBank.filter((question) => question.section === section);
   const answered = questions.filter((question) => state.attempts[question.id]);
-  if (!answered.length) return section === "LR" ? 37 : 39;
+  if (!answered.length) return null;
   const correct = answered.filter((question) => state.attempts[question.id].correct).length;
   return Math.round((correct / answered.length) * 100);
 }
 
 function masteryRating(section) {
   const accuracy = sectionAccuracy(section);
+  if (accuracy === null) return null;
   const attempted = data.questionBank.filter((question) => question.section === section && state.attempts[question.id]).length;
   const volumeBonus = Math.min(12, Math.round(attempted / 3));
   return Math.max(0, Math.min(100, Math.round(accuracy * 0.78 + volumeBonus)));
@@ -357,6 +377,70 @@ function allQuestions() {
   ];
 }
 
+function attemptedQuestions() {
+  return allQuestions().filter((question) => state.attempts[question.id]);
+}
+
+function totalQuestionsAttempted() {
+  return attemptedQuestions().length;
+}
+
+function overallAccuracy() {
+  const attempted = attemptedQuestions();
+  if (!attempted.length) return null;
+  const correct = attempted.filter((question) => state.attempts[question.id]?.correct).length;
+  return Math.round((correct / attempted.length) * 100);
+}
+
+function accuracyByQuestionType() {
+  return familyAnalytics().map(({ family, attempts, accuracy }) => ({ family, attempts, accuracy }));
+}
+
+function averageTimePerQuestion() {
+  const times = attemptedQuestions()
+    .map((question) => state.attempts[question.id]?.timeSeconds)
+    .filter((time) => Number.isFinite(time));
+  if (!times.length) return null;
+  return Math.round(times.reduce((sum, time) => sum + time, 0) / times.length);
+}
+
+function blindReviewGap() {
+  const reviewed = (state.journal || [])
+    .map((entry) => {
+      const question = findQuestion(entry.questionId);
+      const timedChoice = state.attempts[entry.questionId]?.choice;
+      const blindChoice = parseAnswerLetter(entry.secondPassAnswer);
+      if (!question || timedChoice === undefined || blindChoice === null) return null;
+      return {
+        timedRight: timedChoice === question.answer,
+        blindRight: blindChoice === question.answer,
+      };
+    })
+    .filter(Boolean);
+  if (!reviewed.length) return null;
+  const timedAccuracy = Math.round((reviewed.filter((entry) => entry.timedRight).length / reviewed.length) * 100);
+  const blindAccuracy = Math.round((reviewed.filter((entry) => entry.blindRight).length / reviewed.length) * 100);
+  return {
+    value: blindAccuracy - timedAccuracy,
+    timedAccuracy,
+    blindAccuracy,
+    count: reviewed.length,
+  };
+}
+
+function blindReviewGapLabel() {
+  const gap = blindReviewGap();
+  return gap ? `${gap.value} pts` : "Not enough data yet";
+}
+
+function missedQuestionCount() {
+  return attemptedQuestions().filter((question) => !state.attempts[question.id]?.correct).length;
+}
+
+function reviewQueueCount() {
+  return (state.journal || []).filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending").length;
+}
+
 function unreadNotifications() {
   return state.notifications.filter((item) => !item.read).length;
 }
@@ -378,6 +462,7 @@ function studyQualityScore() {
 }
 
 function dashboardRating() {
+  if (!totalQuestionsAttempted()) return null;
   const hardAttempts = allQuestions().filter((question) =>
     state.attempts[question.id] &&
     /hard|advanced/i.test(question.difficulty || "")
@@ -388,8 +473,8 @@ function dashboardRating() {
   const speedScore = timing.correct ? Math.max(0, Math.min(100, 140 - timing.correct)) : 35;
   const reviewScore = Math.min(100, state.journal.filter((entry) => entry.blindReviewOutcome === "complete").length * 12);
   return Math.round(
-    masteryRating("LR") * 0.28 +
-    masteryRating("RC") * 0.28 +
+    (masteryRating("LR") || 0) * 0.28 +
+    (masteryRating("RC") || 0) * 0.28 +
     hardScore * 0.18 +
     speedScore * 0.14 +
     reviewScore * 0.12
@@ -499,7 +584,7 @@ function difficultyAnalytics() {
     return {
       level,
       attempts: attempts.length,
-      accuracy: attempts.length ? Math.round((correct / attempts.length) * 100) : Math.max(42, 78 - levels.indexOf(level) * 8),
+      accuracy: attempts.length ? Math.round((correct / attempts.length) * 100) : null,
     };
   });
 }
@@ -525,9 +610,17 @@ function timeSummary() {
 
 function finalFiveAccuracy() {
   const answered = allQuestions().filter((question) => state.attempts[question.id]).slice(-5);
-  if (!answered.length) return 0;
+  if (!answered.length) return null;
   const correct = answered.filter((question) => state.attempts[question.id].correct).length;
   return Math.round((correct / answered.length) * 100);
+}
+
+function metricLabel(value, fallback = "--") {
+  return value === null || value === undefined ? fallback : value;
+}
+
+function countupAttribute(value) {
+  return Number.isFinite(value) ? `data-countup-value="${value}"` : "";
 }
 
 function rcPassageSplit() {
@@ -1872,8 +1965,8 @@ function renderToday() {
         <strong>${weak.family}</strong>
       </a>
       <a class="today-pill" href="#/review">
-        <span>Blind review gap</span>
-        <strong>${data.analyticsSnapshots.blindReviewGap} pts</strong>
+          <span>Blind review gap</span>
+          <strong>${blindReviewGapLabel()}</strong>
       </a>
       <a class="today-pill" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
         <span>Start sprint</span>
@@ -2090,8 +2183,8 @@ function renderDashboardHero() {
       </div>
       <div class="hero-metrics">
         <article><span>Streak</span><strong>${streakDays()} days</strong></article>
-        <article><span>LR mastery</span><strong>${masteryRating("LR")}/100</strong></article>
-        <article><span>RC mastery</span><strong>${masteryRating("RC")}/100</strong></article>
+        <article><span>LR mastery</span><strong>${metricLabel(masteryRating("LR"))}/100</strong></article>
+        <article><span>RC mastery</span><strong>${metricLabel(masteryRating("RC"))}/100</strong></article>
       </div>
     </section>
   `;
@@ -2132,17 +2225,17 @@ function renderDashboardPage() {
     </section>
     <section class="demon-dashboard">
       <a class="demon-rating demon-rating--overall" href="${ratingHref}">
-        <strong data-countup-value="${rating}">${rating}</strong>
+        <strong ${countupAttribute(rating)}>${metricLabel(rating)}</strong>
         <span>Dashboard rating</span>
         <small>Accuracy + speed + harder-question control</small>
       </a>
       <a class="demon-rating" href="#/practice/drill/${adaptive.preset.id}" data-start-adaptive>
-        <strong data-countup-value="${masteryRating("LR")}">${masteryRating("LR")}</strong>
+        <strong ${countupAttribute(masteryRating("LR"))}>${metricLabel(masteryRating("LR"))}</strong>
         <span>Arguments</span>
         <small>Logical Reasoning</small>
       </a>
       <a class="demon-rating" href="#/practice/rc">
-        <strong data-countup-value="${masteryRating("RC")}">${masteryRating("RC")}</strong>
+        <strong ${countupAttribute(masteryRating("RC"))}>${metricLabel(masteryRating("RC"))}</strong>
         <span>Reading</span>
         <small>Reading Comprehension</small>
       </a>
@@ -2211,9 +2304,9 @@ function renderDashboardPage() {
           ${tests.length ? tests.map((test) => `
             <a href="#/review">
               <span>${test.loggedAt ? new Date(test.loggedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Saved"}</span>
-              <span>${test.ptSection || "PrepTest"}</span>
+              <span>${escapeHtml(test.ptSection || "PrepTest")}</span>
               <span>${test.scaledScore || test.rawScore || "--"}</span>
-              <span>${test.timingNotes || "Review"}</span>
+              <span>${escapeHtml(test.timingNotes || "Review")}</span>
             </a>
           `).join("") : `
             <a href="#/plan">
@@ -2229,9 +2322,9 @@ function renderDashboardPage() {
           <span class="status-pill">${studyQualityScore()}/100 quality</span>
         </div>
         <div class="demon-analytics-strip">
-          <span><strong>${Object.keys(state.attempts).length}</strong> answered</span>
+          <span><strong>${totalQuestionsAttempted()}</strong> answered</span>
           <span><strong>${timeSummary().correct || "--"}s</strong> avg correct</span>
-          <span><strong>${data.analyticsSnapshots.blindReviewGap}</strong> BR gap</span>
+          <span><strong>${blindReviewGapLabel()}</strong> BR gap</span>
           <span><strong>${streakDays()}</strong> day streak</span>
         </div>
       </a>
@@ -2492,11 +2585,12 @@ function renderLessonCheckQuestion(lesson, question, checkState) {
 
 function renderLessonPrimaryMedia(lesson) {
   if (lesson.videoPath) {
+    const mediaLabel = lesson.videoStatus === "native-mp4" ? "Native MP4" : lesson.videoStatus === "sample-mp4" ? "Sample MP4" : "MP4";
     return `
       <section class="lesson-flow-media">
         <div class="lesson-flow-media__head">
           <p class="mini-card__label">Professor Maya video lesson</p>
-          <span class="status-pill">MP4 sample · ${lesson.estimatedLessonMinutes || 8}m lesson</span>
+          <span class="status-pill">${mediaLabel} · ${lesson.estimatedLessonMinutes || 8}m lesson</span>
         </div>
         <video class="lesson-flow-video" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>
       </section>
@@ -2908,7 +3002,7 @@ function renderQuestionTypeLesson(lesson) {
                         ([choiceText, count]) => `
                           <section class="journal-card">
                             <strong>${count} time${count > 1 ? "s" : ""}</strong>
-                            <p>${choiceText}</p>
+                            <p>${escapeHtml(choiceText)}</p>
                           </section>
                         `,
                       )
@@ -2927,9 +3021,9 @@ function renderQuestionTypeLesson(lesson) {
                     .map(
                       (entry) => `
                         <section class="journal-card">
-                          <strong>${entry.trapPattern}</strong>
-                          <p>${entry.whyWrong}</p>
-                          ${entry.wrongChoiceText ? `<p class="microcopy">Wrong choice picked: ${entry.wrongChoiceText}</p>` : ""}
+                          <strong>${escapeHtml(entry.trapPattern)}</strong>
+                          <p>${escapeHtml(entry.whyWrong)}</p>
+                          ${entry.wrongChoiceText ? `<p class="microcopy">Wrong choice picked: ${escapeHtml(entry.wrongChoiceText)}</p>` : ""}
                         </section>
                       `,
                     )
@@ -3894,11 +3988,11 @@ function renderReviewPage(route = {}) {
                     <section class="journal-card blind-review-card">
                       <p class="mini-card__label">BR item ${index + 1} · ${entry.family}</p>
                       <h4>${question?.question || "Review saved miss"}</h4>
-                      <p>${question?.prompt || entry.note}</p>
+                      <p>${question?.prompt || escapeHtml(entry.note)}</p>
                       <label class="br-field"><span>Second-pass answer</span><input data-br-answer="${index}" placeholder="A, B, C, D, or your own prediction"></label>
                       <label class="br-field"><span>Confidence</span><select data-br-confidence="${index}"><option>low</option><option>medium</option><option>high</option></select></label>
                       <label class="br-field"><span>Mistake reason</span><select data-br-reason="${index}">${mistakeReasonOptions().map((reason) => `<option>${reason}</option>`).join("")}</select></label>
-                      <label class="br-field br-field--wide"><span>Rule you will reuse</span><textarea data-br-note="${index}" rows="3" placeholder="Name the gap, trap, and corrected rule.">${entry.whyWrong || ""}</textarea></label>
+                      <label class="br-field br-field--wide"><span>Rule you will reuse</span><textarea data-br-note="${index}" rows="3" placeholder="Name the gap, trap, and corrected rule.">${escapeHtml(entry.whyWrong || "")}</textarea></label>
                       <div class="dashboard-actions">
                         <button class="button button--primary" data-complete-br="${index}" type="button">Unlock explanation</button>
                         <span class="microcopy">Locked explanation: complete Blind Review first.</span>
@@ -3954,7 +4048,7 @@ function renderReviewPage(route = {}) {
       </div>
       <div class="card-grid card-grid--four">
         <a class="mini-card clickthrough-card" href="#/practice/drill/${drillPresetForFamily(weak.family).id}"><p class="mini-card__label">Weakest family</p><h4>${weak.family}</h4><p>${weak.score}% accuracy · open focused drill</p></a>
-        <button class="mini-card clickthrough-card" type="button" data-page-scroll="blind-review"><p class="mini-card__label">Blind review gap</p><h4>${data.analyticsSnapshots.blindReviewGap}</h4><p>Estimated first-try vs second-pass spread · jump to review queue</p></button>
+        <button class="mini-card clickthrough-card" type="button" data-page-scroll="blind-review"><p class="mini-card__label">Blind review gap</p><h4>${blindReviewGapLabel()}</h4><p>First-try vs second-pass spread from completed Blind Review items · jump to review queue</p></button>
         <a class="mini-card clickthrough-card" href="#/plan"><p class="mini-card__label">Variance</p><h4>${scoreVariance()} pts</h4><p>Log more official results to improve stability tracking.</p></a>
         <a class="mini-card clickthrough-card" href="#/learn/${nextLesson().id}"><p class="mini-card__label">Recommended next path</p><h4>${nextLesson().title}</h4><p>Then ${weak.family} drill</p></a>
       </div>
@@ -3975,7 +4069,7 @@ function renderReviewPage(route = {}) {
         </section>
         <section class="transcript-block">
           <p class="mini-card__label">Final five + RC split</p>
-          <h4>${finalFiveAccuracy() || 60}% final-five accuracy</h4>
+          <h4>${finalFiveAccuracy() === null ? "Not enough data yet" : `${finalFiveAccuracy()}% final-five accuracy`}</h4>
           <p>RC target split: ${Math.round(split.read / 60)}:${String(split.read % 60).padStart(2, "0")} read/map · ${Math.round(split.questions / 60)}:${String(split.questions % 60).padStart(2, "0")} questions · ${Math.round(split.check / 60)}:${String(split.check % 60).padStart(2, "0")} final check.</p>
         </section>
       </div>
@@ -3983,8 +4077,8 @@ function renderReviewPage(route = {}) {
         <section class="transcript-block">
           <p class="mini-card__label">Accuracy by difficulty</p>
           ${difficulty.map((item) => `
-            <div class="mastery-row compact-row ${item.accuracy === 0 ? "is-zero" : ""}">
-              <span>${item.level}${item.attempts ? ` · ${item.attempts} attempts` : " · 0 attempts"}</span><strong>${item.accuracy}%</strong><div><i style="width:${item.accuracy}%"></i></div>
+            <div class="mastery-row compact-row ${!item.attempts ? "is-zero" : ""}">
+              <span>${item.level}${item.attempts ? ` · ${item.attempts} attempts` : " · 0 attempts"}</span><strong>${item.accuracy === null ? "--" : `${item.accuracy}%`}</strong><div><i style="width:${item.accuracy || 0}%"></i></div>
             </div>
           `).join("")}
         </section>
@@ -4012,9 +4106,9 @@ function renderReviewPage(route = {}) {
                 .map(
                   (entry) => `
                     <section class="journal-card">
-                      <strong>${entry.family}</strong>
-                      <p>${entry.note}</p>
-                      <p class="microcopy">Trap: ${entry.trapPattern} | Confidence: ${entry.confidence}</p>
+                      <strong>${escapeHtml(entry.family)}</strong>
+                      <p>${escapeHtml(entry.note)}</p>
+                      <p class="microcopy">Trap: ${escapeHtml(entry.trapPattern)} | Confidence: ${escapeHtml(entry.confidence)}</p>
                     </section>
                   `,
                 )
@@ -4071,8 +4165,8 @@ function renderReviewPage(route = {}) {
                   <section class="journal-card mistake-bank-card">
                     <div>
                       <p class="mini-card__label">${entry.family} · ${diagnosis}</p>
-                      <h4>${question?.question || entry.trapPattern}</h4>
-                      <p>${entry.note || entry.whyWrong || "Add a reusable rule after review."}</p>
+                      <h4>${question?.question || escapeHtml(entry.trapPattern)}</h4>
+                      <p>${escapeHtml(entry.note || entry.whyWrong || "Add a reusable rule after review.")}</p>
                     </div>
                     <label class="br-field"><span>Mistake reason</span><select data-mistake-tag="${index}">${mistakeReasonOptions().map((reason) => `<option ${state.mistakeTags[entry.questionId] === reason ? "selected" : ""}>${reason}</option>`).join("")}</select></label>
                     <div class="dashboard-actions">
@@ -4208,7 +4302,7 @@ function renderPlanPage() {
       <div class="journal-list">
         ${
           state.officialLogs.length
-            ? state.officialLogs.slice(0, 4).map((log) => `<section class="journal-card"><strong>${log.ptSection}</strong><p>Raw ${log.rawScore || "n/a"} · Scaled ${log.scaledScore || "n/a"}</p><p class="microcopy">${log.timingNotes || "No timing notes"} · ${log.reflection || "No reflection yet"}</p></section>`).join("")
+            ? state.officialLogs.slice(0, 4).map((log) => `<section class="journal-card"><strong>${escapeHtml(log.ptSection)}</strong><p>Raw ${escapeHtml(log.rawScore || "n/a")} · Scaled ${escapeHtml(log.scaledScore || "n/a")}</p><p class="microcopy">${escapeHtml(log.timingNotes || "No timing notes")} · ${escapeHtml(log.reflection || "No reflection yet")}</p></section>`).join("")
             : `<p class="muted">No official results logged yet. Complete a LawHub section, then log the score and reflection here.</p>`
         }
       </div>
@@ -4254,9 +4348,9 @@ function renderPlanPage() {
         ${(state.admissions.schools || []).length ? state.admissions.schools.map((school) => `
           <section class="journal-card admissions-card">
             <div>
-              <strong>${school.school}</strong>
-              <p>${school.category} · median ${school.medianLsat || "n/a"} · ${school.status}</p>
-              <p class="microcopy">Deadline ${school.deadline || "not set"} · ${school.notes || "No strategy notes yet."}</p>
+              <strong>${escapeHtml(school.school)}</strong>
+              <p>${escapeHtml(school.category)} · median ${escapeHtml(school.medianLsat || "n/a")} · ${escapeHtml(school.status)}</p>
+              <p class="microcopy">Deadline ${escapeHtml(school.deadline || "not set")} · ${escapeHtml(school.notes || "No strategy notes yet.")}</p>
             </div>
             <button class="bookmark-button" type="button" data-remove-school="${school.id}">Remove</button>
           </section>
@@ -4273,7 +4367,7 @@ function renderPlanPage() {
       </div>
       <p>These personal help notes feed the Coach chat and review loop. Use them when a question, lesson, or strategy point feels sticky.</p>
       <div class="journal-list">
-        ${state.support.map((entry) => `<section class="journal-card"><p>${entry}</p></section>`).join("")}
+        ${state.support.map((entry) => `<section class="journal-card"><p>${escapeHtml(entry)}</p></section>`).join("")}
       </div>
       <div class="support-actions">
         <button class="button button--ghost" data-support-fill="question">Add question help note</button>
@@ -5770,7 +5864,8 @@ function wireInteractions(route) {
             journalEntries: restored.journal || restored.journalEntries || [],
             lastSavedAt: new Date().toISOString(),
           });
-          [APP_KEY, ...LEGACY_APP_KEYS].forEach((key) => localStorage.setItem(key, serialized));
+          localStorage.setItem(APP_KEY, serialized);
+          LEGACY_APP_KEYS.forEach((key) => localStorage.removeItem(key));
           window.alert("Backup restored. JessiPreps will reload with restored local data.");
           window.location.reload();
         } catch {

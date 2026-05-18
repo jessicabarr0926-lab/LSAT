@@ -2133,7 +2133,6 @@ window.JESSI_PREPS_DATA = {
   analyticsSnapshots: {
     strongestFamily: "RC Structure",
     weakestFamily: "Assumption",
-    blindReviewGap: 18,
     confidenceMismatch: "High confidence on weaken misses",
     fatigueNote: "Speed drops after question 18 in longer blocks",
   },

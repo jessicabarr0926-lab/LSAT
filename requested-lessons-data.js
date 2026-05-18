@@ -357,6 +357,8 @@ const v2VideoSamples = {
 };
 
 const v2FallbackVideoPaths = Object.values(v2VideoSamples).map((sample) => sample.path);
+const v2RenderedVideoManifest = Array.isArray(window.JESSI_VIDEO_MANIFEST) ? window.JESSI_VIDEO_MANIFEST : [];
+const v2RenderedVideosByLessonId = new Map(v2RenderedVideoManifest.map((entry) => [entry.id, entry]));
 
 const v2YouTubeLessonVideos = [
   ['yt-strengthen-1428', 'How To Solve a Strengthen Question | Demon Daily, Ep. 1428', 'eJbG2-Oyyfk', '14:47', ['strengthen'], ['ka-lr-strengthen-video', 'ka-lr-strengthen-worked', 'ka-lr-strengthen-weaken-quick', 'ka-lr-strengthen-weaken-learn']],
@@ -1671,11 +1673,11 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       if (!lesson.workedExample || /^A passage uses multiple viewpoints/.test(lesson.workedExample.prompt) || /^A stimulus gives evidence/.test(lesson.workedExample.prompt)) {
         lesson.workedExample = v2WorkedExampleForLesson(lesson, family);
       }
-      lesson.videoStatus = sample?.status || (lesson.youtubeVideos?.length ? 'external-video-supported' : 'illustrated-board');
-      lesson.videoPath = sample?.path || '';
-      lesson.videoTheme = sample?.theme || family;
       lesson.youtubeVideos = v2YouTubeVideosForLesson(lesson, family);
-      lesson.videoStatus = sample?.status || (lesson.youtubeVideos?.length ? 'external-video-supported' : 'illustrated-board');
+      const renderedVideo = v2RenderedVideosByLessonId.get(lesson.id);
+      lesson.videoPath = sample?.path || renderedVideo?.outFile || '';
+      lesson.videoStatus = sample?.status || (renderedVideo ? 'native-mp4' : lesson.youtubeVideos?.length ? 'external-video-supported' : 'illustrated-board');
+      lesson.videoTheme = sample?.theme || renderedVideo?.title || family;
       v2SyncExternalMedia(lesson);
     });
     v2AttachAllYouTubeVideosToLessons(data);
@@ -1747,7 +1749,9 @@ function buildV2RcPassage([id, title, topic, summary], index) {
     playableLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.videoPath || lesson.youtubeVideos?.length).length : 0,
     youtubePlaylistVideos: v2YouTubeLessonVideos.length,
     youtubeLinkedLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.youtubeVideos?.length).length : 0,
-    uniqueRenderedMp4s: Object.keys(v2VideoSamples).length,
+    renderedManifestEntries: v2RenderedVideoManifest.length,
+    nativeMp4Lessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.videoPath && ['native-mp4', 'sample-mp4'].includes(lesson.videoStatus)).length : 0,
+    uniqueRenderedMp4s: new Set(v2RenderedVideoManifest.map((entry) => entry.outFile)).size,
     sharedFallbackSamples: v2FallbackVideoPaths.length,
   };
   data.youtubeMedia = v2YouTubeLessonVideos;
