@@ -268,6 +268,7 @@ function ensureLessonProgress(lessonId) {
     quiz: existing.quiz || null,
     checks: existing.checks || {},
     reflectionSaved: Boolean(existing.reflectionSaved),
+    completedAt: existing.completedAt || "",
   };
   state.lessonProgress[lessonId] = normalized;
   return normalized;
@@ -810,10 +811,14 @@ function findLessonDrill(routeId) {
 
 function lessonDrillQuestions(lesson, limit = 5) {
   const exact = data.questionBank.filter((question) => (question.lessonIds || []).includes(lesson.id));
-  if (exact.length >= limit) return exact.slice(0, limit);
   const families = lesson.linkedQuestionFamilies || [];
   const familyMatches = data.questionBank.filter((question) => families.includes(question.family) && !(question.lessonIds || []).includes(lesson.id));
-  return [...exact, ...familyMatches].slice(0, limit);
+  const passageMatches = (data.rcPassages || [])
+    .flatMap((passage) => passage.questions || [])
+    .filter((question) => families.includes(question.family));
+  const isRcLesson = String(lesson.track || "").includes("RC") || families.some((family) => family.startsWith("RC"));
+  const ordered = isRcLesson ? [...passageMatches, ...exact, ...familyMatches] : [...exact, ...familyMatches];
+  return ordered.filter((question, index, items) => items.findIndex((item) => item.id === question.id) === index).slice(0, limit);
 }
 
 function lessonNeighbors(lesson) {
@@ -826,6 +831,19 @@ function lessonNeighbors(lesson) {
 
 function lessonPracticeFocus(lesson) {
   return lesson.linkedQuestionFamilies?.join(" + ") || lesson.videoTheme || "Lesson practice";
+}
+
+function spacedReviewQueue() {
+  const now = Date.now();
+  return data.lessons
+    .map((lesson) => {
+      const progress = state.lessonProgress[lesson.id];
+      if (!progress?.complete || !progress.completedAt) return null;
+      const dueAt = new Date(progress.completedAt).getTime() + 3 * 86400000;
+      return { lesson, dueAt, due: dueAt <= now };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.dueAt - b.dueAt);
 }
 
 function findPassageForQuestion(questionId) {
@@ -2089,6 +2107,8 @@ function renderDashboardPage() {
   const explanation = latestExplanationQuestion();
   const liveSessions = liveClassCatalog().slice(0, 3);
   const predictionOn = Boolean(state.settings.predictionMode);
+  const spacedQueue = spacedReviewQueue();
+  const dueSpaced = spacedQueue.filter((item) => item.due);
   const ratingHref = "#/review";
   return `
     <section class="focus-banner">
@@ -2225,6 +2245,19 @@ function renderDashboardPage() {
           <span class="status-pill">${predictionOn ? "On" : "Off"}</span>
         </div>
         <p>${predictionOn ? "Answer choices stay secondary while you predict the task first." : "Turn it on to practice before answer choices pull you around."}</p>
+      </a>
+
+      <a class="demon-panel demon-panel--srs" href="#/review">
+        <div class="dashboard-card__head">
+          <h3>Spaced review</h3>
+          <span class="status-pill">${dueSpaced.length} due</span>
+        </div>
+        <p>${dueSpaced.length
+          ? `${dueSpaced[0].lesson.title} is ready for a three-day retrieval check.`
+          : spacedQueue.length
+            ? `Next review: ${spacedQueue[0].lesson.title} on ${new Date(spacedQueue[0].dueAt).toLocaleDateString([], { month: "short", day: "numeric" })}.`
+            : "Complete a lesson to start the spaced-review loop."}</p>
+        <strong>${dueSpaced.length ? "Open spaced review →" : "See review schedule →"}</strong>
       </a>
     </section>
   `;
@@ -2453,18 +2486,88 @@ function renderLessonCheckQuestion(lesson, question, checkState) {
 
 function renderLessonPrimaryMedia(lesson) {
   if (lesson.videoPath) {
-    return `<video class="lesson-flow-video" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>`;
+    return `
+      <section class="lesson-flow-media">
+        <div class="lesson-flow-media__head">
+          <p class="mini-card__label">Professor Maya video lesson</p>
+          <span class="status-pill">MP4 sample · ${lesson.estimatedLessonMinutes || 8}m lesson</span>
+        </div>
+        <video class="lesson-flow-video" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>
+      </section>
+    `;
   }
   if (lesson.youtubeVideos?.length) {
     return renderLessonExternalVideos(lesson);
   }
-  const firstScene = lesson.scenes?.[0];
+  const scenes = lesson.scenes || [];
   return `
     <section class="lesson-flow-storyboard">
-      <p class="mini-card__label">Animated lesson board</p>
-      <h3>${firstScene?.title || lesson.title}</h3>
-      <p>${firstScene?.explanation || lesson.summary}</p>
-      ${firstScene?.storyboard ? `<div>${firstScene.storyboard}</div>` : ""}
+      <div class="lesson-flow-media__head">
+        <div>
+          <p class="mini-card__label">Illustrated lesson board</p>
+          <h3>${lesson.title}</h3>
+        </div>
+        <div class="lesson-flow-media__actions">
+          <span class="status-pill">${scenes.length || 4} board beats · ${lesson.estimatedLessonMinutes || 8}m lesson</span>
+          <button class="button button--ghost" type="button" data-speak-lesson="${lesson.id}">Listen to Maya</button>
+        </div>
+      </div>
+      <p class="muted">This is an in-app illustrated lesson board with narration support, not a rendered MP4. Use the boards, lesson text, and linked practice together.</p>
+      <div class="lesson-board-grid">
+        ${scenes.map((scene, index) => `
+          <article>
+            <span>${index + 1}</span>
+            <h4>${scene.title}</h4>
+            <p>${scene.explanation}</p>
+            ${scene.storyboard ? `<strong>${scene.storyboard}</strong>` : ""}
+          </article>
+        `).join("")}
+      </div>
+      ${lesson.narrationScript ? `
+        <details class="lesson-flow-transcript">
+          <summary>Read Professor Maya transcript</summary>
+          <p>${lesson.narrationScript}</p>
+        </details>
+      ` : ""}
+    </section>
+  `;
+}
+
+function lessonCompletionRequirements(lesson, linkedQuestions = lessonDrillQuestions(lesson, 5)) {
+  const progress = ensureLessonProgress(lesson.id);
+  const exactAttempts = linkedQuestions.filter((question) => state.attempts[question.id]);
+  const correct = exactAttempts.filter((question) => state.attempts[question.id]?.correct).length;
+  return {
+    wins: progress.masteryWins || 0,
+    target: lesson.masteryThreshold || 3,
+    correct,
+    attempted: exactAttempts.length,
+    reflectionSaved: Boolean(progress.reflectionSaved),
+    ready: (progress.masteryWins || 0) >= (lesson.masteryThreshold || 3),
+  };
+}
+
+function renderLessonMasteryStatus(lesson, linkedQuestions) {
+  const status = lessonCompletionRequirements(lesson, linkedQuestions);
+  const remaining = Math.max(0, status.target - status.wins);
+  const reviewDate = ensureLessonProgress(lesson.id).completedAt
+    ? new Date(new Date(ensureLessonProgress(lesson.id).completedAt).getTime() + 3 * 86400000)
+    : null;
+  const reviewLabel = reviewDate
+    ? `Next spaced review: ${reviewDate.toLocaleDateString([], { month: "short", day: "numeric" })}`
+    : "Ready for spaced review after completion";
+  return `
+    <section class="lesson-flow-section lesson-mastery-status">
+      <div>
+        <p class="mini-card__label">Mastery evidence</p>
+        <h3>${status.wins}/${status.target} wins collected</h3>
+        <p>${status.ready ? "You have enough evidence to mark this lesson done." : `Need ${remaining} more win${remaining === 1 ? "" : "s"} before this lesson can be marked done.`}</p>
+      </div>
+      <ul>
+        <li class="${status.correct ? "is-done" : ""}">${status.correct ? "✓" : "○"} Practice accuracy: ${status.correct} correct answer${status.correct === 1 ? "" : "s"} logged</li>
+        <li class="${status.reflectionSaved ? "is-done" : ""}">${status.reflectionSaved ? "✓" : "○"} Reflection rule saved to journal</li>
+        <li class="${status.ready ? "is-done" : ""}">${status.ready ? "✓" : "○"} ${reviewLabel}</li>
+      </ul>
     </section>
   `;
 }
@@ -2474,7 +2577,7 @@ function renderLessonPracticeLinks(lesson, linkedQuestions) {
   return `
     <section class="lesson-flow-section lesson-flow-practice">
       <h3>Practice Questions</h3>
-      <p>Open one original JessiPreps question in the full practice view, then return to the lesson when you are done.</p>
+      <p>Work through an original JessiPreps set that mixes easy, medium, and hard items. Each question opens in the full practice view, gives five answer choices, and returns you here with analytics updated.</p>
       <div class="lesson-practice-links">
         ${linkedQuestions.map((question, index) => `
           <a href="#/practice/challenge/${question.id}">
@@ -2527,7 +2630,7 @@ function renderLessonPlayer(lesson) {
     lessonFlowState = { lessonId: lesson.id, notesOpen: false, menuOpen: false };
   }
   const progress = ensureLessonProgress(lesson.id);
-  const linkedQuestions = lessonDrillQuestions(lesson, 5);
+  const linkedQuestions = lessonDrillQuestions(lesson, 8);
   const neighbors = lessonNeighbors(lesson);
   const unit = primaryUnitForLesson(lesson);
   return `
@@ -2568,6 +2671,13 @@ function renderLessonPlayer(lesson) {
           ${lesson.methodSteps?.length ? `<ol>${lesson.methodSteps.map((step) => `<li>${step}</li>`).join("")}</ol>` : ""}
           ${lesson.whyItMatters ? `<p><strong>Why it matters:</strong> ${lesson.whyItMatters}</p>` : ""}
         </section>
+        ${lesson.crossSkillBridge ? `
+          <section class="lesson-flow-section lesson-transfer">
+            <h3>How this connects</h3>
+            <p><strong>${lesson.crossSkillBridge.from}</strong> → <strong>${lesson.crossSkillBridge.to}</strong></p>
+            <p>${lesson.crossSkillBridge.text}</p>
+          </section>
+        ` : ""}
         <section class="lesson-flow-section">
           <h3>Worked example</h3>
           <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
@@ -2586,6 +2696,7 @@ function renderLessonPlayer(lesson) {
           ${lesson.timingPlan?.length ? `<p><strong>Timing plan:</strong> ${lesson.timingPlan.join(" ")}</p>` : ""}
         </section>
         ${renderLessonPracticeLinks(lesson, linkedQuestions)}
+        ${renderLessonMasteryStatus(lesson, linkedQuestions)}
         <section class="lesson-flow-section lesson-flow-reflection">
           <h3>Reflection</h3>
           <label class="br-field br-field--wide"><span>${lesson.journalPrompt || "What is one trap you would now recognize?"}</span><textarea rows="4" data-lesson-reflection="${lesson.id}" placeholder="Write one reusable rule you will use next time."></textarea></label>
@@ -2597,9 +2708,9 @@ function renderLessonPlayer(lesson) {
           <a class="icon-button ${neighbors.previous ? "" : "is-disabled"}" href="${neighbors.previous ? `#/learn/${neighbors.previous.id}` : "#/learn"}" aria-label="Previous lesson">←</a>
           <a class="icon-button ${neighbors.next ? "" : "is-disabled"}" href="${neighbors.next ? `#/learn/${neighbors.next.id}` : "#/practice/timed"}" aria-label="Next lesson">→</a>
         </div>
-        <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}">
+        <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}" ${!progress.complete && !lessonCompletionRequirements(lesson, linkedQuestions).ready ? "disabled" : ""}>
           <span>${progress.complete ? "✓" : ""}</span>
-          <strong>${progress.complete ? "Done" : "Mark done"}</strong>
+          <strong>${progress.complete ? "Done" : lessonCompletionRequirements(lesson, linkedQuestions).ready ? "Mark done" : "Earn mastery first"}</strong>
         </button>
       </footer>
     </article>
@@ -3753,6 +3864,8 @@ function renderReviewPage(route = {}) {
     return acc;
   }, {});
   const topTraps = Object.entries(trapGroups).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const spacedQueue = spacedReviewQueue();
+  const dueSpaced = spacedQueue.filter((item) => item.due);
   return `
     <article class="panel panel--wide">
       <div class="panel__head">
@@ -3786,6 +3899,25 @@ function renderReviewPage(route = {}) {
                 .join("")
             : `<p class="muted">No Blind Review items due. Missed questions will appear here before explanations unlock.</p>`
         }
+      </div>
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Spaced Review</h3>
+        <span class="status-pill">${dueSpaced.length} due now</span>
+      </div>
+      <p>Completed lessons return after three days so you have to retrieve the method from memory instead of merely recognizing it again.</p>
+      <div class="journal-list">
+        ${spacedQueue.length
+          ? spacedQueue.slice(0, 6).map((item) => `
+              <section class="journal-card">
+                <p class="mini-card__label">${item.due ? "Due now" : "Scheduled"}</p>
+                <h4>${item.lesson.title}</h4>
+                <p>${item.due ? "Re-open the lesson, say the method from memory, then do one linked practice question." : `Returns ${new Date(item.dueAt).toLocaleDateString([], { month: "short", day: "numeric" })}.`}</p>
+                <a class="button button--ghost" href="#/learn/${item.lesson.id}">${item.due ? "Review lesson" : "Preview lesson"}</a>
+              </section>
+            `).join("")
+          : `<p class="muted">No spaced reviews yet. Finish a lesson to put it into the retrieval queue.</p>`}
       </div>
     </article>
     <article class="panel panel--wide">
@@ -4197,6 +4329,9 @@ function renderQuestionCard(question, context) {
 }
 
 function answerChoiceReview(question, choiceIndex) {
+  if (question.choiceExplanations?.[choiceIndex]) {
+    return question.choiceExplanations[choiceIndex];
+  }
   if (choiceIndex === question.answer) {
     return question.explanation || "This choice performs the exact job the question asks for.";
   }
@@ -5230,11 +5365,32 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-speak-lesson]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lesson = data.lessons.find((item) => item.id === button.dataset.speakLesson);
+      const script = lesson?.narrationScript || lesson?.script || lesson?.summary;
+      if (!script) return;
+      if (!("speechSynthesis" in window)) {
+        window.alert(script);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(script);
+      utterance.rate = 0.96;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    });
+  });
+
   pageMount.querySelectorAll("[data-toggle-lesson-done]").forEach((button) => {
     button.addEventListener("click", () => {
       const lessonId = button.dataset.toggleLessonDone;
+      const lesson = data.lessons.find((item) => item.id === lessonId);
+      if (!lesson) return;
       const progress = ensureLessonProgress(lessonId);
+      if (!progress.complete && !lessonCompletionRequirements(lesson).ready) return;
       progress.complete = !progress.complete;
+      progress.completedAt = progress.complete ? new Date().toISOString() : "";
       state.lessonProgress[lessonId] = progress;
       saveState();
       renderApp();

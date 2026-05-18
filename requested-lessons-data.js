@@ -1194,12 +1194,147 @@ function contentBoostQuestionDiagnostics(question) {
   };
 }
 
+function v3CrossSkillBridge(family) {
+  const bridges = {
+    'Main Point': {
+      from: 'RC Main Point',
+      to: 'Role / Method / Technique',
+      text: 'The same question you ask in RC -- what is the author trying to accomplish overall? -- becomes the conclusion hunt in LR. Once the conclusion is stable, role questions get easier because every other sentence can be measured against it.',
+    },
+    'Role / Method / Technique': {
+      from: 'Main Point',
+      to: 'RC Function',
+      text: 'Role questions are the LR version of RC function questions. In both places, the right answer names the work a sentence or paragraph performs, not merely the noun it mentions.',
+    },
+    Flaw: {
+      from: 'Strengthen / Weaken',
+      to: 'Assumption',
+      text: 'A flaw is the visible version of a hidden assumption. If you can say what went wrong, you can usually say what assumption would have been needed to prevent it.',
+    },
+    Assumption: {
+      from: 'Flaw',
+      to: 'Strengthen / Weaken',
+      text: 'Assumption work teaches you to name the bridge. Strengthen questions repair that same bridge; weaken questions attack it.',
+    },
+    Strengthen: {
+      from: 'Assumption',
+      to: 'Weaken',
+      text: 'Strengthen and weaken are mirror-image tasks. Keep the same gap in view and ask whether the answer makes that gap safer or more dangerous.',
+    },
+    Weaken: {
+      from: 'Assumption',
+      to: 'Strengthen',
+      text: 'If you can weaken an argument by exposing its gap, you can strengthen one by protecting the very same gap.',
+    },
+    'Conditional Logic': {
+      from: 'Must Be True',
+      to: 'Parallel Flaw',
+      text: 'Conditional rules matter beyond formal logic questions. Reversals and mistaken contrapositives reappear inside flaw, inference, and parallel-reasoning questions.',
+    },
+    'Must Be True': {
+      from: 'Conditional Logic',
+      to: 'RC Inference',
+      text: 'Must Be True discipline transfers directly into RC inference: prove only what the text forces and resist answers that merely sound likely.',
+    },
+    'RC Structure': {
+      from: 'RC Function',
+      to: 'RC Main Point',
+      text: 'Structure is the passage skeleton. Once you can label paragraph jobs, function questions become local structure checks and main-point questions become whole-passage structure checks.',
+    },
+    'RC Main Point': {
+      from: 'RC Structure',
+      to: 'Main Point',
+      text: 'Main point in RC and main conclusion in LR are cousins. In both, the right answer captures the author move, not the most vivid supporting detail.',
+    },
+    'RC Inference': {
+      from: 'Must Be True',
+      to: 'RC Attitude',
+      text: 'Inference discipline protects attitude work too: the author can be skeptical without being hostile, and qualified without being undecided.',
+    },
+    'RC Function': {
+      from: 'Role / Method / Technique',
+      to: 'RC Structure',
+      text: 'Function questions reward the same habit as LR role questions: answer with a verb phrase -- supports, concedes, illustrates, qualifies -- before reading the choices.',
+    },
+    'RC Attitude': {
+      from: 'RC Inference',
+      to: 'RC Main Point',
+      text: 'Tone and main point reinforce each other. A measured author usually earns a measured thesis, not a dramatic one.',
+    },
+  };
+  return bridges[family] || {
+    from: 'earlier structure work',
+    to: 'mixed practice',
+    text: 'This lesson should make the next mixed set feel less random: name the task, protect the exact burden, and carry the same reasoning habit into the next family.',
+  };
+}
+
+function v3LessonNarration(lesson, family, depth) {
+  const bridge = v3CrossSkillBridge(family);
+  return [
+    `Today we are working on ${lesson.title}.`,
+    depth.coreIdea,
+    `Here is the move I want you to make before answer choices: ${depth.coldReadPrompts?.[0] || 'name the task in plain English.'}`,
+    `In the worked example, watch for this sequence: ${(depth.decisionTree || []).slice(0, 3).join(' Then ')}.`,
+    `The trap I most want you to notice is this: ${depth.errorClinic?.[0]?.cause || lesson.trapExplanation || 'familiar wording can feel right while doing the wrong job.'}`,
+    bridge.text,
+    `Before you leave, complete the practice set and save one rule you can use again under time pressure.`,
+  ].join(' ');
+}
+
+function v3FifthChoiceForFamily(family) {
+  const fifth = {
+    'RC Structure': 'It alternates between viewpoints without ever signaling the author final position',
+    'RC Inference': 'The author regards the familiar view as sufficient for every case the passage discusses',
+    'RC Attitude': 'guardedly approving but unwilling to offer any evaluation',
+    'RC Function': 'to mention an interesting detail that has no role in the author larger argument',
+    'RC Main Point': 'The familiar view should be kept exactly as it is because all rival evidence fails',
+    Flaw: 'infers that because two proposals differ, one of them must be false',
+    Assumption: 'The comparison group would have improved by exactly the same amount under every other routine',
+    Strengthen: 'The plan was announced after the improvement had already occurred',
+    Weaken: 'The measured outcome is one the author never uses in the conclusion',
+    'Conditional Logic': 'Reliable baseline data are sufficient by themselves for a policy to be adopted',
+    'Must Be True': 'Every policy requiring reliable baseline data must publish monthly results',
+    'Role / Method / Technique': 'It is a prediction about a future case unrelated to the recommendation',
+    'Resolve / Explain': 'The shorter form contained fewer words than the prior version',
+    Principle: 'A routine should be assigned whenever a teacher prefers it',
+    'Parallel Flaw': 'A tool is useful, so anyone who uses it must improve',
+    'Point at Issue': 'students sometimes become fatigued when they study',
+  };
+  return fifth[family] || 'It repeats familiar wording while leaving the actual question burden unanswered';
+}
+
+function v3NormalizeFiveChoices(question) {
+  const options = Array.isArray(question.options) ? [...question.options] : Array.isArray(question.choices) ? [...question.choices] : [];
+  while (options.length < 5) options.push(v3FifthChoiceForFamily(question.family));
+  question.options = options.slice(0, 5);
+  if (Array.isArray(question.choices)) question.choices = question.options;
+  return question;
+}
+
+function v3ChoiceExplanations(question) {
+  const options = question.options || [];
+  const family = question.family || question.questionType || 'this task';
+  const explanation = question.explanation || 'It is the only answer fully supported by the stimulus or passage.';
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  return options.map((option, index) => {
+    const letter = letters[index] || `Choice ${index + 1}`;
+    if (index === question.answer) return `${letter} is credited because ${explanation}`;
+    if (index === 1) return `${letter} is tempting because it borrows relevant wording, but "${option}" does not satisfy the ${family} burden as precisely as the credited answer.`;
+    if (index === 2) return `${letter} fails because it overstates or redirects the claim: "${option}" goes beyond what this ${family} question asks you to prove.`;
+    if (index === 3) return `${letter} describes something adjacent to the issue, but "${option}" misses the argumentative role the stem is testing.`;
+    return `${letter} is the extra trap: "${option}" sounds plausible in the abstract, yet the passage or stimulus gives you no proof for it.`;
+  });
+}
+
 function v2LessonSummary(lesson, family) {
   const title = lesson.title || 'this lesson';
+  const focus = requestedLessonFocus(title, family);
+  const profile = contentDepthProfile(family, lesson);
   if (String(lesson.track || '').includes('RC')) {
-    return `${title} teaches you to map the passage by paragraph job, author viewpoint, and proof boundaries before answering. The goal is to leave with one clean passage map and one trap rule.`;
+    return `${title} teaches ${focus} through passage jobs, viewpoint shifts, and proof boundaries. ${profile.coreIdea} You should leave able to write one clean map and one trap rule before touching the answers.`;
   }
-  return `${title} teaches you to identify the argument task, name the missing logical move, and reject answers that sound related but do not perform the job.`;
+  return `${title} teaches ${focus} by forcing you to identify the argument task, name the exact logical move, and reject answers that only sound related. ${profile.coreIdea}`;
 }
 
 function v2WorkedExampleForLesson(lesson, family) {
@@ -1274,32 +1409,32 @@ function v2WorkedExampleForLesson(lesson, family) {
 function v2PromptForFamily(family, index) {
   const topic = ['public transit', 'museum funding', 'school tutoring', 'workplace scheduling', 'city gardens', 'digital archives'][index % 6];
   if (family.section === 'RC') {
-    return `Passage capsule: Paragraph 1 introduces a debate about ${topic}. Paragraph 2 complicates the familiar account with evidence from a second field. Paragraph 3 argues for a narrower, qualified conclusion.`;
+    return `A short reading passage examines a debate about ${topic}. It opens with the standard explanation, introduces evidence that narrows that explanation, and closes by arguing that the familiar account is useful only when a missing condition is satisfied.`;
   }
   if (family.family === 'Conditional Logic') {
-    return `If a ${topic} policy is adopted, then the committee must publish monthly results. Any policy with monthly results requires reliable baseline data. The committee adopted the ${topic} policy.`;
+    return `A city committee adopts a new ${topic} policy only after a pilot period. If a policy is adopted, then the committee must publish monthly results. Any policy with monthly results requires reliable baseline data. The committee has now adopted the ${topic} policy after completing its pilot period.`;
   }
   if (family.family === 'Resolve / Explain') {
-    return `After the city shortened the ${topic} application, fewer residents began the form, yet a larger percentage completed it successfully.`;
+    return `After the city shortened the ${topic} application, fewer residents began the form than in the prior year. Yet among the residents who did begin it, a much larger percentage completed the application successfully before the deadline.`;
   }
-  return `A consultant argues that a new ${topic} plan caused better outcomes because the group using the plan improved more than a comparison group that did not use it.`;
+  return `A consultant argues that a new ${topic} plan caused better outcomes. In a three-week pilot, the group using the plan improved more than a comparison group that did not use it. The consultant therefore recommends assigning the plan to every comparable group next term.`;
 }
 
 function v2ChoicesForFamily(family, index) {
   const variants = {
-    Flaw: ['takes an observed association as sufficient evidence of cause', 'rejects a claim because of who proposed it', 'uses a word in two unrelated senses', 'states a conclusion narrower than the evidence'],
-    Assumption: ['The group using the plan was not already more likely to improve', 'Every participant preferred the new plan', 'The plan was less expensive than all alternatives', 'No participant ever changed study methods'],
-    Strengthen: ['The two groups had similar starting conditions before the plan began', 'Some participants liked the plan name', 'The plan was described in a short memo', 'The consultant has evaluated other plans'],
-    Weaken: ['The group using the plan had a major advantage before the plan started', 'The plan can be taught quickly', 'Some participants discussed the plan afterward', 'The consultant recorded the results'],
-    'Conditional Logic': ['The committee must have reliable baseline data', 'Every policy with baseline data is adopted', 'Policies without monthly results always fail', 'The committee did not adopt the policy'],
-    'Must Be True': ['At least one adopted policy requires reliable baseline data', 'Every policy with baseline data is adopted', 'No policy can publish monthly results without public meetings', 'The committee adopted every proposed policy'],
-    'Role / Method / Technique': ['It is evidence offered to support the recommendation', 'It is the final recommendation itself', 'It is an opposing view the author rejects', 'It is an unrelated definition'],
-    'Resolve / Explain': ['The shorter form screened out casual starts but made completion easier for serious applicants', 'The form was never available online', 'Residents stopped applying altogether', 'The completion rate was measured before the change'],
-    'RC Structure': ['It presents a familiar view, introduces a complication, and defends a qualified conclusion', 'It lists three unrelated examples', 'It offers only a personal narrative', 'It defines terms without any argumentative shift'],
-    'RC Inference': ['The author sees the familiar view as useful but incomplete', 'The author rejects every version of the familiar view', 'The passage proves the rival account impossible', 'The passage gives no reason to distinguish the views'],
-    'RC Main Point': ['A familiar account should be narrowed in light of complicating evidence', 'The passage is only a chronology of events', 'Every rival account is false', 'The author refuses to evaluate the issue'],
-    'RC Function': ['to support a later qualification of the initial view', 'to state the final conclusion by itself', 'to change the topic to an unrelated debate', 'to prove that all rival views are false'],
-    'RC Attitude': ['qualified and analytical', 'openly hostile', 'uncritically enthusiastic', 'confused and indifferent'],
+    Flaw: ['takes an observed association as sufficient evidence of cause', 'rejects a claim because of who proposed it', 'uses a word in two unrelated senses', 'states a conclusion narrower than the evidence', v3FifthChoiceForFamily('Flaw')],
+    Assumption: ['The group using the plan was not already more likely to improve', 'Every participant preferred the new plan', 'The plan was less expensive than all alternatives', 'No participant ever changed study methods', v3FifthChoiceForFamily('Assumption')],
+    Strengthen: ['The two groups had similar starting conditions before the plan began', 'Some participants liked the plan name', 'The plan was described in a short memo', 'The consultant has evaluated other plans', v3FifthChoiceForFamily('Strengthen')],
+    Weaken: ['The group using the plan had a major advantage before the plan started', 'The plan can be taught quickly', 'Some participants discussed the plan afterward', 'The consultant recorded the results', v3FifthChoiceForFamily('Weaken')],
+    'Conditional Logic': ['The committee must have reliable baseline data', 'Every policy with baseline data is adopted', 'Policies without monthly results always fail', 'The committee did not adopt the policy', v3FifthChoiceForFamily('Conditional Logic')],
+    'Must Be True': ['At least one adopted policy requires reliable baseline data', 'Every policy with baseline data is adopted', 'No policy can publish monthly results without public meetings', 'The committee adopted every proposed policy', v3FifthChoiceForFamily('Must Be True')],
+    'Role / Method / Technique': ['It is evidence offered to support the recommendation', 'It is the final recommendation itself', 'It is an opposing view the author rejects', 'It is an unrelated definition', v3FifthChoiceForFamily('Role / Method / Technique')],
+    'Resolve / Explain': ['The shorter form screened out casual starts but made completion easier for serious applicants', 'The form was never available online', 'Residents stopped applying altogether', 'The completion rate was measured before the change', v3FifthChoiceForFamily('Resolve / Explain')],
+    'RC Structure': ['It presents a familiar view, introduces a complication, and defends a qualified conclusion', 'It lists three unrelated examples', 'It offers only a personal narrative', 'It defines terms without any argumentative shift', v3FifthChoiceForFamily('RC Structure')],
+    'RC Inference': ['The author sees the familiar view as useful but incomplete', 'The author rejects every version of the familiar view', 'The passage proves the rival account impossible', 'The passage gives no reason to distinguish the views', v3FifthChoiceForFamily('RC Inference')],
+    'RC Main Point': ['A familiar account should be narrowed in light of complicating evidence', 'The passage is only a chronology of events', 'Every rival account is false', 'The author refuses to evaluate the issue', v3FifthChoiceForFamily('RC Main Point')],
+    'RC Function': ['to support a later qualification of the initial view', 'to state the final conclusion by itself', 'to change the topic to an unrelated debate', 'to prove that all rival views are false', v3FifthChoiceForFamily('RC Function')],
+    'RC Attitude': ['qualified and analytical', 'openly hostile', 'uncritically enthusiastic', 'confused and indifferent', v3FifthChoiceForFamily('RC Attitude')],
   };
   const options = variants[family.family] || ['It performs the exact task requested', 'It changes the topic', 'It is too strong', 'It describes only background'];
   return options.map((choice, choiceIndex) => choiceIndex === 0 ? choice : `${choice}${index % 5 === 0 ? '' : ''}`);
@@ -1349,14 +1484,15 @@ function buildV2LessonSpecificQuestion(lesson, index) {
   const isRc = String(lesson.track || '').includes('RC') || family.startsWith('RC');
   const title = lesson.title;
   const prompt = isRc
-    ? `Original passage capsule for ${title}: Paragraph 1 introduces a familiar view about the lesson topic. Paragraph 2 complicates that view with a rival explanation or limitation. Paragraph 3 gives the author's qualified final position.`
-    : `Original stimulus for ${title}: A student group adopts a new review method and improves, so the coordinator concludes that the method itself caused the entire improvement.`;
+    ? `Original passage excerpt for ${title}: One scholar advances a familiar interpretation of the subject, but later archival evidence narrows the reach of that account. The author argues that the familiar view remains useful only after its limits are made explicit.`
+    : `Original stimulus for ${title}: A student group adopted a new review method midway through the semester and later improved more than classmates who did not use it. The coordinator concludes that the method itself caused the entire improvement and should therefore be assigned to all students next term.`;
   const options = isRc
     ? [
         'It presents a familiar view, complicates it, and ends with a qualified author position',
         'It lists unrelated facts without an organizing claim',
         'It proves every rival interpretation false',
         'It shifts to a personal story without returning to the issue',
+        v3FifthChoiceForFamily(family),
       ]
     : v2ChoicesForFamily(v2QuestionFamilies.find((item) => item.family === family) || { family }, index);
   const question = {
@@ -1377,6 +1513,8 @@ function buildV2LessonSpecificQuestion(lesson, index) {
     mistakeReason: v2MistakeReasons[index % v2MistakeReasons.length],
     source: 'JessiPreps original lesson-specific practice',
   };
+  v3NormalizeFiveChoices(question);
+  question.choiceExplanations = v3ChoiceExplanations(question);
   return Object.assign(question, contentBoostQuestionDiagnostics(question));
 }
 
@@ -1399,6 +1537,50 @@ const v2AdditionalRcPassages = [
   ['rc-v3-voting-behavior', 'Voting Behavior and Local Information', 'Social Science', 'A passage complicating simple turnout theories by adding social networks, ballot design, and local news access.'],
 ];
 
+function v3ExpandedRcParagraphs([id, title, topic, summary]) {
+  const lexicon = {
+    Law: {
+      field: 'judges, litigants, and legal historians',
+      evidence: 'case records, statutory language, and later doctrinal practice',
+      stakes: 'predictability, legitimacy, and the fair treatment of future disputes',
+    },
+    'Natural Science': {
+      field: 'field researchers and laboratory scientists',
+      evidence: 'measurements, replication attempts, and models built from incomplete observations',
+      stakes: 'prediction, explanation, and the responsible use of uncertain findings',
+    },
+    Humanities: {
+      field: 'critics, curators, and historians of artistic practice',
+      evidence: 'letters, performances, catalogues, and the material record surrounding the work',
+      stakes: 'interpretation, preservation, and the difference between a finished object and a living practice',
+    },
+    'Social Science': {
+      field: 'social scientists, policymakers, and community researchers',
+      evidence: 'surveys, administrative records, interviews, and longitudinal comparisons',
+      stakes: 'measurement, causal inference, and whether policy reaches the people it claims to help',
+    },
+  };
+  const frame = lexicon[topic] || lexicon.Humanities;
+  return [
+    {
+      label: 'P1',
+      text: `${summary} For years, ${frame.field} have treated this familiar account as the natural starting point because it organizes scattered evidence into a usable story. The account has practical appeal: it is easy to teach, easy to test against a limited set of observations, and consistent with the records scholars first noticed. Yet its clarity partly depends on leaving several borderline cases unexplained.`,
+    },
+    {
+      label: 'P2',
+      text: `More recent work has complicated that comfortable picture. Using ${frame.evidence}, researchers have identified cases that fit the older account only after important qualifications are added. These cases do not make the original framework worthless; instead, they show that one of its background assumptions holds only under narrower conditions than earlier writers recognized. The debate therefore shifts from whether the familiar view is true to when it is useful.`,
+    },
+    {
+      label: 'P3',
+      text: `Some critics answer that a framework requiring so many qualifications should simply be abandoned. That response is tempting, but it mistakes revision for defeat. The strongest counterexamples reveal which variables matter, which comparisons were too crude, and which apparent conflicts disappear once scholars separate evidence from interpretation. In that sense, the newer findings improve the older model more than they destroy it.`,
+    },
+    {
+      label: 'P4',
+      text: `The author concludes that the best account is deliberately qualified. Scholars should keep the original framework as a guide, but only while naming the conditions, rival explanations, and limits that govern its use. That conclusion matters because ${frame.stakes} are all weakened when a neat explanation is mistaken for a complete one. Precision, on this view, is not a retreat from theory; it is what makes theory worth using.`,
+    },
+  ];
+}
+
 function buildV2RcPassage([id, title, topic, summary], index) {
   const families = ['RC Structure', 'RC Main Point', 'RC Inference', 'RC Function', 'RC Attitude'];
   return {
@@ -1407,12 +1589,14 @@ function buildV2RcPassage([id, title, topic, summary], index) {
     topic,
     category: topic,
     difficulty: index % 3 === 0 ? 'Medium' : index % 3 === 1 ? 'Hard' : 'Easy',
-    estimatedReadMinutes: 3,
+    estimatedReadMinutes: 4,
     passageMapPrompts: ['Name the old view.', 'Name the complication.', 'Name the author final qualified claim.'],
-    paragraphs: [
-      { label: 'P1', text: `${summary} The opening paragraph introduces the conventional view and explains why it became attractive to researchers or policymakers.` },
-      { label: 'P2', text: `The second paragraph complicates that view with evidence that appears to pull in a different direction. Rather than treating the familiar view as useless, the evidence shows that it works only under narrower conditions.` },
-      { label: 'P3', text: `The author concludes that the strongest position is qualified: the original framework should guide inquiry, but only after students identify the missing conditions, rival explanations, and limits on the evidence.` },
+    paragraphs: v3ExpandedRcParagraphs([id, title, topic, summary]),
+    modelMap: [
+      'P1: Conventional account and why it became attractive',
+      'P2: New evidence narrows the conventional account',
+      'P3: Critics overread the complication; revision is not defeat',
+      'P4: Author synthesis -- keep the framework, but only with explicit limits',
     ],
     questions: families.map((family, qIndex) => {
       const familyConfig = v2QuestionFamilies.find((item) => item.family === family);
@@ -1428,7 +1612,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         question: familyConfig?.stem || 'Which answer is best supported by the passage?',
         options: v2ChoicesForFamily(familyConfig || { family }, qIndex),
         answer: 0,
-        explanation: `The credited answer stays inside the passage map for ${title}: old view, complication, qualified conclusion.`,
+        explanation: `The credited answer stays inside the full passage map for ${title}: conventional view, complicating evidence, overread criticism, and the author qualified synthesis.`,
         trapPattern: familyConfig?.trap || 'Overstates the passage',
         timingTarget: familyConfig?.target || 98,
         mistakeReason: v2MistakeReasons[(index + qIndex) % v2MistakeReasons.length],
@@ -1470,6 +1654,9 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       lesson.timingPlan = lesson.timingPlan || depth.timingPlan;
       lesson.masteryCriteria = lesson.masteryCriteria || depth.masteryCriteria;
       lesson.journalPrompt = lesson.journalPrompt || depth.journalPrompt;
+      lesson.crossSkillBridge = lesson.crossSkillBridge || v3CrossSkillBridge(family);
+      lesson.narrationScript = lesson.narrationScript || v3LessonNarration(lesson, family, depth);
+      lesson.estimatedLessonMinutes = Number(lesson.estimatedLessonMinutes || requestedWebsiteLessonBlueprints.find(([id]) => id === lesson.id)?.[6] || Math.max(8, (lesson.scenes?.length || 4) * 3));
       lesson.professorNotes = lesson.professorNotes || [
         `Professor Maya framing: ${lesson.title} is not about memorizing labels; it is about knowing what job the answer must do.`,
         `Relatable check: if two answers feel close, slow down and ask which one actually proves the task instead of sounding familiar.`,
@@ -1484,10 +1671,11 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       if (!lesson.workedExample || /^A passage uses multiple viewpoints/.test(lesson.workedExample.prompt) || /^A stimulus gives evidence/.test(lesson.workedExample.prompt)) {
         lesson.workedExample = v2WorkedExampleForLesson(lesson, family);
       }
-      lesson.videoStatus = sample?.status || 'youtube-linked / script-ready';
+      lesson.videoStatus = sample?.status || (lesson.youtubeVideos?.length ? 'external-video-supported' : 'illustrated-board');
       lesson.videoPath = sample?.path || '';
       lesson.videoTheme = sample?.theme || family;
       lesson.youtubeVideos = v2YouTubeVideosForLesson(lesson, family);
+      lesson.videoStatus = sample?.status || (lesson.youtubeVideos?.length ? 'external-video-supported' : 'illustrated-board');
       v2SyncExternalMedia(lesson);
     });
     v2AttachAllYouTubeVideosToLessons(data);
@@ -1500,6 +1688,8 @@ function buildV2RcPassage([id, title, topic, summary], index) {
       question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || [];
       question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
       question.source = question.source || 'JessiPreps original';
+      v3NormalizeFiveChoices(question);
+      question.choiceExplanations = question.choiceExplanations || v3ChoiceExplanations(question);
       Object.assign(question, contentBoostQuestionDiagnostics(question));
     });
     const existingIds = new Set(data.questionBank.map((question) => question.id));
@@ -1539,6 +1729,8 @@ function buildV2RcPassage([id, title, topic, summary], index) {
         question.linkedLessonIds = question.linkedLessonIds || question.lessonIds || ['rc-structure-map'];
         question.mistakeReason = question.mistakeReason || v2MistakeReasons[index % v2MistakeReasons.length];
         question.source = question.source || 'JessiPreps original RC';
+        v3NormalizeFiveChoices(question);
+        question.choiceExplanations = question.choiceExplanations || v3ChoiceExplanations(question);
         Object.assign(question, contentBoostQuestionDiagnostics(question));
       });
     });
@@ -1555,7 +1747,7 @@ function buildV2RcPassage([id, title, topic, summary], index) {
     playableLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.videoPath || lesson.youtubeVideos?.length).length : 0,
     youtubePlaylistVideos: v2YouTubeLessonVideos.length,
     youtubeLinkedLessons: Array.isArray(data.lessons) ? data.lessons.filter((lesson) => lesson.youtubeVideos?.length).length : 0,
-    uniqueRenderedMp4s: 127,
+    uniqueRenderedMp4s: Object.keys(v2VideoSamples).length,
     sharedFallbackSamples: v2FallbackVideoPaths.length,
   };
   data.youtubeMedia = v2YouTubeLessonVideos;
