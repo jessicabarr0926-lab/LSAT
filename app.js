@@ -18,6 +18,7 @@ const commandPaletteButton = document.querySelector("#commandPaletteButton");
 const profileChip = document.querySelector("#profileChip");
 let lessonPlaybackTimer = null;
 let lessonPlaybackState = { lessonId: null, sceneIndex: 0, playing: false };
+let lessonFlowState = { lessonId: null, notesOpen: false, menuOpen: false, challengeQuestionId: null, challengeViewOnly: false };
 let qtPlaybackTimer = null;
 let qtPlaybackState = { lessonId: null, phase: "step1", sceneIndex: 0, playing: false };
 let testDayTimer = null;
@@ -92,6 +93,7 @@ function defaultState() {
       accentColor: "#8a74e8",
     },
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
+    lessonNotes: {},
     questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
     rcProgress: Object.fromEntries(
       (data.rcPassages || []).map((p) => [p.id, { phase: "reading", readStartTime: null, readTimeSeconds: null, mapText: "" }])
@@ -208,6 +210,7 @@ function loadState() {
       ...parsed,
       settings: { ...base.settings, ...(parsed.settings || {}) },
       lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
+      lessonNotes: { ...base.lessonNotes, ...(parsed.lessonNotes || {}) },
       questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
       rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
       attempts: parsed.attempts || {},
@@ -768,6 +771,14 @@ function lessonDrillQuestions(lesson, limit = 5) {
   return [...exact, ...familyMatches].slice(0, limit);
 }
 
+function lessonNeighbors(lesson) {
+  const index = data.lessons.findIndex((item) => item.id === lesson.id);
+  return {
+    previous: index > 0 ? data.lessons[index - 1] : null,
+    next: lesson.nextLessonId ? data.lessons.find((item) => item.id === lesson.nextLessonId) : data.lessons[index + 1] || null,
+  };
+}
+
 function lessonPracticeFocus(lesson) {
   return lesson.linkedQuestionFamilies?.join(" + ") || lesson.videoTheme || "Lesson practice";
 }
@@ -1192,6 +1203,7 @@ function buildMayaLocalReply(prompt, route = routeInfo()) {
 function renderMayaTeacher(route = routeInfo()) {
   if (!mayaTeacherMount) return;
   const shouldShowMaya = route.page === "live" || (route.page === "learn" && route.id && route.id !== "content");
+  const lessonReadingMode = route.page === "learn" && route.id && route.id !== "content" && !findQuestionTypeLesson(route.id);
   if (!shouldShowMaya || route.page === "coach" || (route.page === "practice" && route.subtype === "test-day")) {
     mayaTeacherMount.innerHTML = "";
     return;
@@ -1202,10 +1214,12 @@ function renderMayaTeacher(route = routeInfo()) {
   const statusLabel = teacher.voiceStatus === "connected" ? "Voice connected" : teacher.voiceStatus === "connecting" ? "Connecting..." : "Voice offline";
   mayaTeacherMount.innerHTML = `
     <aside class="maya-teacher ${teacher.open ? "is-open" : ""}" aria-label="Professor Maya AI teacher">
-      <button class="maya-teacher__bubble" type="button" data-maya-toggle aria-expanded="${teacher.open ? "true" : "false"}">
-        <span>MB</span>
-        <strong>Ask Maya</strong>
-      </button>
+      ${lessonReadingMode ? "" : `
+        <button class="maya-teacher__bubble" type="button" data-maya-toggle aria-expanded="${teacher.open ? "true" : "false"}">
+          <span>MB</span>
+          <strong>Ask Maya</strong>
+        </button>
+      `}
       ${teacher.open ? `
         <section class="maya-teacher__panel" role="dialog" aria-label="Talk with Professor Maya">
           <div class="panel__head">
@@ -1563,6 +1577,7 @@ function renderApp() {
   const route = routeInfo();
   document.body.dataset.route = route.page;
   document.body.classList.toggle("test-day-active", route.page === "practice" && route.subtype === "test-day");
+  document.body.classList.toggle("lesson-reading-active", route.page === "learn" && route.id && route.id !== "content" && !findQuestionTypeLesson(route.id));
   if (notificationBell) {
     const unread = unreadNotifications();
     notificationBell.textContent = String(unread);
@@ -2336,224 +2351,200 @@ function renderLessonCheckQuestion(lesson, question, checkState) {
   `;
 }
 
-function renderLessonPlayer(lesson) {
-  ensureLessonPlayback(lesson);
-  const progress = ensureLessonProgress(lesson.id);
-  const linkedQuestions = lessonDrillQuestions(lesson, 5);
-  const activeScene = lesson.scenes[lessonPlaybackState.sceneIndex];
-  const progressPercent = `${((lessonPlaybackState.sceneIndex + 1) / lesson.scenes.length) * 100}%`;
-  const quiz = lesson.quiz;
-  const quizState = progress.quiz || {};
-  const checkState = progress.checks?.[linkedQuestions[0]?.id] || null;
-  // After this HTML is inserted, mount the rendered MP4 (if present) at
-  // the top of the player. If the MP4 isn't on disk yet, this is a silent
-  // no-op and the animated lesson UI below remains the visible state.
-  if (!lesson.videoPath && typeof window !== "undefined" && window.JESSI_LESSON_VIDEOS) {
-    const targetId = lesson.id;
-    requestAnimationFrame(() => {
-      const slot = document.querySelector(`[data-mp4-slot="${targetId}"]`);
-      if (slot) {
-        window.JESSI_LESSON_VIDEOS.mountLessonVideo(slot, targetId, { prepend: true });
-      }
-    });
+function renderLessonPrimaryMedia(lesson) {
+  if (lesson.videoPath) {
+    return `<video class="lesson-flow-video" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>`;
+  }
+  if (lesson.youtubeVideos?.length) {
+    return renderLessonExternalVideos(lesson);
+  }
+  const firstScene = lesson.scenes?.[0];
+  return `
+    <section class="lesson-flow-storyboard">
+      <p class="mini-card__label">Animated lesson board</p>
+      <h3>${firstScene?.title || lesson.title}</h3>
+      <p>${firstScene?.explanation || lesson.summary}</p>
+      ${firstScene?.storyboard ? `<div>${firstScene.storyboard}</div>` : ""}
+    </section>
+  `;
+}
+
+function renderLessonPracticeLinks(lesson, linkedQuestions) {
+  if (!linkedQuestions.length) return "";
+  return `
+    <section class="lesson-flow-section lesson-flow-practice">
+      <h3>Practice Questions</h3>
+      <p>Open one original JessiPreps challenge, then keep going through the linked drill when you are ready.</p>
+      <div class="lesson-practice-links">
+        ${linkedQuestions.map((question, index) => `
+          <button type="button" data-lesson-challenge-question="${question.id}">
+            <span>Challenge ${index + 1}</span>
+            <strong>${question.family}</strong>
+            <small>${question.difficulty} · ${question.timingTarget || 90}s target</small>
+          </button>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderLessonChallengeModal(lesson, question) {
+  if (!question) return "";
+  if (lessonFlowState.challengeViewOnly) {
+    return `
+      <aside class="lesson-flow-overlay" role="dialog" aria-label="View practice question">
+        <section class="lesson-flow-modal lesson-flow-modal--wide">
+          <div class="panel__head">
+            <div>
+              <p class="mini-card__label">${question.section} · ${question.family}</p>
+              <h3>${question.question}</h3>
+            </div>
+            <button class="icon-button" type="button" data-close-lesson-challenge aria-label="Close practice question">×</button>
+          </div>
+          <p>${question.prompt}</p>
+          <ol class="lesson-preview-choices">${question.options.map((choice) => `<li>${choice}</li>`).join("")}</ol>
+          <div class="lesson-flow-modal__actions">
+            <button class="button button--ghost" type="button" data-close-lesson-challenge>Back</button>
+            <a class="button button--primary" href="${lessonDrillHref(lesson)}">Start challenge</a>
+          </div>
+        </section>
+      </aside>
+    `;
   }
   return `
-    <article class="panel panel--wide lesson-detail-shell">
-      <aside class="lesson-toc">
-        <button class="is-active" type="button" data-scroll-target="intro">Intro</button>
-        <button type="button" data-scroll-target="concept">Concept</button>
-        <button type="button" data-scroll-target="example">Worked Example</button>
-        <button type="button" data-scroll-target="traps">Trap Warnings</button>
-        <button type="button" data-scroll-target="mastery">Mastery Drill</button>
-        <button type="button" data-scroll-target="reflection">Reflection</button>
-      </aside>
-      <main class="lesson-content">
-        <nav class="lesson-breadcrumb" aria-label="Lesson breadcrumb">
-          <a href="#/learn">Learn</a>
-          <span>/</span>
-          <a href="#/learn">${lesson.track}</a>
-          <span>/</span>
-          <strong>${lesson.title}</strong>
-        </nav>
+    <aside class="lesson-flow-overlay" role="dialog" aria-label="Start practice challenge">
+      <section class="lesson-flow-modal">
         <div class="panel__head">
           <div>
-            <p class="mini-card__label">${lesson.track}</p>
+            <p class="mini-card__label">${question.section} · ${question.family}</p>
+            <h3>${question.family} challenge</h3>
+          </div>
+          <button class="icon-button" type="button" data-close-lesson-challenge aria-label="Close challenge">×</button>
+        </div>
+        <p>Start this challenge to track your performance, eliminations, flag, timing, and review.</p>
+        <div class="lesson-flow-modal__meta">
+          <span>${question.difficulty}</span>
+          <span>${question.timingTarget || 90}s target</span>
+          <span>${lessonPracticeFocus(lesson)}</span>
+        </div>
+        <div class="lesson-flow-modal__actions">
+          <a class="button button--primary" href="${lessonDrillHref(lesson)}">Start challenge</a>
+          <button class="button button--ghost" type="button" data-view-lesson-question>View only</button>
+          <button class="button button--ghost" type="button" data-close-lesson-challenge>Cancel</button>
+        </div>
+      </section>
+    </aside>
+  `;
+}
+
+function renderLessonNotesPanel(lesson) {
+  if (!lessonFlowState.notesOpen) return "";
+  const saved = state.lessonNotes?.[lesson.id]?.text || "";
+  return `
+    <aside class="lesson-flow-overlay" role="dialog" aria-label="Lesson notes">
+      <section class="lesson-flow-modal lesson-flow-modal--wide">
+        <div class="panel__head">
+          <div>
+            <p class="mini-card__label">Lesson notes</p>
             <h3>${lesson.title}</h3>
           </div>
-          <div class="lesson-save-stack">
-            <span class="status-pill ${progress.complete ? "is-done" : ""}">${progress.complete ? "Mastered" : `${progress.masteryWins}/${lesson.masteryThreshold} mastery wins`}</span>
-            <span class="status-pill" title="Auto-saved lesson progress and local practice data.">${lastSavedLabel()}</span>
-          </div>
+          <button class="icon-button" type="button" data-close-lesson-notes aria-label="Close notes">×</button>
         </div>
-        ${lesson.videoPath ? `<video class="lesson-mp4" controls preload="metadata" playsinline src="${lesson.videoPath}"></video>` : ""}
-        <div class="lesson-mp4-slot" data-mp4-slot="${lesson.id}"></div>
-        ${renderLessonExternalVideos(lesson)}
-        <details id="intro" class="lesson-accordion" open>
-          <summary>Intro and video</summary>
+        <textarea class="lesson-notes-textarea" rows="10" data-lesson-note-input="${lesson.id}" placeholder="Add your note...">${escapeHtml(saved)}</textarea>
+        <div class="lesson-flow-modal__actions">
+          <button class="button button--primary" type="button" data-save-lesson-note="${lesson.id}">Save note</button>
+          <button class="button button--ghost" type="button" data-close-lesson-notes>Cancel</button>
+        </div>
+      </section>
+    </aside>
+  `;
+}
+
+function renderLessonMenuPanel() {
+  if (!lessonFlowState.menuOpen) return "";
+  return `
+    <aside class="lesson-flow-menu" role="dialog" aria-label="Lesson display menu">
+      <button type="button" data-lesson-dark-mode>${state.settings.darkMode ? "Light mode" : "Dark mode"}</button>
+      <button type="button" data-lesson-fullscreen>Full screen</button>
+    </aside>
+  `;
+}
+
+function renderLessonPlayer(lesson) {
+  ensureLessonPlayback(lesson);
+  if (lessonFlowState.lessonId !== lesson.id) {
+    lessonFlowState = { lessonId: lesson.id, notesOpen: false, menuOpen: false, challengeQuestionId: null, challengeViewOnly: false };
+  }
+  const progress = ensureLessonProgress(lesson.id);
+  const linkedQuestions = lessonDrillQuestions(lesson, 5);
+  const challengeQuestion = linkedQuestions.find((question) => question.id === lessonFlowState.challengeQuestionId);
+  const neighbors = lessonNeighbors(lesson);
+  return `
+    <article class="lesson-flow-shell">
+      <header class="lesson-flow-topbar">
+        <a class="icon-button" href="#/learn" aria-label="Close lesson">×</a>
+        <strong>${lesson.track}</strong>
+        <nav aria-label="Lesson tools">
+          <button class="icon-button" type="button" data-lesson-ask aria-label="Ask Professor Maya">?</button>
+          <button class="icon-button" type="button" data-lesson-notes aria-label="Open lesson notes">✎</button>
+          <button class="icon-button" type="button" data-lesson-menu aria-label="Open lesson menu">⋯</button>
+        </nav>
+      </header>
+      ${renderLessonMenuPanel()}
+      <main class="lesson-reader">
+        <header class="lesson-reader__title">
+          <h2>${lesson.title}</h2>
+          <button class="bookmark-button ${isBookmarked(lesson.id) ? "is-on" : ""}" type="button" data-bookmark="${lesson.id}" data-bookmark-type="lesson">${isBookmarked(lesson.id) ? "Saved" : "Save"}</button>
+        </header>
+        ${renderLessonPrimaryMedia(lesson)}
+        <section class="lesson-flow-section">
           <p>${lesson.summary}</p>
-          <div class="video-status-strip">
-            <span class="status-pill">${lesson.videoStatus || "script-ready"}</span>
-            <span class="muted">${lesson.youtubeVideos?.length ? `${lesson.youtubeVideos.length} topic video${lesson.youtubeVideos.length === 1 ? "" : "s"} linked to this lesson.` : lesson.videoPath ? "MP4 sample mounts above when available." : "Video-ready script and storyboard are prepared."}</span>
-          </div>
-          <div class="video-stage">
-            <p class="mini-card__label">Now playing</p>
-            <h4>${activeScene.title}</h4>
-            <p>${activeScene.explanation}</p>
-            <div class="video-stage__story">${activeScene.storyboard}</div>
-            <div class="video-stage__cue">${activeScene.actionCue}</div>
-          </div>
-          <div class="video-controls">
-            <button class="button button--ghost" data-video-nav="prev" ${lessonPlaybackState.sceneIndex === 0 ? "disabled" : ""}>Back</button>
-            <button class="button button--primary" data-video-toggle="true">${lessonPlaybackState.playing ? "Pause lesson" : "Play lesson"}</button>
-            <button class="button button--ghost" data-video-nav="next" ${lessonPlaybackState.sceneIndex === lesson.scenes.length - 1 ? "disabled" : ""}>Next</button>
-          </div>
-          <div class="video-progress"><span style="width:${progressPercent}"></span></div>
-        </details>
-        <details id="concept" class="lesson-accordion" open>
-          <summary>Concept</summary>
-          <div class="scene-stack">${lesson.scenes.slice(0, 2).map((scene) => `<section class="scene-card"><h4>${scene.title}</h4><p>${scene.explanation}</p><div class="scene-card__cue">${scene.actionCue}</div></section>`).join("")}</div>
-          ${lesson.conceptSummary ? `<div class="recommendation-box"><strong>Concept summary:</strong> ${lesson.conceptSummary}</div>` : ""}
-          ${lesson.learningObjectives?.length ? `
-            <section class="lesson-depth-grid">
-              <article class="lesson-depth-card">
-                <p class="mini-card__label">Learning targets</p>
-                <ul>${lesson.learningObjectives.map((objective) => `<li>${objective}</li>`).join("")}</ul>
-              </article>
-              <article class="lesson-depth-card lesson-depth-card--accent">
-                <p class="mini-card__label">Why this matters</p>
-                <p>${lesson.whyItMatters}</p>
-                <strong>${lesson.coreIdea}</strong>
-              </article>
-            </section>
-          ` : ""}
-          ${lesson.methodSteps ? `
-            <section class="content-boost-card">
-              <p class="mini-card__label">Professor Maya method</p>
-              <ol>${lesson.methodSteps.map((step) => `<li>${step}</li>`).join("")}</ol>
-            </section>
-          ` : ""}
-          ${lesson.coldReadPrompts?.length || lesson.decisionTree?.length ? `
-            <section class="lesson-depth-grid">
-              ${lesson.coldReadPrompts?.length ? `
-                <article class="lesson-depth-card">
-                  <p class="mini-card__label">Ask yourself first</p>
-                  <ul>${lesson.coldReadPrompts.map((prompt) => `<li>${prompt}</li>`).join("")}</ul>
-                </article>
-              ` : ""}
-              ${lesson.decisionTree?.length ? `
-                <article class="lesson-depth-card">
-                  <p class="mini-card__label">Decision tree</p>
-                  <ol>${lesson.decisionTree.map((step) => `<li>${step}</li>`).join("")}</ol>
-                </article>
-              ` : ""}
-            </section>
-          ` : ""}
-        </details>
-        <details id="example" class="lesson-accordion">
-          <summary>Worked Example</summary>
+        </section>
+        <section class="lesson-flow-section">
+          <h3>What this trains</h3>
+          <p>${lesson.conceptSummary || lesson.coreIdea}</p>
+          ${lesson.learningObjectives?.length ? `<ul>${lesson.learningObjectives.map((objective) => `<li>${objective}</li>`).join("")}</ul>` : ""}
+        </section>
+        <section class="lesson-flow-section">
+          <h3>Professor Maya method</h3>
+          ${lesson.methodSteps?.length ? `<ol>${lesson.methodSteps.map((step) => `<li>${step}</li>`).join("")}</ol>` : ""}
+          ${lesson.whyItMatters ? `<p><strong>Why it matters:</strong> ${lesson.whyItMatters}</p>` : ""}
+        </section>
+        <section class="lesson-flow-section">
+          <h3>Worked example</h3>
           <p><strong>Prompt:</strong> ${lesson.workedExample.prompt}</p>
           <p>${lesson.workedExample.reasoning}</p>
-          ${lesson.exampleWalkthrough?.length ? `
-            <section class="walkthrough-stack">
-              ${lesson.exampleWalkthrough.map((step) => `
-                <article class="walkthrough-step">
-                  <span>${step.label}</span>
-                  <p>${step.text}</p>
-                </article>
-              `).join("")}
-            </section>
-          ` : ""}
-          ${lesson.professorNotes ? `<div class="scene-stack">${lesson.professorNotes.map((note) => `<section class="scene-card"><h4>Teaching note</h4><p>${note}</p></section>`).join("")}</div>` : ""}
-        </details>
-        <details id="traps" class="lesson-accordion">
-          <summary>Trap Warnings</summary>
+          ${lesson.exampleWalkthrough?.length ? `<ol class="lesson-flow-walkthrough">${lesson.exampleWalkthrough.map((step) => `<li><strong>${step.label}</strong><span>${step.text}</span></li>`).join("")}</ol>` : ""}
+        </section>
+        <section class="lesson-flow-section">
+          <h3>Trap warnings</h3>
           <p>${lesson.trapExplanation}</p>
-          ${lesson.trapWarnings ? `<ul class="trap-list">${lesson.trapWarnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>` : ""}
-          ${lesson.errorClinic?.length ? `
-            <section class="error-clinic-grid">
-              ${lesson.errorClinic.map((entry) => `
-                <article class="error-clinic-card">
-                  <p class="mini-card__label">If this happens</p>
-                  <h4>${entry.symptom}</h4>
-                  <p><strong>Why:</strong> ${entry.cause}</p>
-                  <p><strong>Fix now:</strong> ${entry.fix}</p>
-                </article>
-              `).join("")}
-            </section>
-          ` : ""}
-        </details>
-        <details id="mastery" class="lesson-accordion" open>
-          <summary>Knowledge check + mastery drill</summary>
-          ${lesson.miniDrill ? `
-            <section class="content-boost-card">
-              <p class="mini-card__label">Mini drill</p>
-              <h4>${lesson.miniDrill.prompt}</h4>
-              <ol>${lesson.miniDrill.steps.map((step) => `<li>${step}</li>`).join("")}</ol>
-              <p class="microcopy">${lesson.miniDrill.successRule}</p>
-            </section>
-          ` : ""}
-          ${lesson.timingPlan?.length || lesson.masteryCriteria?.length ? `
-            <section class="lesson-depth-grid">
-              ${lesson.timingPlan?.length ? `
-                <article class="lesson-depth-card">
-                  <p class="mini-card__label">Timing plan</p>
-                  <ol>${lesson.timingPlan.map((step) => `<li>${step}</li>`).join("")}</ol>
-                </article>
-              ` : ""}
-              ${lesson.masteryCriteria?.length ? `
-                <article class="lesson-depth-card lesson-depth-card--accent">
-                  <p class="mini-card__label">You own it when</p>
-                  <ul>${lesson.masteryCriteria.map((criterion) => `<li>${criterion}</li>`).join("")}</ul>
-                </article>
-              ` : ""}
-            </section>
-          ` : ""}
-          ${quiz ? `
-            <section class="quiz-card">
-              <p class="mini-card__label">Checkpoint</p>
-              <h4>${quiz.prompt}</h4>
-              <div class="choice-stack">
-                ${quiz.choices.map((choice, index) => {
-                  const answered = quizState.choice !== undefined;
-                  const isChoice = quizState.choice === index;
-                  const klass = answered && isChoice ? (index === quiz.answer ? "is-right" : "is-wrong") : "";
-                  const label = answered
-                    ? (index === quiz.answer ? "Correct answer" : "Trap answer: this does not protect the method.")
-                    : `Answer choice ${String.fromCharCode(65 + index)}`;
-                  return `<button class="choice-button ${klass}" type="button" data-lesson-quiz-choice="${lesson.id}" data-choice="${index}" aria-label="${label}">${String.fromCharCode(65 + index)}. ${choice}</button>`;
-                }).join("")}
-              </div>
-              ${quizState.choice !== undefined ? `
-                <div class="answer-feedback is-visible">
-                  <strong>${quizState.choice === quiz.answer ? "Correct." : "Not quite."}</strong>
-                  <p>${quizState.choice === quiz.answer ? quiz.explanation : "That answer is a trap because it does not protect the method. Name the task before reading answer choices, then try again."}</p>
-                </div>
-              ` : `<p class="microcopy">Choose an answer to check your method. Nothing is revealed until you click.</p>`}
-            </section>
-          ` : ""}
-          ${linkedQuestions[0] ? renderLessonCheckQuestion(lesson, linkedQuestions[0], checkState) : `<p class="muted">Knowledge check will appear after the linked question bank loads.</p>`}
-          <a class="button button--primary" href="${lessonDrillHref(lesson)}">Open 3-5 question mastery drill</a>
-        </details>
-        <details class="lesson-accordion">
-          <summary>Script and storyboard</summary>
-          <p>${lesson.script || "Video script is being prepared."}</p>
-          <div class="scene-stack">
-            ${(lesson.storyboard || []).map((beat) => `<section class="scene-card"><h4>Beat ${beat.beat}: ${beat.title}</h4><p>${beat.board}</p><div class="scene-card__cue">${beat.caption}</div></section>`).join("")}
-          </div>
-        </details>
-        <details id="reflection" class="lesson-accordion">
-          <summary>Reflection</summary>
+          ${lesson.trapWarnings?.length ? `<ul>${lesson.trapWarnings.map((warning) => `<li>${warning}</li>`).join("")}</ul>` : ""}
+          ${lesson.errorClinic?.length ? `<div class="lesson-flow-errors">${lesson.errorClinic.map((entry) => `<article><strong>${entry.symptom}</strong><span>${entry.cause}</span><em>${entry.fix}</em></article>`).join("")}</div>` : ""}
+        </section>
+        <section class="lesson-flow-section">
+          <h3>Before you practice</h3>
+          ${lesson.coldReadPrompts?.length ? `<ul>${lesson.coldReadPrompts.map((prompt) => `<li>${prompt}</li>`).join("")}</ul>` : ""}
+          ${lesson.timingPlan?.length ? `<p><strong>Timing plan:</strong> ${lesson.timingPlan.join(" ")}</p>` : ""}
+        </section>
+        ${renderLessonPracticeLinks(lesson, linkedQuestions)}
+        <section class="lesson-flow-section lesson-flow-reflection">
+          <h3>Reflection</h3>
           <label class="br-field br-field--wide"><span>${lesson.journalPrompt || "What is one trap you would now recognize?"}</span><textarea rows="4" data-lesson-reflection="${lesson.id}" placeholder="Write one reusable rule you will use next time."></textarea></label>
           <button class="button button--primary" type="button" data-save-lesson-reflection="${lesson.id}">Save to journal</button>
-        </details>
+        </section>
       </main>
-      <aside class="lesson-progress-rail">
-        ${renderDonut(Math.min(100, Math.round((progress.masteryWins / Math.max(1, lesson.masteryThreshold)) * 100)), "mastery wins", `${progress.masteryWins}/${lesson.masteryThreshold}`)}
-        <p class="microcopy">Mastery wins come from the checkpoint, lesson example, and linked drill.</p>
-        <a class="button button--ghost" href="${lesson.nextLessonId ? `#/learn/${lesson.nextLessonId}` : "#/practice/timed"}">Next lesson</a>
-        <button class="button button--primary" data-complete-lesson="${lesson.id}">${progress.masteryWins < lesson.masteryThreshold ? `Mark complete (${progress.masteryWins}/${lesson.masteryThreshold})` : "Pass mastery gate"}</button>
-      </aside>
+      <footer class="lesson-flow-footer">
+        <a class="icon-button ${neighbors.previous ? "" : "is-disabled"}" href="${neighbors.previous ? `#/learn/${neighbors.previous.id}` : "#/learn"}" aria-label="Previous lesson">←</a>
+        <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}">
+          <span>${progress.complete ? "✓" : ""}</span>
+          <strong>${progress.complete ? "Done" : "Mark done"}</strong>
+        </button>
+        <a class="icon-button ${neighbors.next ? "" : "is-disabled"}" href="${neighbors.next ? `#/learn/${neighbors.next.id}` : "#/practice/timed"}" aria-label="Next lesson">→</a>
+      </footer>
     </article>
+    ${renderLessonNotesPanel(lesson)}
+    ${renderLessonChallengeModal(lesson, challengeQuestion)}
   `;
 }
 
@@ -5062,6 +5053,98 @@ function wireInteractions(route) {
         body: `${lesson?.title || "Lesson"} was added to your wrong-answer journal as a reusable rule.`,
         read: false,
       });
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-ask]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mayaTeacher.open = true;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-notes]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.notesOpen = true;
+      lessonFlowState.menuOpen = false;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-close-lesson-notes]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.notesOpen = false;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-save-lesson-note]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.saveLessonNote;
+      const text = pageMount.querySelector(`[data-lesson-note-input="${lessonId}"]`)?.value.trim() || "";
+      state.lessonNotes[lessonId] = { text, updatedAt: new Date().toISOString() };
+      lessonFlowState.notesOpen = false;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-menu]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.menuOpen = !lessonFlowState.menuOpen;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-dark-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.settings.darkMode = !state.settings.darkMode;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-fullscreen]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (document.fullscreenElement) await document.exitFullscreen?.();
+      else await document.documentElement.requestFullscreen?.();
+      lessonFlowState.menuOpen = false;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-lesson-challenge-question]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.challengeQuestionId = button.dataset.lessonChallengeQuestion;
+      lessonFlowState.challengeViewOnly = false;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-view-lesson-question]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.challengeViewOnly = true;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-close-lesson-challenge]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lessonFlowState.challengeQuestionId = null;
+      lessonFlowState.challengeViewOnly = false;
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-toggle-lesson-done]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lessonId = button.dataset.toggleLessonDone;
+      const progress = ensureLessonProgress(lessonId);
+      progress.complete = !progress.complete;
+      state.lessonProgress[lessonId] = progress;
       saveState();
       renderApp();
     });
