@@ -110,6 +110,7 @@ function defaultState() {
       dailyMinutes: 45,
     },
     officialLogs: [],
+    testAttempts: [],
     bookmarks: {},
     studyFocus: "auto",
     adaptiveMode: "weakness",
@@ -160,15 +161,29 @@ function defaultState() {
     },
     answerLog: [],
     testDay: {
-      mode: "strict",
+      mode: "timed",
       active: false,
+      attemptId: "",
+      phase: "setup",
+      startedAt: "",
+      completedAt: "",
+      setup: {
+        sectionType: "LR",
+        mode: "timed",
+        length: "10",
+      },
+      sections: [],
       sectionIndex: 0,
       questionIndex: 0,
+      blindReviewIndex: 0,
       sectionStartedAt: "",
       sectionEndsAt: "",
       sectionSubmitted: {},
       fullTestSubmitted: false,
       answers: {},
+      blindReviewAnswers: {},
+      confidenceRatings: {},
+      blindReviewSubmitted: false,
       eliminated: {},
       flagged: {},
       highlights: {},
@@ -238,6 +253,7 @@ function loadState() {
         plan: { ...base.plan, ...(parsed.plan || {}) },
         onboarding: { ...base.onboarding, ...(parsed.onboarding || {}) },
         officialLogs: parsed.officialLogs || [],
+        testAttempts: parsed.testAttempts || [],
         bookmarks: parsed.bookmarks || {},
         studyFocus: parsed.studyFocus || base.studyFocus,
         adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
@@ -264,7 +280,12 @@ function loadState() {
         coachMessages: parsed.coachMessages || [],
         mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
         answerLog: parsed.answerLog || [],
-        testDay: { ...base.testDay, ...(parsed.testDay || {}), prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) } },
+        testDay: {
+          ...base.testDay,
+          ...(parsed.testDay || {}),
+          setup: { ...base.testDay.setup, ...(parsed.testDay?.setup || {}) },
+          prefs: { ...base.testDay.prefs, ...(parsed.testDay?.prefs || {}) },
+        },
         drillInterface: {
           ...base.drillInterface,
           ...(parsed.drillInterface || {}),
@@ -405,7 +426,8 @@ function averageTimePerQuestion() {
 }
 
 function blindReviewGap() {
-  const reviewed = (state.journal || [])
+  const journalReviewed = (state.journal || [])
+    .filter((entry) => !entry.testAttemptId)
     .map((entry) => {
       const question = findQuestion(entry.questionId);
       const timedChoice = state.attempts[entry.questionId]?.choice;
@@ -417,6 +439,19 @@ function blindReviewGap() {
       };
     })
     .filter(Boolean);
+  const testReviewed = (state.testAttempts || []).flatMap((attempt) =>
+    (attempt.questions || []).map((question) => {
+      const key = question.key;
+      const timedChoice = attempt.originalAnswers?.[key];
+      const blindChoice = attempt.blindReviewAnswers?.[key];
+      if (timedChoice === undefined || blindChoice === undefined) return null;
+      return {
+        timedRight: timedChoice === question.correctAnswer,
+        blindRight: blindChoice === question.correctAnswer,
+      };
+    }).filter(Boolean)
+  );
+  const reviewed = [...journalReviewed, ...testReviewed];
   if (!reviewed.length) return null;
   const timedAccuracy = Math.round((reviewed.filter((entry) => entry.timedRight).length / reviewed.length) * 100);
   const blindAccuracy = Math.round((reviewed.filter((entry) => entry.blindRight).length / reviewed.length) * 100);
@@ -439,6 +474,12 @@ function missedQuestionCount() {
 
 function reviewQueueCount() {
   return (state.journal || []).filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending").length;
+}
+
+function recentTestAttempts(limit = 5) {
+  return [...(state.testAttempts || [])]
+    .sort((a, b) => new Date(b.completedAt || b.startedAt || 0) - new Date(a.completedAt || a.startedAt || 0))
+    .slice(0, limit);
 }
 
 function unreadNotifications() {
@@ -490,7 +531,15 @@ function smartDrillAccuracy() {
 }
 
 function recentSectionRows(limit = 5) {
-  return (state.answerLog || []).slice(0, limit).map((attempt) => {
+  const testRows = recentTestAttempts(limit).map((attempt) => ({
+    date: attempt.completedAt ? new Date(attempt.completedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Today",
+    type: attempt.sectionType === "MIXED" ? "LR/RC" : attempt.sectionType,
+    family: attempt.sectionType === "MIXED" ? "Mixed Drill" : `${attempt.sectionType === "RC" ? "Reading Comprehension" : "Logical Reasoning"} ${attempt.length === "full" ? "section" : "set"}`,
+    score: `${attempt.score}/${attempt.questions.filter((question) => question.scored).length}`,
+    accuracy: `${attempt.accuracy}%`,
+    href: "#/practice/test-day/results",
+  }));
+  const answerRows = (state.answerLog || []).map((attempt) => {
     const question = findQuestion(attempt.questionId);
     return {
       date: attempt.answeredAt ? new Date(attempt.answeredAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Today",
@@ -501,6 +550,7 @@ function recentSectionRows(limit = 5) {
       href: "#/review",
     };
   });
+  return [...testRows, ...answerRows].slice(0, limit);
 }
 
 function latestExplanationQuestion() {
@@ -1077,7 +1127,7 @@ function buildDrillAnalysis(family) {
 }
 
 function changedAnswerStats() {
-  const entries = state.journal.filter((entry) => entry.secondPassAnswer);
+  const entries = state.journal.filter((entry) => entry.secondPassAnswer && !entry.testAttemptId);
   const stats = { rightToWrong: 0, wrongToRight: 0, sameWrong: 0, sameRight: 0 };
   entries.forEach((entry) => {
     const question = findQuestion(entry.questionId);
@@ -1091,6 +1141,19 @@ function changedAnswerStats() {
     else if (!timedRight && brRight) stats.wrongToRight += 1;
     else if (!timedRight && !brRight) stats.sameWrong += 1;
     else stats.sameRight += 1;
+  });
+  (state.testAttempts || []).forEach((attempt) => {
+    (attempt.questions || []).forEach((question) => {
+      const timed = attempt.originalAnswers?.[question.key];
+      const br = attempt.blindReviewAnswers?.[question.key];
+      if (timed === undefined || br === undefined) return;
+      const timedRight = timed === question.correctAnswer;
+      const brRight = br === question.correctAnswer;
+      if (timedRight && !brRight) stats.rightToWrong += 1;
+      else if (!timedRight && brRight) stats.wrongToRight += 1;
+      else if (!timedRight && !brRight) stats.sameWrong += 1;
+      else stats.sameRight += 1;
+    });
   });
   return stats;
 }
@@ -3206,18 +3269,58 @@ function testQuestionPool(sectionType, count, seed = 0) {
       correctAnswer: source.answer,
       explanation: source.explanation,
       trapPattern: source.trapPattern || source.family,
+      mistakeReason: source.mistakeReason || "Wrong answer trap",
+      scored: true,
     };
   });
 }
 
+function mixedTestQuestionPool(count, seed = 0) {
+  const lrCount = Math.ceil(count / 2);
+  const rcCount = Math.floor(count / 2);
+  const lr = testQuestionPool("LR", lrCount, seed);
+  const rc = testQuestionPool("RC", rcCount, seed + 4);
+  return Array.from({ length: count }, (_, index) => (index % 2 === 0 ? lr.shift() : rc.shift())).filter(Boolean);
+}
+
+function normalizeTestMode(mode = "timed") {
+  if (mode === "strict") return "timed";
+  if (mode === "study") return "untimed";
+  return ["timed", "untimed", "blind-review"].includes(mode) ? mode : "timed";
+}
+
+function normalizedTestLength(length, sectionType = "LR") {
+  if (length === "full") return sectionType === "RC" ? 24 : 25;
+  return Math.max(5, Math.min(25, Number(length) || 10));
+}
+
+function buildTestSections(setup = state.testDay.setup || {}) {
+  const sectionType = setup.sectionType || "LR";
+  const length = setup.length || "10";
+  if (sectionType === "FULL") {
+    return [
+      { id: "s1", label: "Section 1", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 0) },
+      { id: "s2", label: "Section 2", type: "RC", name: "Reading Comprehension", scored: true, seconds: 35 * 60, questions: testQuestionPool("RC", 24, 3) },
+      { id: "break", label: "10-minute break", type: "BREAK", name: "Break", scored: false, seconds: 10 * 60, questions: [] },
+      { id: "s3", label: "Section 3", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 8) },
+      { id: "s4", label: "Section 4", type: "LR", name: "Variable Section", scored: false, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 16).map((question) => ({ ...question, scored: false })) },
+    ];
+  }
+  const count = normalizedTestLength(length, sectionType);
+  const isMixed = sectionType === "MIXED";
+  return [{
+    id: "s1",
+    label: "Section 1",
+    type: isMixed ? "MIXED" : sectionType,
+    name: isMixed ? "Mixed Drill" : sectionType === "RC" ? "Reading Comprehension" : "Logical Reasoning",
+    scored: true,
+    seconds: 35 * 60,
+    questions: isMixed ? mixedTestQuestionPool(count, 0) : testQuestionPool(sectionType, count, 0),
+  }];
+}
+
 function testSections() {
-  return [
-    { id: "s1", label: "Section 1", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 0) },
-    { id: "s2", label: "Section 2", type: "RC", name: "Reading Comprehension", scored: true, seconds: 35 * 60, questions: testQuestionPool("RC", 24, 3) },
-    { id: "break", label: "10-minute break", type: "BREAK", name: "Break", seconds: 10 * 60, questions: [] },
-    { id: "s3", label: "Section 3", type: "LR", name: "Logical Reasoning", scored: true, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 8) },
-    { id: "s4", label: "Section 4", type: "LR", name: "Variable Section", scored: false, seconds: 35 * 60, questions: testQuestionPool("LR", 25, 16) },
-  ];
+  return state.testDay.sections?.length ? state.testDay.sections : buildTestSections(state.testDay.setup);
 }
 
 function currentTestSection() {
@@ -3234,21 +3337,37 @@ function ensureTestSession() {
   const section = currentTestSection();
   const now = Date.now();
   state.testDay.active = true;
+  state.testDay.phase = "testing";
   state.testDay.fullTestSubmitted = false;
+  state.testDay.startedAt = state.testDay.startedAt || new Date(now).toISOString();
   state.testDay.sectionStartedAt = new Date(now).toISOString();
   state.testDay.sectionEndsAt = new Date(now + (section.seconds || 2100) * 1000).toISOString();
   saveState();
 }
 
-function resetTestSession(mode = state.testDay.mode || "strict") {
+function resetTestSession(config = state.testDay.setup || {}) {
+  const nextSetup = typeof config === "string"
+    ? { ...state.testDay.setup, mode: normalizeTestMode(config) }
+    : {
+        sectionType: config.sectionType || state.testDay.setup?.sectionType || "LR",
+        mode: normalizeTestMode(config.mode || state.testDay.setup?.mode || state.testDay.mode),
+        length: config.length || state.testDay.setup?.length || "10",
+      };
   const prefs = { ...state.testDay.prefs };
+  const now = new Date();
+  const sections = buildTestSections(nextSetup);
   state.testDay = {
     ...defaultState().testDay,
-    mode,
+    mode: nextSetup.mode,
     active: true,
+    phase: "testing",
+    attemptId: `test-attempt-${Date.now()}`,
+    setup: nextSetup,
+    sections,
     prefs,
-    sectionStartedAt: new Date().toISOString(),
-    sectionEndsAt: new Date(Date.now() + 35 * 60 * 1000).toISOString(),
+    startedAt: now.toISOString(),
+    sectionStartedAt: now.toISOString(),
+    sectionEndsAt: new Date(now.getTime() + 35 * 60 * 1000).toISOString(),
   };
   saveState();
 }
@@ -3265,10 +3384,15 @@ function startTestDayTimer() {
   if (!state.testDay.active || state.testDay.fullTestSubmitted) return;
   testDayTimer = setInterval(() => {
     const remaining = testSecondsRemaining();
-    if (remaining <= 0 && state.testDay.mode === "strict") {
+    if (remaining <= 0 && state.testDay.mode === "timed") {
       submitCurrentTestSection();
     } else {
-      renderApp();
+      const clock = document.querySelector("[data-test-clock]");
+      if (clock) {
+        const clockValue = state.testDay.mode === "timed" ? formatClock(remaining) : formatClock(testElapsedSeconds());
+        clock.textContent = clockValue;
+        clock.classList.toggle("is-danger", remaining < 0 && state.testDay.mode === "timed");
+      }
     }
   }, 1000);
 }
@@ -3284,6 +3408,12 @@ function formatClock(seconds) {
   const mins = Math.floor(safe / 60);
   const secs = safe % 60;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function testElapsedSeconds() {
+  const started = new Date(state.testDay.sectionStartedAt || state.testDay.startedAt || 0).getTime();
+  if (!started) return 0;
+  return Math.max(0, Math.round((Date.now() - started) / 1000));
 }
 
 function testAnswerKey(question) {
@@ -3386,6 +3516,7 @@ function highlightTextForQuestion(text, question) {
 }
 
 function submitCurrentTestSection() {
+  recordTestQuestionTime(currentTestQuestion());
   const section = currentTestSection();
   state.testDay.sectionSubmitted[section.id] = {
     submittedAt: new Date().toISOString(),
@@ -3396,8 +3527,9 @@ function submitCurrentTestSection() {
   if (nextIndex >= sections.length) {
     state.testDay.fullTestSubmitted = true;
     state.testDay.active = false;
+    state.testDay.phase = "blind-review";
     saveState();
-    location.hash = "#/practice/test-day/results";
+    location.hash = "#/practice/test-day/blind-review";
     return;
   }
   state.testDay.sectionIndex = nextIndex;
@@ -3410,23 +3542,58 @@ function submitCurrentTestSection() {
   location.hash = nextSection.type === "BREAK" ? "#/practice/test-day/break" : "#/practice/test-day";
 }
 
-function renderTestDirections() {
+function renderTestSetup() {
+  const setup = state.testDay.setup || defaultState().testDay.setup;
+  const modeCopy = {
+    timed: "Timed mode uses the 35-minute full-section clock and auto-submits at zero.",
+    untimed: "Untimed mode tracks elapsed time without pressuring you.",
+    "blind-review": "Blind Review practice gives you a first pass, then hides answers until your second pass is complete.",
+  };
   return `
     <section class="test-shell test-shell--directions">
       <article class="test-directions-card">
         <p class="mini-card__label">Original JessiPreps simulator</p>
-        <h2>Test-Day Mode</h2>
-        <p>This simulates the workflow and tools you need for test-day practice without copying LSAC branding, protected design, or official question text.</p>
+        <h2>Build a practice session</h2>
+        <p>Use original JessiPreps questions in a LawHub-style workflow: answer control first, Blind Review second, explanations only after both passes are done.</p>
+        <div class="test-setup-grid">
+          <label>
+            <span>Section type</span>
+            <select data-test-setup="sectionType">
+              <option value="LR" ${setup.sectionType === "LR" ? "selected" : ""}>Logical Reasoning</option>
+              <option value="RC" ${setup.sectionType === "RC" ? "selected" : ""}>Reading Comprehension</option>
+              <option value="MIXED" ${setup.sectionType === "MIXED" ? "selected" : ""}>Mixed Drill</option>
+              <option value="FULL" ${setup.sectionType === "FULL" ? "selected" : ""}>Full Practice Test</option>
+            </select>
+          </label>
+          <label>
+            <span>Mode</span>
+            <select data-test-setup="mode">
+              <option value="timed" ${setup.mode === "timed" ? "selected" : ""}>Timed</option>
+              <option value="untimed" ${setup.mode === "untimed" ? "selected" : ""}>Untimed</option>
+              <option value="blind-review" ${setup.mode === "blind-review" ? "selected" : ""}>Blind Review practice</option>
+            </select>
+          </label>
+          <label>
+            <span>Length</span>
+            <select data-test-setup="length" ${setup.sectionType === "FULL" ? "disabled" : ""}>
+              <option value="5" ${setup.length === "5" ? "selected" : ""}>5 questions</option>
+              <option value="10" ${setup.length === "10" ? "selected" : ""}>10 questions</option>
+              <option value="15" ${setup.length === "15" ? "selected" : ""}>15 questions</option>
+              <option value="full" ${setup.length === "full" ? "selected" : ""}>Full section</option>
+            </select>
+          </label>
+        </div>
         <div class="test-flow-strip">
-          <span>Directions</span><span>Section 1 · 35m</span><span>Section 2 · 35m</span><span>Break · 10m</span><span>Section 3 · 35m</span><span>Section 4 · 35m</span><span>Review</span>
+          <span>Setup</span><span>First pass</span><span>Review screen</span><span>Blind Review</span><span>Results</span>
         </div>
-        <div class="card-grid card-grid--two">
-          <section class="mini-card"><p class="mini-card__label">Practice Mode</p><h4>Untimed learning</h4><p>Use drills when you want immediate explanations and coaching.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Test-Day Mode</p><h4>No explanations during the section</h4><p>Timer, flags, review screen, answer elimination, and after-section analytics.</p></section>
+        <div class="card-grid card-grid--three">
+          <section class="mini-card"><p class="mini-card__label">Timed</p><h4>35:00 section clock</h4><p>Auto-submits when the section timer reaches zero.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Untimed</p><h4>Elapsed clock</h4><p>Track pacing without a deadline while still using the same tools.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Blind Review</p><h4>No answers shown early</h4><p>Second-pass answers stay separate from your first-pass choices.</p></section>
         </div>
+        <div class="recommendation-box"><strong>Selected mode:</strong> ${modeCopy[setup.mode] || modeCopy.timed}</div>
         <div class="dashboard-actions">
-          <button class="button button--primary" type="button" data-test-start="strict">Start strict test</button>
-          <button class="button button--ghost" type="button" data-test-start="study">Start study mode</button>
+          <button class="button button--primary" type="button" data-test-start-session>Start practice session</button>
           <a class="button button--ghost" href="#/practice">Back to practice</a>
         </div>
       </article>
@@ -3436,8 +3603,9 @@ function renderTestDirections() {
 
 function renderTestDayPage(route) {
   if (route.id === "results") return renderTestResults();
+  if (route.id === "blind-review") return renderTestBlindReview();
   if (route.id === "break" || currentTestSection().type === "BREAK") return renderTestBreak();
-  if (!state.testDay.active) return renderTestDirections();
+  if (!state.testDay.active) return renderTestSetup();
   ensureTestSession();
   if (route.id === "review") return renderTestReview();
   const section = currentTestSection();
@@ -3458,7 +3626,8 @@ function renderTestDayPage(route) {
     <section class="test-shell test-shell--${section.type.toLowerCase()} test-font-${prefs.fontSize} test-lines-${prefs.lineSpacing} test-theme-${prefs.theme} test-width-${prefs.passageWidth}">
       ${renderTestTopBar(section, question, remaining, overtime)}
       <main class="test-workspace">
-        ${section.type === "RC" ? renderTestRC(question, selected, eliminated) : renderTestLR(question, selected, eliminated)}
+        ${(question.sectionType || section.type) === "RC" ? renderTestRC(question, selected, eliminated) : renderTestLR(question, selected, eliminated)}
+        ${renderTestQuestionLineup(section)}
         <aside class="test-shortcuts" aria-label="Keyboard shortcuts">
           <strong>Shortcuts</strong>
           <span>A-E select</span>
@@ -3474,6 +3643,10 @@ function renderTestDayPage(route) {
 
 function renderTestTopBar(section, question, remaining, overtime) {
   const prefs = state.testDay.prefs;
+  const clockText = state.testDay.mode === "timed"
+    ? prefs.showTimer ? formatClock(remaining) : "Timer hidden"
+    : prefs.showTimer ? formatClock(testElapsedSeconds()) : "Timer hidden";
+  const clockLabel = state.testDay.mode === "timed" ? "remaining" : "elapsed";
   return `
     <header class="test-topbar">
       <div>
@@ -3482,7 +3655,8 @@ function renderTestTopBar(section, question, remaining, overtime) {
       </div>
       <div class="test-topbar__center">
         <span>Question ${state.testDay.questionIndex + 1} of ${section.questions.length}</span>
-        <strong class="${overtime ? "is-danger" : ""}">${prefs.showTimer ? formatClock(remaining) : "Timer hidden"}</strong>
+        <strong data-test-clock class="${overtime && state.testDay.mode === "timed" ? "is-danger" : ""}">${clockText}</strong>
+        <small>${clockLabel}</small>
       </div>
       <div class="test-topbar__actions">
         <button class="button button--ghost" type="button" data-test-directions>Directions</button>
@@ -3492,6 +3666,23 @@ function renderTestTopBar(section, question, remaining, overtime) {
       </div>
       ${state.testDay.settingsOpen ? renderTestSettingsPanel() : ""}
     </header>
+  `;
+}
+
+function renderTestQuestionLineup(section) {
+  return `
+    <nav class="test-question-lineup" aria-label="Question navigation">
+      ${section.questions.map((question, index) => {
+        const key = `${section.id}:${question.id}`;
+        const answered = state.testDay.answers[key] !== undefined;
+        const flagged = Boolean(state.testDay.flagged[key]);
+        return `
+          <button class="${index === state.testDay.questionIndex ? "is-current" : ""} ${answered ? "is-answered" : "is-unanswered"} ${flagged ? "is-flagged" : ""}" type="button" data-test-jump="${index}" aria-label="Question ${index + 1}${answered ? ", answered" : ", unanswered"}${flagged ? ", flagged" : ""}">
+            ${flagged ? "⚑" : ""}<span>${index + 1}</span>
+          </button>
+        `;
+      }).join("")}
+    </nav>
   `;
 }
 
@@ -3509,17 +3700,17 @@ function renderTestSettingsPanel() {
   `;
 }
 
-function renderTestLR(question, selected, eliminated) {
+function renderTestLR(question, selected, eliminated, options = {}) {
   return `
     <article class="test-question-panel">
       <section class="test-readable" data-readable="stimulus"><p>${highlightTextForQuestion(question.stimulus, question)}</p></section>
       <h3 class="test-readable" data-readable="stem">${highlightTextForQuestion(question.questionStem, question)}</h3>
-      ${renderTestChoices(question, selected, eliminated)}
+      ${renderTestChoices(question, selected, eliminated, options)}
     </article>
   `;
 }
 
-function renderTestRC(question, selected, eliminated) {
+function renderTestRC(question, selected, eliminated, options = {}) {
   const passage = question.passage;
   return `
     <article class="test-rc-layout">
@@ -3530,13 +3721,13 @@ function renderTestRC(question, selected, eliminated) {
       </section>
       <section class="test-question-panel">
         <h3 class="test-readable" data-readable="stem">${highlightTextForQuestion(question.questionStem, question)}</h3>
-        ${renderTestChoices(question, selected, eliminated)}
+        ${renderTestChoices(question, selected, eliminated, options)}
       </section>
     </article>
   `;
 }
 
-function renderTestChoices(question, selected, eliminated) {
+function renderTestChoices(question, selected, eliminated, { blindReview = false } = {}) {
   return `
     <div class="test-choices">
       ${question.choices.map((choice, index) => {
@@ -3545,8 +3736,8 @@ function renderTestChoices(question, selected, eliminated) {
         const isEliminated = eliminated.includes(index);
         return `
           <div class="test-choice ${isSelected ? "is-selected" : ""} ${isEliminated ? "is-eliminated" : ""}">
-            <button type="button" data-test-answer="${index}" aria-label="Select answer ${letter}"><span>${isSelected ? "●" : "○"}</span><strong>${letter}.</strong> ${choice}</button>
-            <button class="test-eliminate" type="button" data-test-eliminate="${index}">${isEliminated ? "Undo" : "Eliminate"}</button>
+            <button type="button" ${blindReview ? `data-test-br-answer="${index}"` : `data-test-answer="${index}"`} aria-label="Select answer ${letter}"><span>${isSelected ? "●" : "○"}</span><strong>${letter}.</strong> ${choice}</button>
+            ${blindReview ? "" : `<button class="test-eliminate" type="button" data-test-eliminate="${index}">${isEliminated ? "Undo" : "Eliminate"}</button>`}
           </div>
         `;
       }).join("")}
@@ -3568,7 +3759,7 @@ function renderTestBottomBar(section, flagged) {
 function renderTestReview() {
   const section = currentTestSection();
   const filter = state.testDay.reviewFilter || "all";
-  const unansweredTotal = unansweredInCurrentSection();
+  const unansweredTotal = currentSectionUnansweredCount();
   const flaggedTotal = section.questions.filter((question) => state.testDay.flagged[`${section.id}:${question.id}`]).length;
   const rows = section.questions.map((question, index) => {
     const key = `${section.id}:${question.id}`;
@@ -3605,6 +3796,76 @@ function renderTestReview() {
   `;
 }
 
+function testSessionItems({ scoredOnly = false } = {}) {
+  return testSections()
+    .filter((section) => section.type !== "BREAK")
+    .filter((section) => !scoredOnly || section.scored)
+    .flatMap((section) => section.questions.map((question) => ({
+      section,
+      question,
+      key: `${section.id}:${question.id}`,
+    })));
+}
+
+function answerLetter(choice) {
+  return choice === undefined || choice === null ? "Unanswered" : String.fromCharCode(65 + Number(choice));
+}
+
+function renderTestBlindReview() {
+  const items = testSessionItems();
+  if (!items.length) return renderTestSetup();
+  const index = Math.max(0, Math.min(items.length - 1, Number(state.testDay.blindReviewIndex || 0)));
+  const item = items[index];
+  const blindChoice = state.testDay.blindReviewAnswers[item.key];
+  const confidence = state.testDay.confidenceRatings[item.key] || "";
+  const completed = items.filter((entry) => state.testDay.blindReviewAnswers[entry.key] !== undefined && state.testDay.confidenceRatings[entry.key]).length;
+  return `
+    <section class="test-shell test-shell--blind-review">
+      <header class="test-topbar">
+        <div>
+          <strong>Blind Review</strong>
+          <span>${item.section.label} · ${item.section.name}</span>
+        </div>
+        <div class="test-topbar__center">
+          <span>Question ${index + 1} of ${items.length}</span>
+          <strong>${completed}/${items.length} reviewed</strong>
+        </div>
+        <div class="test-topbar__actions">
+          <span class="status-pill">Correct answers hidden</span>
+        </div>
+      </header>
+      <main class="test-workspace">
+        <article class="blind-review-shell">
+          <div class="recommendation-box">
+            <strong>Original answer:</strong> ${answerLetter(state.testDay.answers[item.key])}
+            ${state.testDay.flagged[item.key] ? " · flagged on first pass" : ""}
+          </div>
+          ${(item.question.sectionType || item.section.type) === "RC"
+            ? renderTestRC(item.question, blindChoice, [], { blindReview: true })
+            : renderTestLR(item.question, blindChoice, [], { blindReview: true })}
+          <section class="blind-review-confidence">
+            <p class="mini-card__label">Confidence</p>
+            ${["high", "medium", "low"].map((level) => `<button class="${confidence === level ? "is-active" : ""}" type="button" data-test-br-confidence="${level}">${level}</button>`).join("")}
+          </section>
+          <p class="microcopy">Blind Review keeps the correct answer hidden. Choose again from reasoning, not memory of the first pass.</p>
+        </article>
+        <nav class="test-question-lineup blind-review-lineup" aria-label="Blind Review navigation">
+          ${items.map((entry, itemIndex) => {
+            const answered = state.testDay.blindReviewAnswers[entry.key] !== undefined;
+            const rated = Boolean(state.testDay.confidenceRatings[entry.key]);
+            return `<button class="${itemIndex === index ? "is-current" : ""} ${answered && rated ? "is-answered" : "is-unanswered"}" type="button" data-test-br-jump="${itemIndex}" aria-label="Blind Review question ${itemIndex + 1}${answered && rated ? ", complete" : ", incomplete"}"><span>${itemIndex + 1}</span></button>`;
+          }).join("")}
+        </nav>
+      </main>
+      <footer class="test-bottombar test-bottombar--review">
+        <button class="button button--ghost" type="button" data-test-br-prev ${index === 0 ? "disabled" : ""}>Previous</button>
+        <button class="button button--ghost" type="button" data-test-br-next ${index === items.length - 1 ? "disabled" : ""}>Next</button>
+        <button class="button button--primary" type="button" data-test-submit-blind-review>Submit Blind Review</button>
+      </footer>
+    </section>
+  `;
+}
+
 function renderTestBreak() {
   return `
     <section class="test-shell test-shell--directions">
@@ -3618,27 +3879,47 @@ function renderTestBreak() {
   `;
 }
 
+function latestTestAttempt() {
+  return recentTestAttempts(1)[0] || null;
+}
+
+function testAttemptItems(attempt, { scoredOnly = false } = {}) {
+  return (attempt?.questions || []).filter((question) => !scoredOnly || question.scored);
+}
+
 function renderTestResults() {
-  const sections = testSections().filter((section) => section.type !== "BREAK");
-  const scored = sections.filter((section) => section.scored);
-  const all = scored.flatMap((section) => section.questions.map((question) => ({ section, question, key: `${section.id}:${question.id}` })));
-  const answered = all.filter((item) => state.testDay.answers[item.key] !== undefined);
-  const correct = answered.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer);
-  const missed = all.filter((item) => state.testDay.answers[item.key] !== item.question.correctAnswer);
-  const flagged = all.filter((item) => state.testDay.flagged[item.key]);
-  const unanswered = all.filter((item) => state.testDay.answers[item.key] === undefined);
-  const timed = all.map((item) => Number(state.testDay.timeSpent[item.key] || 0)).filter(Boolean);
-  const avgTime = timed.length ? Math.round(timed.reduce((sum, value) => sum + value, 0) / timed.length) : 0;
-  const byType = missed.reduce((acc, item) => {
-    acc[item.question.questionType] = (acc[item.question.questionType] || 0) + 1;
+  const attempt = latestTestAttempt();
+  if (!attempt) {
+    return `
+      <section class="test-results">
+        <article class="panel panel--wide">
+          <h2>No completed test attempt yet</h2>
+          <p>Finish a section and Blind Review first, then results will appear here.</p>
+          <a class="button button--primary" href="#/practice/test-day">Build a practice session</a>
+        </article>
+      </section>
+    `;
+  }
+  const all = testAttemptItems(attempt, { scoredOnly: true });
+  const missed = all.filter((question) => attempt.originalAnswers[question.key] !== question.correctAnswer);
+  const flagged = all.filter((question) => attempt.flaggedQuestions[question.key]);
+  const unanswered = all.filter((question) => attempt.originalAnswers[question.key] === undefined);
+  const timed = Object.values(attempt.timePerQuestion || {}).map(Number).filter((value) => Number.isFinite(value));
+  const byType = all.reduce((acc, question) => {
+    const bucket = acc[question.questionType] || { total: 0, correct: 0 };
+    bucket.total += 1;
+    if (attempt.originalAnswers[question.key] === question.correctAnswer) bucket.correct += 1;
+    acc[question.questionType] = bucket;
     return acc;
   }, {});
-  const missedReasons = missed.reduce((acc, item) => {
-    const reason = item.question.mistakeReason || "Wrong answer trap";
+  const missedReasons = missed.reduce((acc, question) => {
+    const reason = question.mistakeReason || "Wrong answer trap";
     acc[reason] = (acc[reason] || 0) + 1;
     return acc;
   }, {});
-  const topMissType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]?.[0] || adaptiveDrillTarget().weak.family;
+  const topMissType = Object.entries(byType)
+    .sort((a, b) => (b[1].total - b[1].correct) - (a[1].total - a[1].correct))[0]?.[0] || adaptiveDrillTarget().weak.family;
+  const flaggedCorrect = flagged.filter((question) => attempt.originalAnswers[question.key] === question.correctAnswer).length;
   return `
     <section class="test-results">
       <article class="panel panel--wide">
@@ -3647,51 +3928,195 @@ function renderTestResults() {
             <p class="mini-card__label">After-section analytics</p>
             <h2>Score / Review</h2>
           </div>
-          <button class="button button--primary" type="button" data-test-start="strict">Retake simulator</button>
+          <a class="button button--primary" href="#/practice/test-day">Build another session</a>
         </div>
         <div class="recommendation-box">
           <strong>Next fix:</strong> Save misses to the mistake bank, Blind Review ${topMissType}, then run a short adaptive drill before another timed section.
         </div>
         <div class="card-grid card-grid--four">
-          <section class="mini-card"><p class="mini-card__label">Raw score</p><h4>${correct.length}/${all.length}</h4><p>Scored sections only.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Accuracy</p><h4>${all.length ? Math.round((correct.length / all.length) * 100) : 0}%</h4><p>Original local questions.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Flagged accuracy</p><h4>${flagged.length ? Math.round((flagged.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length / flagged.length) * 100) : 0}%</h4><p>${flagged.length} flagged.</p></section>
-          <section class="mini-card"><p class="mini-card__label">Avg time / question</p><h4>${avgTime || 0}s</h4><p>${unanswered.length} unanswered.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Raw score</p><h4>${attempt.score}/${all.length}</h4><p>Scored questions only.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Accuracy</p><h4>${attempt.accuracy}%</h4><p>First-pass answers.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Time spent</p><h4>${formatClock(attempt.timeSpentSeconds || 0)}</h4><p>${attempt.averageTimePerQuestion || 0}s average.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Blind Review</p><h4>${attempt.blindReviewScore}/${all.length}</h4><p>${attempt.blindReviewGap} pt gap.</p></section>
+        </div>
+        <div class="card-grid card-grid--four">
+          <section class="mini-card"><p class="mini-card__label">Missed</p><h4>${missed.length}</h4><p>${unanswered.length} unanswered.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Flagged</p><h4>${flagged.length}</h4><p>${flagged.length ? `${Math.round((flaggedCorrect / flagged.length) * 100)}% accuracy` : "No flags used."}</p></section>
+          <section class="mini-card"><p class="mini-card__label">Changed answers</p><h4>${attempt.changedAnswers.total}</h4><p>${attempt.changedAnswers.wrongToRight} wrong → right.</p></section>
+          <section class="mini-card"><p class="mini-card__label">Changed right → wrong</p><h4>${attempt.changedAnswers.rightToWrong}</h4><p>Use confidence ratings to audit these.</p></section>
         </div>
       </article>
       <article class="panel panel--wide">
         <div class="panel__head"><h3>Mistake bank</h3><span class="status-pill">${missed.length} review items</span></div>
         <div class="dashboard-actions">
-          <button class="button button--primary" type="button" data-save-test-misses>Save all misses to mistake bank</button>
-          <a class="button button--ghost" href="#/review">Open Blind Review</a>
+          <a class="button button--primary" href="#/review">Review missed questions</a>
+          <a class="button button--ghost" href="#/dashboard">Return to dashboard</a>
         </div>
         <div class="practice-list">
-          ${missed.slice(0, 18).map((item) => `
+          ${missed.slice(0, 18).map((question) => `
             <section class="question-card">
-              <p class="mini-card__label">${item.section.label} · ${item.question.questionType}</p>
-              <h4>${item.question.questionStem}</h4>
-              <p><strong>Your answer:</strong> ${state.testDay.answers[item.key] === undefined ? "Unanswered" : String.fromCharCode(65 + state.testDay.answers[item.key])} · <strong>Correct:</strong> ${String.fromCharCode(65 + item.question.correctAnswer)} · <strong>Time:</strong> ${state.testDay.timeSpent[item.key] || 0}s</p>
-              <p>${item.question.explanation}</p>
-              <p class="microcopy">Trap pattern: ${item.question.trapPattern} · Mistake tag: ${item.question.mistakeReason || "Wrong answer trap"}</p>
+              <p class="mini-card__label">${question.sectionLabel} · ${question.questionType}</p>
+              <h4>${question.questionStem}</h4>
+              <p><strong>Original:</strong> ${answerLetter(attempt.originalAnswers[question.key])} · <strong>Blind Review:</strong> ${answerLetter(attempt.blindReviewAnswers[question.key])} · <strong>Correct:</strong> ${answerLetter(question.correctAnswer)} · <strong>Time:</strong> ${attempt.timePerQuestion[question.key] || 0}s</p>
+              <p>${question.explanation}</p>
+              <p class="microcopy">Trap pattern: ${question.trapPattern} · Mistake tag: ${question.mistakeReason || "Wrong answer trap"}</p>
             </section>
           `).join("")}
         </div>
-        <div class="recommendation-box"><strong>Missed question types:</strong> ${Object.entries(byType).map(([type, count]) => `${type} (${count})`).join(", ") || "None yet."}</div>
+        <div class="recommendation-box"><strong>Question type breakdown:</strong> ${Object.entries(byType).map(([type, bucket]) => `${type} ${bucket.correct}/${bucket.total}`).join(", ") || "Not enough data yet."}</div>
         <div class="recommendation-box"><strong>Missed reasons:</strong> ${Object.entries(missedReasons).map(([reason, count]) => `${reason} (${count})`).join(", ") || "None yet."}</div>
       </article>
     </section>
   `;
 }
 
+function buildCompletedTestAttempt() {
+  const items = testSessionItems();
+  const scoredItems = items.filter((item) => item.section.scored && item.question.scored !== false);
+  const completedAt = new Date().toISOString();
+  const questions = items.map(({ section, question, key }) => ({
+    key,
+    id: question.id,
+    sourceId: question.sourceId,
+    sectionId: section.id,
+    sectionLabel: section.label,
+    sectionType: question.sectionType || section.type,
+    questionType: question.questionType,
+    family: question.family,
+    difficulty: question.difficulty,
+    questionStem: question.questionStem,
+    correctAnswer: question.correctAnswer,
+    choices: question.choices,
+    explanation: question.explanation,
+    trapPattern: question.trapPattern,
+    mistakeReason: question.mistakeReason || "Wrong answer trap",
+    scored: Boolean(section.scored && question.scored !== false),
+  }));
+  const score = scoredItems.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length;
+  const blindReviewScore = scoredItems.filter((item) => state.testDay.blindReviewAnswers[item.key] === item.question.correctAnswer).length;
+  const changedAnswers = scoredItems.reduce((acc, item) => {
+    const original = state.testDay.answers[item.key];
+    const blind = state.testDay.blindReviewAnswers[item.key];
+    if (original === undefined || blind === undefined || original === blind) return acc;
+    acc.total += 1;
+    const originalRight = original === item.question.correctAnswer;
+    const blindRight = blind === item.question.correctAnswer;
+    if (!originalRight && blindRight) acc.wrongToRight += 1;
+    if (originalRight && !blindRight) acc.rightToWrong += 1;
+    return acc;
+  }, { total: 0, wrongToRight: 0, rightToWrong: 0 });
+  const timeValues = Object.values(state.testDay.timeSpent || {}).map(Number).filter((value) => Number.isFinite(value));
+  const timeSpentSeconds = timeValues.reduce((sum, value) => sum + value, 0);
+  return {
+    attemptId: state.testDay.attemptId || `test-attempt-${Date.now()}`,
+    startedAt: state.testDay.startedAt || completedAt,
+    completedAt,
+    mode: state.testDay.mode,
+    sectionType: state.testDay.setup?.sectionType || currentTestSection()?.type || "LR",
+    length: state.testDay.setup?.length || "full",
+    questions,
+    sections: testSections().map((section) => ({
+      id: section.id,
+      label: section.label,
+      type: section.type,
+      name: section.name,
+      scored: Boolean(section.scored),
+      questionKeys: section.questions.map((question) => `${section.id}:${question.id}`),
+    })),
+    originalAnswers: { ...state.testDay.answers },
+    blindReviewAnswers: { ...state.testDay.blindReviewAnswers },
+    confidenceRatings: { ...state.testDay.confidenceRatings },
+    eliminatedChoices: { ...state.testDay.eliminated },
+    flaggedQuestions: { ...state.testDay.flagged },
+    timePerQuestion: { ...state.testDay.timeSpent },
+    score,
+    accuracy: scoredItems.length ? Math.round((score / scoredItems.length) * 100) : 0,
+    blindReviewScore,
+    blindReviewGap: scoredItems.length ? Math.round((blindReviewScore / scoredItems.length) * 100) - Math.round((score / scoredItems.length) * 100) : 0,
+    changedAnswers,
+    mistakeTags: {},
+    timeSpentSeconds,
+    averageTimePerQuestion: scoredItems.length ? Math.round(timeSpentSeconds / scoredItems.length) : 0,
+  };
+}
+
+function syncCompletedTestAttempt(attempt) {
+  if (!attempt || state.testAttempts.some((item) => item.attemptId === attempt.attemptId)) return;
+  state.testAttempts.unshift(attempt);
+  state.testAttempts = state.testAttempts.slice(0, 100);
+  attempt.questions.forEach((question) => {
+    const sourceQuestion = findQuestion(question.sourceId);
+    if (!sourceQuestion || !question.scored) return;
+    const choice = attempt.originalAnswers[question.key];
+    const correct = choice === question.correctAnswer;
+    state.attempts[question.sourceId] = {
+      correct,
+      choice,
+      context: "test-day",
+      wrongChoiceText: correct ? null : choice === undefined ? "Unanswered" : question.choices[choice],
+      confidence: attempt.confidenceRatings[question.key] || "medium",
+      timeSeconds: Number(attempt.timePerQuestion[question.key] || 0),
+    };
+    state.answerLog.unshift({
+      id: `answer-${attempt.attemptId}-${question.sourceId}`,
+      questionId: question.sourceId,
+      family: question.family,
+      correct,
+      choice,
+      correctAnswer: question.correctAnswer,
+      context: "test-day",
+      timeSeconds: Number(attempt.timePerQuestion[question.key] || 0),
+      trapPattern: question.trapPattern,
+      mistakeReason: correct ? "" : question.mistakeReason,
+      answeredAt: attempt.completedAt,
+    });
+    if (!correct && !state.journal.some((entry) => entry.testAttemptId === attempt.attemptId && entry.questionId === question.sourceId)) {
+      const blindChoice = attempt.blindReviewAnswers[question.key];
+      state.journal.unshift({
+        testAttemptId: attempt.attemptId,
+        questionId: question.sourceId,
+        family: question.family,
+        trapPattern: question.trapPattern,
+        confidence: attempt.confidenceRatings[question.key] || "medium",
+        reviewConfidence: attempt.confidenceRatings[question.key] || "medium",
+        blindReviewOutcome: "complete",
+        secondPassAnswer: answerLetter(blindChoice),
+        wrongChoiceText: choice === undefined ? "Unanswered" : question.choices[choice],
+        whyWrong: question.explanation,
+        note: `Test-day miss from ${question.sectionLabel}. Compare the first pass with Blind Review before retrying this family.`,
+        issueType: !correct && blindChoice === question.correctAnswer ? "timing" : "concept",
+        createdAt: attempt.completedAt,
+        reviewedAt: attempt.completedAt,
+      });
+    }
+  });
+  state.answerLog = state.answerLog.slice(0, 500);
+}
+
+function submitBlindReviewAttempt() {
+  const items = testSessionItems();
+  const incomplete = items.filter((item) => state.testDay.blindReviewAnswers[item.key] === undefined || !state.testDay.confidenceRatings[item.key]);
+  if (incomplete.length) {
+    const proceed = window.confirm(`${incomplete.length} Blind Review item${incomplete.length === 1 ? "" : "s"} are incomplete. Submit anyway?`);
+    if (!proceed) return;
+  }
+  state.testDay.blindReviewSubmitted = true;
+  state.testDay.phase = "results";
+  state.testDay.completedAt = new Date().toISOString();
+  const attempt = buildCompletedTestAttempt();
+  syncCompletedTestAttempt(attempt);
+  saveState();
+  location.hash = "#/practice/test-day/results";
+}
+
 function renderFlaggedAccuracyLabel() {
-  const sections = testSections().filter((section) => section.scored);
-  const flagged = sections.flatMap((section) =>
-    section.questions
-      .map((question) => ({ section, question, key: `${section.id}:${question.id}` }))
-      .filter((item) => state.testDay.flagged[item.key])
+  const flagged = (state.testAttempts || []).flatMap((attempt) =>
+    (attempt.questions || [])
+      .filter((question) => question.scored && attempt.flaggedQuestions?.[question.key])
+      .map((question) => ({ attempt, question }))
   );
   if (!flagged.length) return "n/a";
-  const correct = flagged.filter((item) => state.testDay.answers[item.key] === item.question.correctAnswer).length;
+  const correct = flagged.filter((item) => item.attempt.originalAnswers[item.question.key] === item.question.correctAnswer).length;
   return `${Math.round((correct / flagged.length) * 100)}%`;
 }
 
@@ -3758,9 +4183,7 @@ function renderPracticePage(route) {
         </div>
         <p class="microcopy">Use local simulated sections for skill-building, then jump out to official materials for licensed PrepTest review.</p>
         <div class="dashboard-actions">
-          <a class="button button--primary" href="#/practice/test-day">Open test-day simulator</a>
-          <button class="button button--ghost" type="button" data-test-start="strict">Start strict test</button>
-          <button class="button button--ghost" type="button" data-test-start="study">Start study mode</button>
+          <a class="button button--primary" href="#/practice/test-day">Build a practice session</a>
         </div>
         <div class="link-list">
           ${data.officialLinks.map((link) => `<a class="chip-link" href="${link.href}" target="_blank" rel="noreferrer">${link.label}</a>`).join("")}
@@ -5032,10 +5455,73 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-test-setup]").forEach((field) => {
+    field.addEventListener("change", () => {
+      const key = field.dataset.testSetup;
+      state.testDay.setup = {
+        ...state.testDay.setup,
+        [key]: field.value,
+      };
+      if (key === "sectionType" && field.value === "FULL") state.testDay.setup.length = "full";
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-start-session]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetTestSession(state.testDay.setup);
+      location.hash = "#/practice/test-day";
+      renderApp();
+    });
+  });
+
   pageMount.querySelectorAll("[data-test-answer]").forEach((button) => {
     button.addEventListener("click", () => {
       selectTestAnswer(Number(button.dataset.testAnswer));
     });
+  });
+
+  pageMount.querySelectorAll("[data-test-br-answer]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = testSessionItems()[Number(state.testDay.blindReviewIndex || 0)];
+      if (!item) return;
+      state.testDay.blindReviewAnswers[item.key] = Number(button.dataset.testBrAnswer);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-br-confidence]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = testSessionItems()[Number(state.testDay.blindReviewIndex || 0)];
+      if (!item) return;
+      state.testDay.confidenceRatings[item.key] = button.dataset.testBrConfidence;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-br-jump]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.testDay.blindReviewIndex = Number(button.dataset.testBrJump);
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-br-prev], [data-test-br-next]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const delta = button.hasAttribute("data-test-br-next") ? 1 : -1;
+      const max = Math.max(0, testSessionItems().length - 1);
+      state.testDay.blindReviewIndex = Math.max(0, Math.min(max, Number(state.testDay.blindReviewIndex || 0) + delta));
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-test-submit-blind-review]").forEach((button) => {
+    button.addEventListener("click", () => submitBlindReviewAttempt());
   });
 
   pageMount.querySelectorAll("[data-test-eliminate]").forEach((button) => {
@@ -5073,7 +5559,8 @@ function wireInteractions(route) {
     button.addEventListener("click", () => {
       state.testDay.questionIndex = Number(button.dataset.testJump);
       saveState();
-      location.hash = "#/practice/test-day";
+      if (location.hash === "#/practice/test-day") renderApp();
+      else location.hash = "#/practice/test-day";
     });
   });
 
@@ -5087,37 +5574,6 @@ function wireInteractions(route) {
 
   pageMount.querySelectorAll("[data-test-submit-section]").forEach((button) => {
     button.addEventListener("click", () => maybeSubmitCurrentTestSection());
-  });
-
-  pageMount.querySelectorAll("[data-save-test-misses]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const scored = testSections().filter((section) => section.scored);
-      const missed = scored.flatMap((section) => section.questions.map((question) => ({ section, question, key: `${section.id}:${question.id}` })))
-        .filter((item) => state.testDay.answers[item.key] !== item.question.correctAnswer);
-      missed.forEach((item) => {
-        const questionId = item.question.id;
-        if (state.journal.some((entry) => entry.questionId === questionId)) return;
-        state.journal.unshift({
-          questionId,
-          family: item.question.family || item.question.questionType,
-          trapPattern: item.question.trapPattern || "Wrong answer trap",
-          confidence: state.testDay.flagged[item.key] ? "low" : "medium",
-          blindReviewOutcome: "pending",
-          wrongChoiceText: state.testDay.answers[item.key] === undefined ? "Unanswered" : item.question.choices[state.testDay.answers[item.key]],
-          whyWrong: item.question.explanation,
-          note: `Timed test miss from ${item.section.label}. Save a second-pass answer before unlocking the explanation.`,
-          createdAt: new Date().toISOString(),
-        });
-      });
-      state.notifications.unshift({
-        id: `test-misses-${Date.now()}`,
-        title: "Mistakes saved",
-        body: `${missed.length} timed-test miss${missed.length === 1 ? "" : "es"} are now queued for Blind Review.`,
-        read: false,
-      });
-      saveState();
-      location.hash = "#/review";
-    });
   });
 
   pageMount.querySelectorAll("[data-test-settings]").forEach((button) => {

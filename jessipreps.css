@@ -4191,6 +4191,28 @@ body.test-day-active .page-grid {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.test-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.test-setup-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+}
+
+.test-setup-grid select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+}
+
 .test-topbar,
 .test-bottombar {
   position: sticky;
@@ -4235,6 +4257,10 @@ body.test-day-active .page-grid {
 
 .test-topbar__center strong {
   font-variant-numeric: tabular-nums;
+}
+
+.test-topbar__center small {
+  color: var(--muted);
 }
 
 .is-danger {
@@ -4302,6 +4328,44 @@ body.test-day-active .page-grid {
   border-radius: 999px;
   padding: 6px 10px;
   background: rgba(255, 255, 255, 0.78);
+}
+
+.test-question-lineup {
+  max-width: 920px;
+  margin: 18px auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.test-question-lineup button {
+  width: 38px;
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.test-question-lineup button.is-current {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.test-question-lineup button.is-answered span {
+  font-weight: 700;
+}
+
+.test-question-lineup button.is-unanswered {
+  color: var(--danger);
+}
+
+.test-question-lineup button.is-flagged {
+  background: rgba(255, 240, 189, 0.88);
 }
 
 .test-question-panel,
@@ -4466,6 +4530,53 @@ body.test-day-active .page-grid {
   display: grid;
   gap: 20px;
   background: #f7f6fb;
+}
+
+.test-shell--blind-review .test-choice {
+  grid-template-columns: 1fr;
+}
+
+.blind-review-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.blind-review-confidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.blind-review-confidence p {
+  width: 100%;
+  margin: 0;
+}
+
+.blind-review-confidence button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.blind-review-confidence button.is-active {
+  border-color: rgba(138, 116, 232, 0.34);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.blind-review-lineup {
+  justify-content: center;
+}
+
+.test-bottombar--review {
+  grid-template-columns: repeat(3, minmax(150px, auto));
 }
 
 .video-status-strip {
