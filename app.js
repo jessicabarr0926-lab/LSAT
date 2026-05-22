@@ -69,7 +69,13 @@ globalSearch?.addEventListener("keydown", (event) => {
   if (!term) return;
   const lesson = data.lessons.find((item) => item.title.toLowerCase().includes(term) || item.track.toLowerCase().includes(term));
   const family = [...new Set(data.questionBank.map((question) => question.family))].find((item) => item.toLowerCase().includes(term));
-  location.hash = lesson ? `#/learn/${lesson.id}` : family ? "#/practice" : "#/learn";
+  if (lesson) location.hash = `#/learn/${lesson.id}`;
+  else if (family) location.hash = "#/practice";
+  else {
+    state.contentLibrary = { ...state.contentLibrary, query: globalSearch.value.trim() };
+    saveState();
+    location.hash = "#/content";
+  }
 });
 
 window.addEventListener("keydown", (event) => {
@@ -94,6 +100,20 @@ function defaultState() {
     },
     lessonProgress: Object.fromEntries(data.lessons.map((lesson) => [lesson.id, { complete: false, masteryWins: 0 }])),
     lessonNotes: {},
+    contentLibrary: {
+      query: "",
+      type: "all",
+      section: "all",
+      status: "all",
+      video: "all",
+      questionType: "all",
+    },
+    contentManager: {
+      editingDraftId: "",
+      exportText: "",
+    },
+    contentDrafts: [],
+    documentLinks: [],
     questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
     rcProgress: Object.fromEntries(
       (data.rcPassages || []).map((p) => [p.id, { phase: "reading", readStartTime: null, readTimeSeconds: null, mapText: "" }])
@@ -245,6 +265,10 @@ function loadState() {
         settings: { ...base.settings, ...(parsed.settings || {}) },
         lessonProgress: { ...base.lessonProgress, ...(parsed.lessonProgress || {}) },
         lessonNotes: { ...base.lessonNotes, ...(parsed.lessonNotes || {}) },
+        contentLibrary: { ...base.contentLibrary, ...(parsed.contentLibrary || {}) },
+        contentManager: { ...base.contentManager, ...(parsed.contentManager || {}) },
+        contentDrafts: Array.isArray(parsed.contentDrafts) ? parsed.contentDrafts : [],
+        documentLinks: Array.isArray(parsed.documentLinks) ? parsed.documentLinks : [],
         questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
         rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
         attempts: parsed.attempts || {},
@@ -1869,6 +1893,7 @@ function renderNav() {
   const subitems = {
     dashboard: ["Today", "Ratings", "Notifications"],
     learn: ["Lessons", "You Try", "Recorded videos"],
+    content: ["Library", "Drafts", "Docs"],
     practice: ["Adaptive", "Timed", "Full PT"],
     review: ["Blind Review", "SRS", "Explanations"],
     plan: ["Onboarding", "LawHub", "Import"],
@@ -2043,6 +2068,10 @@ function renderToday() {
         <span>Settings</span>
         <strong>Colors, display, sidebar</strong>
       </a>
+      <a class="today-pill" href="#/content">
+        <span>Content</span>
+        <strong>Search lessons, videos, docs</strong>
+      </a>
     </section>
   `;
   todayCard.querySelectorAll("[data-start-adaptive]").forEach((link) => {
@@ -2124,6 +2153,578 @@ function renderSettingsPage() {
   `;
 }
 
+function contentSectionLabel(value = "") {
+  const text = String(value || "");
+  if (/reading|rc/i.test(text)) return "Reading Comprehension";
+  if (/logical|lr|argument|flaw|assumption|strengthen|weaken|conditional|main point|must be true|principle/i.test(text)) return "Logical Reasoning";
+  if (/admission|law school|application/i.test(text)) return "Law School Prep";
+  return "General Study";
+}
+
+function contentStatusForLesson(lesson) {
+  const progress = state.lessonProgress[lesson.id] || {};
+  if (progress.complete) return "complete";
+  if ((progress.masteryWins || 0) > 0 || progress.reflectionSaved || state.lessonNotes?.[lesson.id]) return "in progress";
+  return "not started";
+}
+
+function safeContentUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  if (/^(https?:\/\/|#\/|\.\/|\/|output\/|video-lessons\/)/i.test(url)) return url;
+  return "";
+}
+
+function youtubeEmbedFromUrl(value) {
+  const url = safeContentUrl(value);
+  if (!url) return "";
+  if (/youtube\.com\/embed\//i.test(url)) return url;
+  const watchMatch = url.match(/[?&]v=([^&]+)/i);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/i);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  return url;
+}
+
+function splitTags(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function slugify(value) {
+  return String(value || "content")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "content";
+}
+
+function contentInventoryCounts() {
+  return {
+    lessons: data.lessons.length + (state.contentDrafts || []).length,
+    videos: data.lessons.filter((lesson) => lesson.videoPath).length + (data.youtubeMedia || []).length,
+    documents: (state.documentLinks || []).length,
+    questions: allQuestions().length,
+    passages: (data.rcPassages || []).length,
+    notes: Object.keys(state.lessonNotes || {}).length + (state.journal || []).length,
+    youtube: (data.youtubeMedia || []).length,
+  };
+}
+
+function lessonContentItem(lesson) {
+  const relatedQuestions = lessonDrillQuestions(lesson, 20);
+  const families = lesson.linkedQuestionFamilies || [];
+  const tags = [...new Set([lesson.track, lesson.statusLabel, ...(lesson.sourceTags || []), ...families].filter(Boolean))];
+  return {
+    id: `lesson:${lesson.id}`,
+    sourceId: lesson.id,
+    type: "lesson",
+    title: lesson.title,
+    section: contentSectionLabel(`${lesson.track} ${families.join(" ")}`),
+    module: primaryUnitForLesson(lesson)?.title || lesson.track,
+    summary: lesson.summary || lesson.conceptSummary || "",
+    tags,
+    difficulty: lesson.difficulty || lesson.statusLabel || "",
+    status: contentStatusForLesson(lesson),
+    nativeVideoPath: lesson.videoPath || "",
+    youtubeUrl: lesson.youtubeVideos?.[0]?.watchUrl || lesson.youtubeEmbedUrl || "",
+    documentPath: "",
+    relatedQuestionIds: relatedQuestions.map((question) => question.id),
+    relatedPassageIds: [],
+    relatedLessonIds: [lesson.nextLessonId].filter(Boolean),
+    questionType: families[0] || "",
+    hasNativeMp4: Boolean(lesson.videoPath),
+    hasYoutube: Boolean(lesson.youtubeVideos?.length || lesson.youtubeEmbedUrl),
+    hasPractice: relatedQuestions.length > 0,
+    createdBy: "JessiPreps",
+    source: "built-in curriculum",
+    isUserCreated: false,
+    updatedAt: "",
+    href: `#/learn/${lesson.id}`,
+  };
+}
+
+function contentLibraryItems() {
+  const lessonItems = data.lessons.map(lessonContentItem);
+  const nativeVideos = data.lessons.filter((lesson) => lesson.videoPath).map((lesson) => ({
+    ...lessonContentItem(lesson),
+    id: `video:native:${lesson.id}`,
+    type: "video",
+    title: `${lesson.title} - native MP4`,
+    summary: `Rendered JessiPreps MP4 mounted in the ${lesson.title} lesson player.`,
+    status: contentStatusForLesson(lesson),
+    href: `#/learn/${lesson.id}`,
+  }));
+  const youtubeItems = (data.youtubeMedia || []).map((video) => ({
+    id: `video:youtube:${video.id}`,
+    sourceId: video.id,
+    type: "video",
+    title: video.title,
+    section: contentSectionLabel(`${video.section || ""} ${(video.keywords || []).join(" ")} ${video.title}`),
+    module: video.sourceChannel || "YouTube Resources",
+    summary: `${video.sourceChannel || "YouTube"} support video${video.duration ? ` · ${video.duration}` : ""}.`,
+    tags: video.keywords || [],
+    difficulty: "",
+    status: "not started",
+    nativeVideoPath: "",
+    youtubeUrl: video.watchUrl || video.embedUrl || "",
+    documentPath: "",
+    relatedQuestionIds: [],
+    relatedPassageIds: [],
+    relatedLessonIds: video.lessonIds || [],
+    questionType: (video.keywords || []).find((tag) => /flaw|assumption|strengthen|weaken|inference|main point|rc/i.test(tag)) || "",
+    hasNativeMp4: false,
+    hasYoutube: true,
+    hasPractice: false,
+    createdBy: video.sourceChannel || "YouTube",
+    source: "linked YouTube resource",
+    isUserCreated: false,
+    updatedAt: "",
+    href: safeContentUrl(video.watchUrl || video.embedUrl),
+    external: true,
+  }));
+  const questionItems = allQuestions().map((question) => ({
+    id: `question:${question.id}`,
+    sourceId: question.id,
+    type: "question",
+    title: `${question.family}: ${question.question || question.questionStem || "Practice question"}`,
+    section: contentSectionLabel(question.section || question.sectionType || question.family),
+    module: question.family,
+    summary: question.prompt || question.stimulus || question.explanation || "",
+    tags: [question.family, question.trapPattern, question.mistakeReason].filter(Boolean),
+    difficulty: question.difficulty || "",
+    status: state.attempts[question.id] ? "complete" : "not started",
+    nativeVideoPath: "",
+    youtubeUrl: "",
+    documentPath: "",
+    relatedQuestionIds: [question.id],
+    relatedPassageIds: [],
+    relatedLessonIds: question.lessonIds || question.linkedLessonIds || [],
+    questionType: question.questionType || question.family,
+    hasNativeMp4: false,
+    hasYoutube: false,
+    hasPractice: true,
+    createdBy: "JessiPreps",
+    source: question.source || "original practice question",
+    isUserCreated: false,
+    updatedAt: "",
+    href: `#/practice/challenge/${question.id}`,
+  }));
+  const passageItems = (data.rcPassages || []).map((passage) => {
+    const answered = (passage.questions || []).filter((question) => state.attempts[question.id]).length;
+    const status = answered === (passage.questions || []).length && answered ? "complete" : answered ? "in progress" : "not started";
+    return {
+      id: `passage:${passage.id}`,
+      sourceId: passage.id,
+      type: "passage",
+      title: passage.title,
+      section: "Reading Comprehension",
+      module: passage.topic || "RC Passages",
+      summary: passage.summary || `${passage.paragraphs?.length || 0} paragraphs · ${passage.questions?.length || 0} questions.`,
+      tags: [passage.topic, passage.isComparative ? "comparative" : "", ...(passage.passageMapPrompts || [])].filter(Boolean),
+      difficulty: passage.difficulty || "",
+      status,
+      nativeVideoPath: "",
+      youtubeUrl: "",
+      documentPath: "",
+      relatedQuestionIds: (passage.questions || []).map((question) => question.id),
+      relatedPassageIds: [passage.id],
+      relatedLessonIds: ["rc-structure-map"],
+      questionType: "RC Passage",
+      hasNativeMp4: false,
+      hasYoutube: false,
+      hasPractice: Boolean(passage.questions?.length),
+      createdBy: "JessiPreps",
+      source: "original RC passage",
+      isUserCreated: false,
+      updatedAt: "",
+      href: `#/practice/rc/${passage.id}`,
+    };
+  });
+  const documentItems = (state.documentLinks || []).map((doc) => ({
+    id: `document:${doc.id}`,
+    sourceId: doc.id,
+    type: "document",
+    title: doc.title,
+    section: doc.section || "General Study",
+    module: doc.module || "Documents",
+    summary: doc.summary || "Manual document/PDF link. Upload storage is a future backend feature.",
+    tags: doc.tags || [],
+    difficulty: doc.difficulty || "",
+    status: "not started",
+    nativeVideoPath: "",
+    youtubeUrl: "",
+    documentPath: doc.documentPath || doc.url || "",
+    relatedQuestionIds: [],
+    relatedPassageIds: [],
+    relatedLessonIds: doc.relatedLessonIds || [],
+    questionType: "",
+    hasNativeMp4: false,
+    hasYoutube: false,
+    hasPractice: false,
+    createdBy: "Jessica",
+    source: "local document link",
+    isUserCreated: true,
+    updatedAt: doc.updatedAt || "",
+    href: safeContentUrl(doc.documentPath || doc.url),
+    external: true,
+  }));
+  const noteItems = [
+    ...Object.entries(state.lessonNotes || {}).map(([lessonId, note]) => {
+      const lesson = data.lessons.find((item) => item.id === lessonId);
+      return {
+        id: `note:lesson:${lessonId}`,
+        sourceId: lessonId,
+        type: "note",
+        title: `Lesson note: ${lesson?.title || lessonId}`,
+        section: contentSectionLabel(lesson?.track || ""),
+        module: lesson?.track || "Lesson Notes",
+        summary: note.text || "",
+        tags: ["lesson note", ...(lesson?.linkedQuestionFamilies || [])],
+        difficulty: "",
+        status: "in progress",
+        nativeVideoPath: "",
+        youtubeUrl: "",
+        documentPath: "",
+        relatedQuestionIds: [],
+        relatedPassageIds: [],
+        relatedLessonIds: [lessonId],
+        questionType: lesson?.linkedQuestionFamilies?.[0] || "",
+        hasNativeMp4: Boolean(lesson?.videoPath),
+        hasYoutube: Boolean(lesson?.youtubeVideos?.length),
+        hasPractice: Boolean(lesson && lessonDrillQuestions(lesson, 1).length),
+        createdBy: "Jessica",
+        source: "local lesson note",
+        isUserCreated: true,
+        updatedAt: note.updatedAt || "",
+        href: lesson ? `#/learn/${lesson.id}` : "#/content",
+      };
+    }),
+    ...(state.journal || []).map((entry, index) => ({
+      id: `note:journal:${index}`,
+      sourceId: entry.questionId || String(index),
+      type: "note",
+      title: `Review note: ${entry.family || "LSAT"}`,
+      section: contentSectionLabel(entry.family || ""),
+      module: "Wrong-Answer Journal",
+      summary: entry.note || entry.whyWrong || "",
+      tags: [entry.family, entry.trapPattern, entry.mistakeReason].filter(Boolean),
+      difficulty: "",
+      status: entry.blindReviewOutcome === "complete" ? "complete" : "in progress",
+      nativeVideoPath: "",
+      youtubeUrl: "",
+      documentPath: "",
+      relatedQuestionIds: [entry.questionId].filter(Boolean),
+      relatedPassageIds: [],
+      relatedLessonIds: [],
+      questionType: entry.family || "",
+      hasNativeMp4: false,
+      hasYoutube: false,
+      hasPractice: true,
+      createdBy: "Jessica",
+      source: "local review journal",
+      isUserCreated: true,
+      updatedAt: entry.reviewedAt || entry.createdAt || "",
+      href: "#/review",
+    })),
+  ];
+  const draftItems = (state.contentDrafts || []).map((draft) => ({
+    id: `draft:${draft.id}`,
+    sourceId: draft.id,
+    type: "lesson",
+    title: draft.title,
+    section: draft.section || "General Study",
+    module: draft.module || "Local Drafts",
+    summary: draft.summary || "",
+    tags: draft.tags || [],
+    difficulty: draft.difficulty || "",
+    status: "in progress",
+    nativeVideoPath: draft.nativeVideoPath || "",
+    youtubeUrl: draft.youtubeUrl || "",
+    documentPath: draft.documentPath || "",
+    relatedQuestionIds: draft.relatedQuestionIds || [],
+    relatedPassageIds: draft.relatedPassageIds || [],
+    relatedLessonIds: draft.relatedLessonIds || [],
+    questionType: (draft.tags || []).find((tag) => /flaw|assumption|strengthen|weaken|inference|main point|rc/i.test(tag)) || "",
+    hasNativeMp4: Boolean(draft.nativeVideoPath),
+    hasYoutube: Boolean(draft.youtubeUrl),
+    hasPractice: Boolean(draft.relatedQuestionIds?.length),
+    createdBy: draft.createdBy || "Jessica",
+    source: draft.source || "localStorage draft",
+    isUserCreated: true,
+    updatedAt: draft.updatedAt || "",
+    href: `#/content/draft/${draft.id}`,
+  }));
+  return [...lessonItems, ...nativeVideos, ...youtubeItems, ...documentItems, ...passageItems, ...questionItems, ...noteItems, ...draftItems];
+}
+
+function contentFilterOptions() {
+  const items = contentLibraryItems();
+  return {
+    sections: ["all", ...new Set(items.map((item) => item.section).filter(Boolean))],
+    questionTypes: ["all", ...new Set(items.map((item) => item.questionType).filter(Boolean))].sort(),
+  };
+}
+
+function filteredContentItems() {
+  const filters = state.contentLibrary || defaultState().contentLibrary;
+  const query = String(filters.query || "").trim().toLowerCase();
+  return contentLibraryItems().filter((item) => {
+    const haystack = [item.title, item.summary, item.section, item.module, item.questionType, item.source, ...(item.tags || [])].join(" ").toLowerCase();
+    const videoMatch =
+      filters.video === "all" ||
+      (filters.video === "native" && item.hasNativeMp4) ||
+      (filters.video === "youtube" && item.hasYoutube) ||
+      (filters.video === "none" && !item.hasNativeMp4 && !item.hasYoutube);
+    return (!query || haystack.includes(query)) &&
+      (filters.type === "all" || item.type === filters.type) &&
+      (filters.section === "all" || item.section === filters.section) &&
+      (filters.status === "all" || item.status === filters.status) &&
+      videoMatch &&
+      (filters.questionType === "all" || item.questionType === filters.questionType);
+  });
+}
+
+function renderContentItemCard(item) {
+  const href = safeContentUrl(item.href) || "#/content";
+  const attrs = item.external ? `target="_blank" rel="noreferrer"` : "";
+  return `
+    <a class="content-item-card" href="${escapeHtml(href)}" ${attrs}>
+      <div class="content-item-card__head">
+        <span class="status-pill">${escapeHtml(item.type)}</span>
+        <span class="status-pill ${item.status === "complete" ? "is-done" : ""}">${escapeHtml(item.status)}</span>
+      </div>
+      <h4>${escapeHtml(item.title)}</h4>
+      <p>${escapeHtml(item.summary || "No summary yet.")}</p>
+      <div class="content-badges">
+        <span>${escapeHtml(item.section)}</span>
+        ${item.difficulty ? `<span>${escapeHtml(item.difficulty)}</span>` : ""}
+        ${item.hasNativeMp4 ? `<span>Native MP4</span>` : ""}
+        ${item.hasYoutube ? `<span>YouTube</span>` : ""}
+        ${item.hasPractice ? `<span>${item.relatedQuestionIds?.length || "Practice"} Qs</span>` : ""}
+        ${item.isUserCreated ? `<span>Local</span>` : ""}
+      </div>
+      ${(item.tags || []).length ? `<small>${item.tags.slice(0, 5).map(escapeHtml).join(" · ")}</small>` : ""}
+    </a>
+  `;
+}
+
+function renderContentLibraryPanel() {
+  const counts = contentInventoryCounts();
+  const filters = state.contentLibrary || defaultState().contentLibrary;
+  const options = contentFilterOptions();
+  const items = filteredContentItems();
+  return `
+    <article class="panel panel--wide content-library-shell">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Content library</p>
+          <h3>Browse every study asset in one place</h3>
+        </div>
+        <span class="status-pill">${items.length} shown</span>
+      </div>
+      <div class="content-inventory-grid">
+        <section><strong>${counts.lessons}</strong><span>Lessons</span></section>
+        <section><strong>${counts.videos}</strong><span>Videos</span></section>
+        <section><strong>${counts.documents}</strong><span>Docs</span></section>
+        <section><strong>${counts.questions}</strong><span>Questions</span></section>
+        <section><strong>${counts.passages}</strong><span>RC passages</span></section>
+        <section><strong>${counts.notes}</strong><span>Notes</span></section>
+      </div>
+      <div class="content-filters">
+        <label class="content-search">
+          <span>Search</span>
+          <input type="search" data-content-filter="query" value="${escapeHtml(filters.query || "")}" placeholder="Title, keyword, trap, lesson...">
+        </label>
+        <label><span>Type</span><select data-content-filter="type">
+          ${["all", "lesson", "video", "document", "question", "passage", "note"].map((item) => `<option value="${item}" ${filters.type === item ? "selected" : ""}>${item}</option>`).join("")}
+        </select></label>
+        <label><span>Section</span><select data-content-filter="section">
+          ${options.sections.map((item) => `<option value="${escapeHtml(item)}" ${filters.section === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
+        </select></label>
+        <label><span>Status</span><select data-content-filter="status">
+          ${["all", "not started", "in progress", "complete"].map((item) => `<option value="${item}" ${filters.status === item ? "selected" : ""}>${item}</option>`).join("")}
+        </select></label>
+        <label><span>Video</span><select data-content-filter="video">
+          ${[
+            ["all", "all video states"],
+            ["native", "native MP4"],
+            ["youtube", "YouTube"],
+            ["none", "no video"],
+          ].map(([value, label]) => `<option value="${value}" ${filters.video === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select></label>
+        <label><span>Question type</span><select data-content-filter="questionType">
+          ${options.questionTypes.map((item) => `<option value="${escapeHtml(item)}" ${filters.questionType === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
+        </select></label>
+      </div>
+      <div class="content-library-actions">
+        <button class="button button--ghost" type="button" data-content-reset>Reset filters</button>
+        <a class="button button--primary" href="#/learn/${nextLesson().id}">Continue lesson</a>
+      </div>
+      ${items.length ? `
+        <div class="content-item-grid">
+          ${items.slice(0, 120).map(renderContentItemCard).join("")}
+        </div>
+        ${items.length > 120 ? `<p class="microcopy">Showing the first 120 matches. Narrow the filters to inspect the rest.</p>` : ""}
+      ` : `<div class="empty-state"><h3>No content matches yet</h3><p>Try a broader filter or add a local draft/document below.</p></div>`}
+    </article>
+  `;
+}
+
+function renderContentManagerPanel() {
+  const editing = (state.contentDrafts || []).find((draft) => draft.id === state.contentManager?.editingDraftId);
+  const draftValues = editing || {};
+  return `
+    <article class="panel panel--wide content-manager-shell">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Local-only content manager</p>
+          <h3>${editing ? "Edit draft lesson" : "Add a lesson draft"}</h3>
+        </div>
+        <span class="status-pill">Does not overwrite curriculum</span>
+      </div>
+      <p class="microcopy">Draft lessons, document links, and notes save only in localStorage for now. Real uploads need backend storage later.</p>
+      <form id="contentDraftForm" class="content-editor-grid">
+        <input type="hidden" name="id" value="${escapeHtml(draftValues.id || "")}">
+        <label><span>Lesson title</span><input name="title" required value="${escapeHtml(draftValues.title || "")}" placeholder="Example: Causal flaws from my notes"></label>
+        <label><span>Section</span><select name="section">
+          ${["Logical Reasoning", "Reading Comprehension", "Law School Prep", "General Study"].map((item) => `<option ${draftValues.section === item ? "selected" : ""}>${item}</option>`).join("")}
+        </select></label>
+        <label><span>Module</span><input name="module" value="${escapeHtml(draftValues.module || "")}" placeholder="LR Fundamentals"></label>
+        <label><span>Difficulty</span><select name="difficulty">
+          ${["Beginner", "Intermediate", "Advanced", "Mixed"].map((item) => `<option ${draftValues.difficulty === item ? "selected" : ""}>${item}</option>`).join("")}
+        </select></label>
+        <label class="content-editor-grid__wide"><span>Summary</span><textarea name="summary" rows="3" placeholder="What this lesson teaches and why it matters">${escapeHtml(draftValues.summary || "")}</textarea></label>
+        <label><span>Tags</span><input name="tags" value="${escapeHtml((draftValues.tags || []).join(", "))}" placeholder="flaw, causation, wrong answer traps"></label>
+        <label><span>Native MP4 path</span><input name="nativeVideoPath" value="${escapeHtml(draftValues.nativeVideoPath || "")}" placeholder="output/videos/lessons/...mp4"></label>
+        <label><span>YouTube URL</span><input name="youtubeUrl" value="${escapeHtml(draftValues.youtubeUrl || "")}" placeholder="https://www.youtube.com/watch?v=..."></label>
+        <label><span>PDF/document URL or path</span><input name="documentPath" value="${escapeHtml(draftValues.documentPath || "")}" placeholder="https://... or ./docs/file.pdf"></label>
+        <label class="content-editor-grid__wide"><span>Lesson notes</span><textarea name="notes" rows="4" placeholder="Paste your outline, book notes in your own words, or lesson script draft">${escapeHtml(draftValues.notes || "")}</textarea></label>
+        <div class="content-editor-actions">
+          <button class="button button--primary" type="submit">${editing ? "Save draft changes" : "Save draft"}</button>
+          ${editing ? `<a class="button button--ghost" href="#/content/draft/${editing.id}">Preview draft</a><button class="button button--ghost" type="button" data-content-new-draft>New draft</button>` : ""}
+        </div>
+      </form>
+      ${(state.contentDrafts || []).length ? `
+        <div class="local-draft-list">
+          ${(state.contentDrafts || []).map((draft) => `
+            <section class="journal-card">
+              <strong>${escapeHtml(draft.title)}</strong>
+              <p>${escapeHtml(draft.section)} · ${escapeHtml(draft.module || "Local Drafts")}</p>
+              <div class="dashboard-actions">
+                <a class="button button--ghost" href="#/content/draft/${draft.id}">Preview</a>
+                <button class="button button--ghost" type="button" data-content-edit-draft="${draft.id}">Edit</button>
+              </div>
+            </section>
+          `).join("")}
+        </div>
+      ` : `<p class="muted">No local lesson drafts yet.</p>`}
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">PDF/document links</p>
+          <h3>Add documents without pretending uploads exist</h3>
+        </div>
+        <span class="status-pill">${(state.documentLinks || []).length} saved</span>
+      </div>
+      <p class="microcopy">For V3, documents are links or paths only. Actual local upload, cloud storage, and file indexing are a backend feature for later.</p>
+      <form id="documentLinkForm" class="content-editor-grid content-editor-grid--compact">
+        <label><span>Document title</span><input name="title" required placeholder="My flaw notes PDF"></label>
+        <label><span>URL/path</span><input name="documentPath" required placeholder="https://... or ./docs/file.pdf"></label>
+        <label><span>Section</span><select name="section">
+          <option>Logical Reasoning</option><option>Reading Comprehension</option><option>Law School Prep</option><option>General Study</option>
+        </select></label>
+        <label><span>Tags</span><input name="tags" placeholder="book notes, flaw, review"></label>
+        <button class="button button--primary" type="submit">Save document link</button>
+      </form>
+      ${(state.documentLinks || []).length ? `
+        <div class="local-draft-list">
+          ${(state.documentLinks || []).map((doc) => `
+            <section class="journal-card">
+              <strong>${escapeHtml(doc.title)}</strong>
+              <p>${escapeHtml(doc.section)} · ${escapeHtml(doc.documentPath)}</p>
+            </section>
+          `).join("")}
+        </div>
+      ` : ""}
+    </article>
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <h3>Export local content JSON</h3>
+        <button class="button button--ghost" type="button" data-export-content-json>Generate JSON</button>
+      </div>
+      <p class="microcopy">Exports only local drafts and document links. Built-in curriculum remains in source files for now.</p>
+      ${state.contentManager?.exportText ? `<textarea class="json-export-box" readonly rows="10">${escapeHtml(state.contentManager.exportText)}</textarea>` : ""}
+    </article>
+  `;
+}
+
+function renderContentDraftPreview(draftId) {
+  const draft = (state.contentDrafts || []).find((item) => item.id === draftId);
+  if (!draft) {
+    return `
+      <article class="panel panel--wide empty-state">
+        <h3>Draft not found</h3>
+        <p>This local draft may have been removed from localStorage.</p>
+        <a class="button button--primary" href="#/content">Back to content library</a>
+      </article>
+    `;
+  }
+  const youtubeEmbed = youtubeEmbedFromUrl(draft.youtubeUrl);
+  return `
+    <article class="lesson-flow-shell content-draft-preview">
+      <header class="lesson-flow-topbar">
+        <a class="icon-button" href="#/content" aria-label="Close draft preview">×</a>
+        <strong>${escapeHtml(draft.module || "Local Draft")}</strong>
+        <nav><button class="icon-button" type="button" data-content-edit-draft="${draft.id}" aria-label="Edit draft">✎</button></nav>
+      </header>
+      <main class="lesson-reader">
+        <header class="lesson-reader__title">
+          <h2>${escapeHtml(draft.title)}</h2>
+          <span class="status-pill">Local-only draft</span>
+        </header>
+        ${draft.nativeVideoPath ? `
+          <section class="lesson-flow-media">
+            <div class="lesson-flow-media__head"><p class="mini-card__label">Native MP4 path</p><span class="status-pill">draft media</span></div>
+            <video class="lesson-flow-video" controls preload="metadata" playsinline src="${escapeHtml(safeContentUrl(draft.nativeVideoPath))}"></video>
+          </section>
+        ` : ""}
+        ${youtubeEmbed ? `
+          <section class="lesson-external-video">
+            <div class="panel__head"><h4>Linked YouTube video</h4><span class="status-pill">local draft</span></div>
+            <div class="responsive-video"><iframe src="${escapeHtml(youtubeEmbed)}" title="${escapeHtml(draft.title)} YouTube video" loading="lazy" allowfullscreen></iframe></div>
+          </section>
+        ` : ""}
+        <section class="lesson-flow-section"><h3>Summary</h3><p>${escapeHtml(draft.summary || "No summary yet.")}</p></section>
+        <section class="lesson-flow-section"><h3>Notes</h3><p>${escapeHtml(draft.notes || "No notes yet.").replace(/\n/g, "<br>")}</p></section>
+        ${draft.documentPath ? `<section class="lesson-flow-section"><h3>Document</h3><a class="button button--ghost" href="${escapeHtml(safeContentUrl(draft.documentPath))}" target="_blank" rel="noreferrer">Open linked document</a></section>` : ""}
+        <section class="lesson-flow-section"><h3>Metadata</h3><p>${escapeHtml(draft.section)} · ${escapeHtml(draft.difficulty || "No difficulty")} · ${(draft.tags || []).map(escapeHtml).join(" · ")}</p></section>
+      </main>
+    </article>
+  `;
+}
+
+function renderContentPage(route = {}) {
+  if (route.subtype === "draft") return renderContentDraftPreview(route.id);
+  return `
+    <section class="content-page">
+      <article class="panel panel--wide content-hero">
+        <div>
+          <p class="eyebrow">Phase 3 Content System</p>
+          <h3>One searchable library for lessons, videos, questions, passages, notes, and local drafts.</h3>
+          <p>Built-in content still loads from the current source files, but new drafts and document links now save safely in localStorage.</p>
+        </div>
+        <a class="button button--primary" href="#/learn/${nextLesson().id}">Continue current lesson</a>
+      </article>
+      ${renderContentLibraryPanel()}
+      ${renderContentManagerPanel()}
+    </section>
+  `;
+}
+
 function renderRouteMeta(route) {
   if (route.page === "practice" && route.subtype === "test-day") {
     routeEyebrow.textContent = "Test-Day Mode";
@@ -2139,6 +2740,11 @@ function renderRouteMeta(route) {
     const passage = route.id && route.id !== "rc" ? (data.rcPassages || []).find((p) => p.id === route.id) : null;
     routeEyebrow.textContent = "RC Passage Practice";
     routeTitle.textContent = passage ? passage.title : "Passage Library";
+    return;
+  }
+  if (route.page === "content") {
+    routeEyebrow.textContent = "Library + Manager";
+    routeTitle.textContent = route.subtype === "draft" ? "Draft Preview" : "Content";
     return;
   }
   const nav = data.navigation.find((item) => item.route === route.page) || data.navigation[0];
@@ -2157,6 +2763,7 @@ function renderPage(route) {
   const pageRenderers = {
     dashboard: renderDashboardPage,
     learn: renderLearnPage,
+    content: renderContentPage,
     practice: renderPracticePage,
     review: renderReviewPage,
     plan: renderPlanPage,
@@ -2200,6 +2807,7 @@ function renderNoticeLayer() {
         <a href="#/practice/drill/${adaptiveDrillTarget().preset.id}" data-command-link><strong>Start adaptive drill</strong><span>${adaptiveDrillTarget().weak.family}</span></a>
         <a href="#/practice/test-day" data-command-link><strong>Open test-day simulator</strong><span>35-minute sections, flags, review, and settings</span></a>
         <a href="#/learn/${nextLesson().id}" data-command-link><strong>Open last lesson</strong><span>${nextLesson().title}</span></a>
+        <a href="#/content" data-command-link><strong>Search content library</strong><span>Lessons, videos, docs, passages, and notes</span></a>
         <a href="#/review/preptest/pt130" data-command-link><strong>Review PrepTest 130</strong><span>Results, timing, Blind Review</span></a>
         <a href="#/plan" data-command-link><strong>Log LawHub result</strong><span>Official score companion</span></a>
       </aside>
@@ -2320,6 +2928,12 @@ function renderDashboardPage() {
         <h3>${lesson.title}</h3>
         <p>${focus ? `${focus.title} focus is pinned for this week.` : "Merged lesson, drill, explanation, and journal handoff."}</p>
         <strong>Resume lesson →</strong>
+      </a>
+      <a class="demon-action" href="#/content">
+        <p class="mini-card__label">Content library</p>
+        <h3>${contentInventoryCounts().lessons} lessons · ${contentInventoryCounts().videos} videos</h3>
+        <p>Search lessons, native MP4s, YouTube resources, RC passages, documents, and local notes.</p>
+        <strong>Open content library →</strong>
       </a>
 
       <article class="demon-panel demon-panel--sections">
@@ -2462,6 +3076,28 @@ function renderLearnPage(route) {
           <a class="text-link" href="#/learn/${featured.id}">Resume</a>
           <button class="text-link text-link--button" type="button" data-page-scroll="lesson-picker">Pick a different lesson</button>
         </div>
+      </div>
+      <div class="learning-path-strip" aria-label="Learning paths">
+        <a href="#/learn/unit/foundations">
+          <span>Beginner path</span>
+          <strong>Foundations first</strong>
+        </a>
+        <a href="#/learn/unit/lr-foundations">
+          <span>LR-first path</span>
+          <strong>Arguments before RC</strong>
+        </a>
+        <a href="#/learn">
+          <span>Question-type path</span>
+          <strong>Question-Type Academy below</strong>
+        </a>
+        <a href="#/practice/drill/${adaptiveDrillTarget().preset.id}" data-start-adaptive>
+          <span>Weakness path</span>
+          <strong>${focusAwareWeakestFamily().family}</strong>
+        </a>
+        <a href="#/content">
+          <span>Content library</span>
+          <strong>Search all assets</strong>
+        </a>
       </div>
       <div class="syllabus-layout" id="lesson-picker">
         <aside class="syllabus-units">
@@ -2871,9 +3507,9 @@ function renderLessonPlayer(lesson) {
           <a class="icon-button ${neighbors.previous ? "" : "is-disabled"}" href="${neighbors.previous ? `#/learn/${neighbors.previous.id}` : "#/learn"}" aria-label="Previous lesson">←</a>
           <a class="icon-button ${neighbors.next ? "" : "is-disabled"}" href="${neighbors.next ? `#/learn/${neighbors.next.id}` : "#/practice/timed"}" aria-label="Next lesson">→</a>
         </div>
-        <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}" ${!progress.complete && !lessonCompletionRequirements(lesson, linkedQuestions).ready ? "disabled" : ""}>
+        <button class="lesson-done-toggle ${progress.complete ? "is-done" : ""}" type="button" data-toggle-lesson-done="${lesson.id}">
           <span>${progress.complete ? "✓" : ""}</span>
-          <strong>${progress.complete ? "Done" : lessonCompletionRequirements(lesson, linkedQuestions).ready ? "Mark done" : "Earn mastery first"}</strong>
+          <strong>${progress.complete ? "Done" : "Mark done"}</strong>
         </button>
       </footer>
     </article>
@@ -5356,6 +5992,123 @@ function wireInteractions(route) {
     });
   });
 
+  pageMount.querySelectorAll("[data-content-filter]").forEach((field) => {
+    const eventName = field.tagName === "INPUT" ? "input" : "change";
+    field.addEventListener(eventName, () => {
+      const key = field.dataset.contentFilter;
+      state.contentLibrary = { ...defaultState().contentLibrary, ...(state.contentLibrary || {}), [key]: field.value };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelector("[data-content-reset]")?.addEventListener("click", () => {
+    state.contentLibrary = { ...defaultState().contentLibrary };
+    saveState();
+    renderApp();
+  });
+
+  pageMount.querySelector("#contentDraftForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const title = String(formData.get("title") || "").trim();
+    if (!title) return;
+    const existingId = String(formData.get("id") || "").trim();
+    const now = new Date().toISOString();
+    const id = existingId || `local-${slugify(title)}-${Date.now()}`;
+    const previous = (state.contentDrafts || []).find((draft) => draft.id === id);
+    const draft = {
+      id,
+      title,
+      type: "lesson",
+      section: String(formData.get("section") || "General Study"),
+      module: String(formData.get("module") || "Local Drafts").trim() || "Local Drafts",
+      summary: String(formData.get("summary") || "").trim(),
+      tags: splitTags(formData.get("tags")),
+      difficulty: String(formData.get("difficulty") || ""),
+      status: "draft",
+      nativeVideoPath: safeContentUrl(formData.get("nativeVideoPath")),
+      youtubeUrl: safeContentUrl(formData.get("youtubeUrl")),
+      documentPath: safeContentUrl(formData.get("documentPath")),
+      notes: String(formData.get("notes") || "").trim(),
+      relatedQuestionIds: previous?.relatedQuestionIds || [],
+      relatedPassageIds: previous?.relatedPassageIds || [],
+      relatedLessonIds: previous?.relatedLessonIds || [],
+      createdBy: "Jessica",
+      source: "localStorage draft",
+      isUserCreated: true,
+      createdAt: previous?.createdAt || now,
+      updatedAt: now,
+    };
+    state.contentDrafts = [draft, ...(state.contentDrafts || []).filter((item) => item.id !== id)];
+    state.contentManager = { ...state.contentManager, editingDraftId: id, exportText: "" };
+    state.contentLibrary = { ...defaultState().contentLibrary, query: title, type: "lesson" };
+    state.notifications.unshift({
+      id: `content-draft-${Date.now()}`,
+      title: "Draft lesson saved",
+      body: `${title} is saved locally and can be previewed or exported as JSON.`,
+      read: true,
+    });
+    saveState();
+    renderApp();
+  });
+
+  pageMount.querySelectorAll("[data-content-edit-draft]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      state.contentManager = { ...state.contentManager, editingDraftId: button.dataset.contentEditDraft, exportText: "" };
+      saveState();
+      location.hash = "#/content";
+      renderApp();
+    });
+  });
+
+  pageMount.querySelector("[data-content-new-draft]")?.addEventListener("click", () => {
+    state.contentManager = { ...state.contentManager, editingDraftId: "", exportText: "" };
+    saveState();
+    renderApp();
+  });
+
+  pageMount.querySelector("#documentLinkForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const title = String(formData.get("title") || "").trim();
+    const documentPath = safeContentUrl(formData.get("documentPath"));
+    if (!title || !documentPath) return;
+    const doc = {
+      id: `doc-${slugify(title)}-${Date.now()}`,
+      title,
+      type: "document",
+      section: String(formData.get("section") || "General Study"),
+      module: "Documents",
+      summary: "Manual PDF/document link.",
+      tags: splitTags(formData.get("tags")),
+      documentPath,
+      createdBy: "Jessica",
+      source: "local document link",
+      isUserCreated: true,
+      updatedAt: new Date().toISOString(),
+    };
+    state.documentLinks = [doc, ...(state.documentLinks || [])];
+    state.contentLibrary = { ...defaultState().contentLibrary, type: "document" };
+    saveState();
+    renderApp();
+  });
+
+  pageMount.querySelector("[data-export-content-json]")?.addEventListener("click", () => {
+    state.contentManager = {
+      ...state.contentManager,
+      exportText: JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        schema: "jessipreps-content-v1",
+        contentDrafts: state.contentDrafts || [],
+        documentLinks: state.documentLinks || [],
+      }, null, 2),
+    };
+    saveState();
+    renderApp();
+  });
+
   pageMount.querySelectorAll("[data-drill-nav]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.dataset.drillKey;
@@ -5975,7 +6728,6 @@ function wireInteractions(route) {
       const lesson = data.lessons.find((item) => item.id === lessonId);
       if (!lesson) return;
       const progress = ensureLessonProgress(lessonId);
-      if (!progress.complete && !lessonCompletionRequirements(lesson).ready) return;
       progress.complete = !progress.complete;
       progress.completedAt = progress.complete ? new Date().toISOString() : "";
       state.lessonProgress[lessonId] = progress;

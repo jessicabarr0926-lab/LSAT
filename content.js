@@ -1799,6 +1799,7 @@ window.JESSI_PREPS_DATA = {
   navigation: [
     { route: "dashboard", label: "Dashboard", eyebrow: "Command Center" },
     { route: "learn", label: "Learn", eyebrow: "Content Hub" },
+    { route: "content", label: "Content", eyebrow: "Library + Manager" },
     { route: "practice", label: "Practice", eyebrow: "Question Bank + Drills" },
     { route: "review", label: "Review", eyebrow: "Journal + Analytics" },
     { route: "plan", label: "Plan", eyebrow: "Study System" },
