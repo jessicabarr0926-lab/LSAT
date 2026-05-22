@@ -123,6 +123,15 @@ function defaultState() {
     },
     contentDrafts: [],
     documentLinks: [],
+    reviewFilters: {
+      query: "",
+      tag: "all",
+      type: "all",
+      status: "open",
+      section: "all",
+    },
+    reviewNotes: {},
+    reviewStatus: {},
     questionTypeProgress: Object.fromEntries((data.questionTypeLessons || []).map((lesson) => [lesson.id, { complete: false, guidedWins: 0, drillWins: 0, currentStep: 1 }])),
     rcProgress: Object.fromEntries(
       (data.rcPassages || []).map((p) => [p.id, { phase: "reading", readStartTime: null, readTimeSeconds: null, mapText: "" }])
@@ -278,6 +287,9 @@ function loadState() {
         contentManager: { ...base.contentManager, ...(parsed.contentManager || {}) },
         contentDrafts: Array.isArray(parsed.contentDrafts) ? parsed.contentDrafts : [],
         documentLinks: Array.isArray(parsed.documentLinks) ? parsed.documentLinks : [],
+        reviewFilters: { ...base.reviewFilters, ...(parsed.reviewFilters || {}) },
+        reviewNotes: parsed.reviewNotes || {},
+        reviewStatus: parsed.reviewStatus || {},
         questionTypeProgress: { ...base.questionTypeProgress, ...(parsed.questionTypeProgress || {}) },
         rcProgress: { ...base.rcProgress, ...(parsed.rcProgress || {}) },
         attempts: parsed.attempts || {},
@@ -436,14 +448,14 @@ function attemptedQuestions() {
 }
 
 function totalQuestionsAttempted() {
-  return attemptedQuestions().length;
+  return phase4PracticeRecords().length;
 }
 
 function overallAccuracy() {
-  const attempted = attemptedQuestions();
-  if (!attempted.length) return null;
-  const correct = attempted.filter((question) => state.attempts[question.id]?.correct).length;
-  return Math.round((correct / attempted.length) * 100);
+  const records = phase4PracticeRecords();
+  if (!records.length) return null;
+  const correct = records.filter((record) => record.correct).length;
+  return Math.round((correct / records.length) * 100);
 }
 
 function accuracyByQuestionType() {
@@ -451,8 +463,8 @@ function accuracyByQuestionType() {
 }
 
 function averageTimePerQuestion() {
-  const times = attemptedQuestions()
-    .map((question) => state.attempts[question.id]?.timeSeconds)
+  const times = phase4PracticeRecords()
+    .map((record) => record.timeSeconds)
     .filter((time) => Number.isFinite(time));
   if (!times.length) return null;
   return Math.round(times.reduce((sum, time) => sum + time, 0) / times.length);
@@ -497,16 +509,16 @@ function blindReviewGap() {
 }
 
 function blindReviewGapLabel() {
-  const gap = blindReviewGap();
-  return gap ? `${gap.value} pts` : "Not enough data yet";
+  const gap = phase4BlindReviewStats();
+  return gap.gap === null ? "Not enough data yet" : `${gap.gap} pts`;
 }
 
 function missedQuestionCount() {
-  return attemptedQuestions().filter((question) => !state.attempts[question.id]?.correct).length;
+  return phase4PracticeRecords().filter((record) => !record.correct).length;
 }
 
 function reviewQueueCount() {
-  return (state.journal || []).filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending").length;
+  return phase4WrongAnswerItems().filter((item) => !item.reviewed).length;
 }
 
 function recentTestAttempts(limit = 5) {
@@ -689,6 +701,437 @@ function timeSummary() {
     wrong: bucket((question) => state.attempts[question.id] && !state.attempts[question.id].correct),
     review: state.journal.length ? Math.max(180, state.journal.length * 55) : null,
   };
+}
+
+function questionTimingTarget(record) {
+  if (record?.timingTarget) return Number(record.timingTarget);
+  if (record?.section === "RC") return 105;
+  return 85;
+}
+
+function phase4RecordDate(record) {
+  return Date.parse(record.completedAt || record.answeredAt || record.createdAt || "") || 0;
+}
+
+function phase4PracticeRecords() {
+  const records = [];
+  const seen = new Set();
+  (state.testAttempts || []).forEach((attempt) => {
+    (attempt.questions || []).forEach((question) => {
+      if (!question.scored) return;
+      const source = findQuestion(question.sourceId || question.id);
+      const key = question.key;
+      const original = attempt.originalAnswers?.[key];
+      const blind = attempt.blindReviewAnswers?.[key];
+      const correctAnswer = question.correctAnswer;
+      const confidence = attempt.confidenceRatings?.[key] || "";
+      const reviewKey = `test:${attempt.attemptId}:${key}`;
+      const timeSeconds = Number(attempt.timePerQuestion?.[key] || 0);
+      const record = {
+        reviewKey,
+        attemptId: attempt.attemptId,
+        questionId: question.sourceId || question.id,
+        key,
+        source: "test-day",
+        section: question.sectionType || attempt.sectionType || source?.section || "LR",
+        sectionLabel: question.sectionLabel || question.sectionType || attempt.sectionType || source?.section || "Section",
+        questionType: question.questionType || question.family || source?.family || "Mixed",
+        family: question.family || source?.family || question.questionType || "Mixed",
+        difficulty: question.difficulty || source?.difficulty || "",
+        prompt: source?.prompt || "",
+        questionText: question.questionStem || source?.question || question.id,
+        originalAnswer: original,
+        blindReviewAnswer: blind,
+        correctAnswer,
+        correct: original === correctAnswer,
+        blindCorrect: blind === correctAnswer,
+        confidence,
+        timeSeconds: Number.isFinite(timeSeconds) && timeSeconds > 0 ? timeSeconds : null,
+        flagged: Boolean(attempt.flaggedQuestions?.[key]),
+        unanswered: original === undefined,
+        changed: original !== undefined && blind !== undefined && original !== blind,
+        wrongToRight: original !== undefined && blind !== undefined && original !== correctAnswer && blind === correctAnswer,
+        rightToWrong: original !== undefined && blind !== undefined && original === correctAnswer && blind !== correctAnswer,
+        trapPattern: question.trapPattern || source?.trapPattern || "Unclassified trap",
+        mistakeReason: state.mistakeTags?.[reviewKey] || state.mistakeTags?.[question.sourceId || question.id] || question.mistakeReason || source?.mistakeReason || "",
+        explanation: question.explanation || source?.explanation || "",
+        timingTarget: source?.timingTarget || (question.sectionType === "RC" ? 105 : 85),
+        completedAt: attempt.completedAt || attempt.startedAt,
+      };
+      records.push(record);
+      seen.add(reviewKey);
+      seen.add(`source:${record.questionId}`);
+    });
+  });
+
+  (state.answerLog || []).forEach((log) => {
+    if (log.context === "test-day") return;
+    const question = findQuestion(log.questionId);
+    if (!question) return;
+    const reviewKey = `drill:${log.id || `${log.questionId}:${log.answeredAt || ""}`}`;
+    if (seen.has(reviewKey)) return;
+    records.push({
+      reviewKey,
+      questionId: log.questionId,
+      key: log.questionId,
+      source: log.context || "practice",
+      section: question.section || "LR",
+      sectionLabel: question.section || "Practice",
+      questionType: question.family || log.family || "Mixed",
+      family: question.family || log.family || "Mixed",
+      difficulty: question.difficulty || "",
+      prompt: question.prompt || "",
+      questionText: question.question || log.questionId,
+      originalAnswer: log.choice,
+      blindReviewAnswer: undefined,
+      correctAnswer: log.correctAnswer ?? question.answer,
+      correct: Boolean(log.correct),
+      blindCorrect: false,
+      confidence: state.attempts?.[log.questionId]?.confidence || "",
+      timeSeconds: Number.isFinite(Number(log.timeSeconds)) ? Number(log.timeSeconds) : null,
+      flagged: Boolean(state.drillInterface?.flagged?.[log.questionId]),
+      unanswered: log.choice === undefined,
+      changed: false,
+      wrongToRight: false,
+      rightToWrong: false,
+      trapPattern: log.trapPattern || question.trapPattern || "Unclassified trap",
+      mistakeReason: state.mistakeTags?.[reviewKey] || state.mistakeTags?.[log.questionId] || log.mistakeReason || question.mistakeReason || "",
+      explanation: question.explanation || "",
+      timingTarget: question.timingTarget || (question.section === "RC" ? 105 : 85),
+      completedAt: log.answeredAt || "",
+    });
+    seen.add(reviewKey);
+    seen.add(`source:${log.questionId}`);
+  });
+
+  Object.entries(state.attempts || {}).forEach(([questionId, attempt]) => {
+    if (seen.has(`source:${questionId}`)) return;
+    const question = findQuestion(questionId);
+    if (!question) return;
+    const reviewKey = `attempt:${questionId}`;
+    records.push({
+      reviewKey,
+      questionId,
+      key: questionId,
+      source: attempt.context || "practice",
+      section: question.section || "LR",
+      sectionLabel: question.section || "Practice",
+      questionType: question.family || "Mixed",
+      family: question.family || "Mixed",
+      difficulty: question.difficulty || "",
+      prompt: question.prompt || "",
+      questionText: question.question || questionId,
+      originalAnswer: attempt.choice,
+      blindReviewAnswer: undefined,
+      correctAnswer: question.answer,
+      correct: Boolean(attempt.correct),
+      blindCorrect: false,
+      confidence: attempt.confidence || "",
+      timeSeconds: Number.isFinite(Number(attempt.timeSeconds)) ? Number(attempt.timeSeconds) : null,
+      flagged: Boolean(state.drillInterface?.flagged?.[questionId]),
+      unanswered: attempt.choice === undefined,
+      changed: false,
+      wrongToRight: false,
+      rightToWrong: false,
+      trapPattern: question.trapPattern || "Unclassified trap",
+      mistakeReason: state.mistakeTags?.[reviewKey] || state.mistakeTags?.[questionId] || question.mistakeReason || "",
+      explanation: question.explanation || "",
+      timingTarget: question.timingTarget || (question.section === "RC" ? 105 : 85),
+      completedAt: "",
+    });
+  });
+
+  return records.sort((a, b) => phase4RecordDate(b) - phase4RecordDate(a));
+}
+
+function bucketAccuracy(records, keyFn) {
+  const buckets = records.reduce((acc, record) => {
+    const key = keyFn(record) || "Unclassified";
+    acc[key] = acc[key] || { label: key, attempts: 0, correct: 0, totalTime: 0, timed: 0 };
+    acc[key].attempts += 1;
+    if (record.correct) acc[key].correct += 1;
+    if (Number.isFinite(record.timeSeconds)) {
+      acc[key].totalTime += record.timeSeconds;
+      acc[key].timed += 1;
+    }
+    return acc;
+  }, {});
+  return Object.values(buckets).map((bucket) => ({
+    ...bucket,
+    accuracy: bucket.attempts ? Math.round((bucket.correct / bucket.attempts) * 100) : null,
+    avgTime: bucket.timed ? Math.round(bucket.totalTime / bucket.timed) : null,
+  }));
+}
+
+function phase4BlindReviewStats(records = phase4PracticeRecords()) {
+  const reviewed = records.filter((record) => record.blindReviewAnswer !== undefined);
+  if (!reviewed.length) {
+    const gap = blindReviewGap();
+    return gap
+      ? { count: gap.count, originalScore: gap.timedAccuracy, blindReviewScore: gap.blindAccuracy, gap: gap.value, changed: { total: changedAnswerStats().rightToWrong + changedAnswerStats().wrongToRight, ...changedAnswerStats() }, highConfidenceWrong: 0, lowConfidenceCorrect: 0 }
+      : { count: 0, originalScore: null, blindReviewScore: null, gap: null, changed: { total: 0, wrongToRight: 0, rightToWrong: 0, sameWrong: 0, sameRight: 0 }, highConfidenceWrong: 0, lowConfidenceCorrect: 0 };
+  }
+  const originalCorrect = reviewed.filter((record) => record.correct).length;
+  const blindCorrect = reviewed.filter((record) => record.blindReviewAnswer === record.correctAnswer).length;
+  const changed = reviewed.reduce((acc, record) => {
+    if (!record.changed) return acc;
+    acc.total += 1;
+    if (record.wrongToRight) acc.wrongToRight += 1;
+    else if (record.rightToWrong) acc.rightToWrong += 1;
+    else if (!record.correct && !record.blindCorrect) acc.sameWrong += 1;
+    else acc.sameRight += 1;
+    return acc;
+  }, { total: 0, wrongToRight: 0, rightToWrong: 0, sameWrong: 0, sameRight: 0 });
+  return {
+    count: reviewed.length,
+    originalScore: Math.round((originalCorrect / reviewed.length) * 100),
+    blindReviewScore: Math.round((blindCorrect / reviewed.length) * 100),
+    gap: Math.round((blindCorrect / reviewed.length) * 100) - Math.round((originalCorrect / reviewed.length) * 100),
+    changed,
+    highConfidenceWrong: reviewed.filter((record) => record.confidence === "high" && !record.correct).length,
+    lowConfidenceCorrect: reviewed.filter((record) => record.confidence === "low" && record.correct).length,
+  };
+}
+
+function phase4WrongAnswerItems(records = phase4PracticeRecords()) {
+  const items = [];
+  const seen = new Set();
+  records.forEach((record) => {
+    const shouldReview = !record.correct || record.unanswered || record.rightToWrong || (record.confidence === "high" && !record.correct);
+    if (!shouldReview) return;
+    const status = state.reviewStatus?.[record.reviewKey] || {};
+    const note = state.reviewNotes?.[record.reviewKey]?.note || "";
+    const tag = state.mistakeTags?.[record.reviewKey] || state.mistakeTags?.[record.questionId] || record.mistakeReason || (record.unanswered ? "timing issue" : "attractive wrong answer");
+    items.push({
+      ...record,
+      note,
+      tag,
+      reviewed: Boolean(status.reviewed),
+      reviewedAt: status.reviewedAt || "",
+      retry: state.mistakeRetries?.[record.reviewKey] || state.mistakeRetries?.[record.questionId] || null,
+      recommendedAction: record.unanswered
+        ? "Run a short pacing drill and choose a skip point before 85 seconds."
+        : record.rightToWrong
+          ? "Rebuild the proof for your first answer before changing it."
+          : record.confidence === "high"
+            ? "Slow down on trap answers and write the one-word reason the wrong answer fails."
+            : "Write the missed task, retry the question, then drill the family.",
+    });
+    seen.add(record.reviewKey);
+  });
+  (state.journal || []).forEach((entry, index) => {
+    const reviewKey = `journal:${entry.testAttemptId || "local"}:${entry.questionId}:${index}`;
+    if (seen.has(reviewKey)) return;
+    const question = findQuestion(entry.questionId);
+    const status = state.reviewStatus?.[reviewKey] || {};
+    const tag = state.mistakeTags?.[reviewKey] || state.mistakeTags?.[entry.questionId] || entry.mistakeReason || "attractive wrong answer";
+    items.push({
+      reviewKey,
+      questionId: entry.questionId,
+      section: question?.section || ((entry.family || "").startsWith("RC") ? "RC" : "LR"),
+      sectionLabel: question?.section || "Review",
+      questionType: entry.family || question?.family || "Review",
+      family: entry.family || question?.family || "Review",
+      difficulty: question?.difficulty || "",
+      prompt: question?.prompt || "",
+      questionText: question?.question || entry.trapPattern || "Saved review item",
+      originalAnswer: state.attempts?.[entry.questionId]?.choice,
+      blindReviewAnswer: parseAnswerLetter(entry.secondPassAnswer),
+      correctAnswer: question?.answer,
+      correct: false,
+      confidence: entry.reviewConfidence || entry.confidence || "",
+      timeSeconds: state.attempts?.[entry.questionId]?.timeSeconds || null,
+      flagged: false,
+      unanswered: false,
+      changed: false,
+      wrongToRight: false,
+      rightToWrong: false,
+      trapPattern: entry.trapPattern || "Unclassified trap",
+      mistakeReason: entry.mistakeReason || tag,
+      explanation: entry.whyWrong || question?.explanation || "",
+      timingTarget: question?.timingTarget || ((question?.section || "").startsWith("RC") ? 105 : 85),
+      completedAt: entry.createdAt || entry.reviewedAt || "",
+      note: state.reviewNotes?.[reviewKey]?.note || entry.note || "",
+      tag,
+      reviewed: Boolean(status.reviewed),
+      reviewedAt: status.reviewedAt || "",
+      retry: state.mistakeRetries?.[reviewKey] || state.mistakeRetries?.[entry.questionId] || null,
+      recommendedAction: "Complete the Blind Review note, tag the miss, and retry a related drill.",
+    });
+  });
+  return items.sort((a, b) => Number(a.reviewed) - Number(b.reviewed) || phase4RecordDate(b) - phase4RecordDate(a));
+}
+
+function filteredPhase4WrongAnswerItems(items = phase4WrongAnswerItems()) {
+  const filters = state.reviewFilters || defaultState().reviewFilters;
+  const query = String(filters.query || "").toLowerCase().trim();
+  return items.filter((item) => {
+    if (filters.status === "open" && item.reviewed) return false;
+    if (filters.status === "reviewed" && !item.reviewed) return false;
+    if (filters.section !== "all" && item.section !== filters.section) return false;
+    if (filters.type !== "all" && item.questionType !== filters.type && item.family !== filters.type) return false;
+    if (filters.tag !== "all" && item.tag !== filters.tag) return false;
+    if (query) {
+      const haystack = `${item.questionText} ${item.family} ${item.trapPattern} ${item.note} ${item.tag}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+}
+
+function phase4Analytics() {
+  const records = phase4PracticeRecords();
+  const total = records.length;
+  const correct = records.filter((record) => record.correct).length;
+  const timed = records.filter((record) => Number.isFinite(record.timeSeconds));
+  const bySection = bucketAccuracy(records, (record) => record.section);
+  const byType = bucketAccuracy(records, (record) => record.questionType || record.family).sort((a, b) => a.accuracy - b.accuracy);
+  const byDifficulty = bucketAccuracy(records, (record) => record.difficulty || "Unknown");
+  const br = phase4BlindReviewStats(records);
+  const confidence = records.reduce((acc, record) => {
+    const level = record.confidence || "unrated";
+    const key = `${level}${record.correct ? "Correct" : "Wrong"}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const wrongItems = phase4WrongAnswerItems(records);
+  const trapCounts = wrongItems.reduce((acc, item) => {
+    const trap = item.trapPattern || "Unclassified trap";
+    acc[trap] = (acc[trap] || 0) + 1;
+    return acc;
+  }, {});
+  const recentTests = recentTestAttempts(10).map((attempt) => ({
+    label: attempt.completedAt ? new Date(attempt.completedAt).toLocaleDateString([], { month: "short", day: "numeric" }) : "Test",
+    accuracy: attempt.accuracy,
+    score: attempt.score,
+    total: (attempt.questions || []).filter((question) => question.scored).length,
+  }));
+  const recentRecords = records.slice(0, 10);
+  const recentAccuracy = recentRecords.length ? Math.round((recentRecords.filter((record) => record.correct).length / recentRecords.length) * 100) : null;
+  const avgTime = timed.length ? Math.round(timed.reduce((sum, record) => sum + record.timeSeconds, 0) / timed.length) : null;
+  const slowest = [...timed].sort((a, b) => b.timeSeconds - a.timeSeconds).slice(0, 5);
+  const fastestMisses = records.filter((record) => !record.correct && Number.isFinite(record.timeSeconds)).sort((a, b) => a.timeSeconds - b.timeSeconds).slice(0, 5);
+  const overTarget = timed.filter((record) => record.timeSeconds > questionTimingTarget(record));
+  const trend = recentTests.length >= 2
+    ? recentTests[0].accuracy > recentTests[recentTests.length - 1].accuracy ? "improving" : recentTests[0].accuracy < recentTests[recentTests.length - 1].accuracy ? "needs review" : "steady"
+    : recentRecords.length >= 5
+      ? "steady"
+      : "needs more data";
+  return {
+    records,
+    total,
+    correct,
+    accuracy: total ? Math.round((correct / total) * 100) : null,
+    bySection,
+    byType,
+    byDifficulty,
+    avgTime,
+    avgTimeByType: byType.filter((item) => item.avgTime !== null),
+    missedCount: records.filter((record) => !record.correct).length,
+    flaggedCount: records.filter((record) => record.flagged).length,
+    unansweredCount: records.filter((record) => record.unanswered).length,
+    blindReview: br,
+    changedAnswers: br.changed,
+    confidence,
+    recentTests,
+    recentAccuracy,
+    trend,
+    weakestTypes: byType.filter((item) => item.attempts > 0).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5),
+    strongestTypes: byType.filter((item) => item.attempts > 0).sort((a, b) => b.accuracy - a.accuracy).slice(0, 5),
+    reviewQueueCount: wrongItems.filter((item) => !item.reviewed).length,
+    wrongItems,
+    slowest,
+    fastestMisses,
+    overTarget,
+    repeatedTraps: Object.entries(trapCounts).sort((a, b) => b[1] - a[1]).slice(0, 6),
+  };
+}
+
+function lessonForFamily(family) {
+  return data.lessons.find((lesson) => (lesson.linkedQuestionFamilies || []).includes(family))
+    || data.lessons.find((lesson) => `${lesson.title} ${lesson.summary}`.toLowerCase().includes(String(family || "").toLowerCase().split(" ")[0]))
+    || nextLesson();
+}
+
+function phase4Recommendations(analytics = phase4Analytics()) {
+  if (!analytics.total) {
+    return [{
+      reason: "Not enough data yet.",
+      action: "Complete one 5-question LR or RC test-day session, then submit Blind Review.",
+      href: "#/practice/test-day",
+    }];
+  }
+  const recommendations = [];
+  const weak = analytics.weakestTypes[0];
+  if (weak && weak.accuracy < 70) {
+    const lesson = lessonForFamily(weak.label);
+    recommendations.push({
+      reason: `${weak.label} is your weakest logged type at ${weak.accuracy}%.`,
+      action: `Review ${lesson.title}, then run a targeted drill.`,
+      href: `#/learn/${lesson.id}`,
+    });
+  }
+  if (analytics.avgTime && analytics.accuracy >= 75 && analytics.avgTime > 95) {
+    recommendations.push({
+      reason: `Accuracy is solid, but average time is ${analytics.avgTime}s.`,
+      action: "Run a timed drill and practice earlier skip decisions.",
+      href: "#/practice/timed",
+    });
+  }
+  if (analytics.avgTime && analytics.accuracy !== null && analytics.accuracy < 65 && analytics.avgTime < 70) {
+    recommendations.push({
+      reason: "You are moving quickly while accuracy is low.",
+      action: "Slow down: classify the stimulus and predict before answer choices.",
+      href: "#/learn/lr-argument-core",
+    });
+  }
+  if (analytics.blindReview.highConfidenceWrong > 0) {
+    recommendations.push({
+      reason: `${analytics.blindReview.highConfidenceWrong} high-confidence wrong answer${analytics.blindReview.highConfidenceWrong === 1 ? "" : "s"} logged.`,
+      action: "Review trap-answer patterns before your next timed section.",
+      href: "#/review",
+    });
+  }
+  if (analytics.blindReview.gap !== null && analytics.blindReview.gap >= 15) {
+    recommendations.push({
+      reason: `Blind Review is ${analytics.blindReview.gap} points higher than timed work.`,
+      action: "Pair timed practice with confidence review. Knowledge is ahead of speed.",
+      href: "#/practice/test-day",
+    });
+  }
+  if (analytics.blindReview.gap !== null && analytics.blindReview.gap <= 3 && analytics.accuracy < 70) {
+    recommendations.push({
+      reason: "Timed and Blind Review scores are close, but both need lift.",
+      action: "Do concept work before more timed sets.",
+      href: `#/learn/${lessonForFamily(weak?.label).id}`,
+    });
+  }
+  if (analytics.changedAnswers.rightToWrong > 0) {
+    recommendations.push({
+      reason: `${analytics.changedAnswers.rightToWrong} answer change went right to wrong.`,
+      action: "Write the proof before changing an answer.",
+      href: "#/review",
+    });
+  }
+  if (analytics.flaggedCount >= 3) {
+    recommendations.push({
+      reason: `${analytics.flaggedCount} questions were flagged.`,
+      action: "Practice confidence decisions: skip, flag, return, commit.",
+      href: "#/practice/test-day",
+    });
+  }
+  if (analytics.unansweredCount > 0) {
+    recommendations.push({
+      reason: `${analytics.unansweredCount} question${analytics.unansweredCount === 1 ? " was" : "s were"} unanswered.`,
+      action: "Run pacing drills and set a hard move-on point.",
+      href: "#/practice/timed",
+    });
+  }
+  return recommendations.length ? recommendations.slice(0, 5) : [{
+    reason: "Your recent data is steady.",
+    action: "Keep the loop: timed set, Blind Review, journal one reusable rule.",
+    href: "#/practice/test-day",
+  }];
 }
 
 function finalFiveAccuracy() {
@@ -1214,13 +1657,20 @@ function blindReviewDiagnosis(entry) {
 
 function mistakeReasonOptions() {
   return [
-    "Misread stimulus",
-    "Misread question stem",
-    "Wrong answer trap",
-    "Timing issue",
-    "Narrowed to two",
-    "Did not understand argument",
-    "Careless error",
+    "misread stimulus",
+    "misread question stem",
+    "missed conclusion",
+    "confused sufficient/necessary",
+    "weak conditional logic",
+    "causal reasoning mistake",
+    "attractive wrong answer",
+    "timing issue",
+    "careless mistake",
+    "low confidence",
+    "changed right to wrong",
+    "guessed",
+    "did not understand argument",
+    "narrowed to two",
   ];
 }
 
@@ -2871,14 +3321,15 @@ function renderDashboardHero() {
 }
 
 function renderDashboardPage() {
-  const weak = focusAwareWeakestFamily();
+  const analytics = phase4Analytics();
+  const recommended = phase4Recommendations(analytics)[0];
+  const weak = analytics.weakestTypes[0]
+    ? { family: analytics.weakestTypes[0].label, score: analytics.weakestTypes[0].accuracy }
+    : focusAwareWeakestFamily();
   const adaptive = adaptiveDrillTarget();
   const lesson = nextLesson();
   const focus = activeStudyUnit();
-  const dueEntries = state.journal.filter(
-    (entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending"
-  );
-  const dueCount = dueEntries.length;
+  const dueCount = analytics.reviewQueueCount;
   const recentRows = recentSectionRows();
   const tests = (state.officialLogs || []).slice(0, 4);
   const rating = dashboardRating();
@@ -2929,7 +3380,7 @@ function renderDashboardPage() {
       <a class="demon-action" href="#/review">
         <p class="mini-card__label">Review inbox</p>
         <h3>${dueCount}</h3>
-        <p>Blind Review item${dueCount === 1 ? "" : "s"} waiting before explanations unlock.</p>
+        <p>${dueCount ? "Missed, changed, or high-confidence wrong items waiting." : "No open review items. New misses will appear here automatically."}</p>
         <strong>Open review inbox →</strong>
       </a>
       <a class="demon-action" href="#/learn/${lesson.id}">
@@ -3005,14 +3456,23 @@ function renderDashboardPage() {
       <a class="demon-panel demon-panel--analytics" href="#/review">
         <div class="dashboard-card__head">
           <h3>Smart analytics</h3>
-          <span class="status-pill">${studyQualityScore()}/100 quality</span>
+          <span class="status-pill">${analytics.trend}</span>
         </div>
         <div class="demon-analytics-strip">
-          <span><strong>${totalQuestionsAttempted()}</strong> answered</span>
-          <span><strong>${timeSummary().correct || "--"}s</strong> avg correct</span>
-          <span><strong>${blindReviewGapLabel()}</strong> BR gap</span>
-          <span><strong>${streakDays()}</strong> day streak</span>
+          <span><strong>${analytics.total}</strong> answered</span>
+          <span><strong>${analytics.recentAccuracy === null ? "Not enough data yet" : `${analytics.recentAccuracy}%`}</strong> recent accuracy</span>
+          <span><strong>${analytics.blindReview.gap === null ? "Not enough data yet" : `${analytics.blindReview.gap} pts`}</strong> BR gap</span>
+          <span><strong>${analytics.reviewQueueCount}</strong> review queue</span>
         </div>
+      </a>
+
+      <a class="demon-panel demon-panel--recommendation" href="${recommended.href}">
+        <div class="dashboard-card__head">
+          <h3>Recommended next action</h3>
+          <span class="status-pill">Phase 4</span>
+        </div>
+        <p><strong>${escapeHtml(recommended.reason)}</strong></p>
+        <span>${escapeHtml(recommended.action)}</span>
       </a>
 
       <a class="demon-panel demon-panel--explanation" href="#/review">
@@ -5015,10 +5475,194 @@ function renderPrepTestResults(id) {
   `;
 }
 
+function renderPhase4Metric(label, value, body) {
+  return `<section class="mini-card phase4-metric"><p class="mini-card__label">${escapeHtml(label)}</p><h4>${escapeHtml(value)}</h4><p>${escapeHtml(body)}</p></section>`;
+}
+
+function renderPhase4BarRows(rows, { empty = "Not enough data yet." } = {}) {
+  if (!rows.length) return `<p class="muted">${empty}</p>`;
+  return rows.map((item) => `
+    <div class="mastery-row compact-row ${!item.attempts ? "is-zero" : ""}">
+      <span>${escapeHtml(item.label)}${item.attempts ? ` · ${item.attempts} attempt${item.attempts === 1 ? "" : "s"}` : " · 0 attempts"}</span>
+      <strong>${item.accuracy === null ? "--" : `${item.accuracy}%`}</strong>
+      <div><i style="width:${Math.max(0, item.accuracy || 0)}%"></i></div>
+    </div>
+  `).join("");
+}
+
+function renderReviewItemCard(item) {
+  const note = state.reviewNotes?.[item.reviewKey]?.note || item.note || "";
+  const tag = state.mistakeTags?.[item.reviewKey] || state.mistakeTags?.[item.questionId] || item.tag || "attractive wrong answer";
+  return `
+    <section class="journal-card review-item-card ${item.reviewed ? "is-reviewed" : ""}" data-review-key="${escapeHtml(item.reviewKey)}">
+      <div class="review-item-card__main">
+        <p class="mini-card__label">${escapeHtml(item.section)} · ${escapeHtml(item.questionType)} · ${escapeHtml(item.difficulty || "difficulty n/a")}</p>
+        <h4>${escapeHtml(item.questionText || item.questionId)}</h4>
+        <p>${escapeHtml(item.prompt || item.explanation || "Saved review item.")}</p>
+        <dl class="review-facts">
+          <div><dt>Original</dt><dd>${escapeHtml(answerLetter(item.originalAnswer))}</dd></div>
+          <div><dt>Blind Review</dt><dd>${escapeHtml(item.blindReviewAnswer === undefined ? "n/a" : answerLetter(item.blindReviewAnswer))}</dd></div>
+          <div><dt>Correct</dt><dd>${escapeHtml(item.correctAnswer === undefined ? "n/a" : answerLetter(item.correctAnswer))}</dd></div>
+          <div><dt>Time</dt><dd>${item.timeSeconds === null ? "n/a" : `${item.timeSeconds}s`}</dd></div>
+          <div><dt>Confidence</dt><dd>${escapeHtml(item.confidence || "unrated")}</dd></div>
+          <div><dt>Status</dt><dd>${item.reviewed ? "reviewed" : "open"}</dd></div>
+        </dl>
+        <p class="microcopy">Trap: ${escapeHtml(item.trapPattern)} · Next: ${escapeHtml(item.recommendedAction)}</p>
+      </div>
+      <div class="review-item-card__controls">
+        <label class="br-field"><span>Mistake tag</span><select data-review-tag="${escapeHtml(item.reviewKey)}" data-question-id="${escapeHtml(item.questionId || "")}">
+          ${mistakeReasonOptions().map((reason) => `<option value="${escapeHtml(reason)}" ${tag === reason ? "selected" : ""}>${escapeHtml(reason)}</option>`).join("")}
+        </select></label>
+        <label class="br-field br-field--wide"><span>Why I missed it</span><textarea rows="3" data-review-note>${escapeHtml(note)}</textarea></label>
+        <div class="dashboard-actions">
+          <button class="button button--primary" type="button" data-review-note-save="${escapeHtml(item.reviewKey)}">Save note</button>
+          <button class="button button--ghost" type="button" data-review-reviewed="${escapeHtml(item.reviewKey)}">${item.reviewed ? "Reviewed" : "Mark reviewed"}</button>
+          <button class="button button--ghost" type="button" data-review-retry-item="${escapeHtml(item.reviewKey)}">${item.retry ? "Retry logged" : "Mark retry correct"}</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderPhase4ReviewPage() {
+  const analytics = phase4Analytics();
+  const recommendations = phase4Recommendations(analytics);
+  const wrongItems = phase4WrongAnswerItems(analytics.records);
+  const filteredItems = filteredPhase4WrongAnswerItems(wrongItems);
+  const filters = state.reviewFilters || defaultState().reviewFilters;
+  const types = ["all", ...new Set(wrongItems.map((item) => item.questionType || item.family).filter(Boolean))].slice(0, 50);
+  const tags = ["all", ...new Set([...mistakeReasonOptions(), ...wrongItems.map((item) => item.tag).filter(Boolean)])];
+  const sections = ["all", ...new Set(wrongItems.map((item) => item.section).filter(Boolean))];
+  const br = analytics.blindReview;
+  const brMeaning = br.gap === null
+    ? "Complete a test-day session and Blind Review to unlock this diagnosis."
+    : br.gap >= 15
+      ? "Your untimed reasoning is ahead of timed performance. Train pacing and confidence."
+      : br.gap <= 3 && analytics.accuracy !== null && analytics.accuracy < 70
+        ? "Blind Review is not lifting the score much yet. Prioritize concept lessons before more speed work."
+        : br.changed.rightToWrong > br.changed.wrongToRight
+          ? "Too many changes are hurting you. Require proof before switching answers."
+          : "Your review process is giving usable signal. Keep tagging the misses.";
+  return `
+    <section class="review-hub">
+      <article class="panel panel--wide review-hero">
+        <div>
+          <p class="eyebrow">Phase 4 Analytics</p>
+          <h2>Review what cost points, why it happened, and what to do next.</h2>
+          <p>No fake score magic here: cards say “Not enough data yet” until you have actual attempts, timing, and Blind Review records.</p>
+        </div>
+        <a class="button button--primary" href="#/practice/test-day">Run a 5-question test-day set</a>
+      </article>
+
+      <article id="review-queue" class="panel panel--wide">
+        <div class="panel__head">
+          <div><p class="mini-card__label">Review queue</p><h3>${analytics.reviewQueueCount} open item${analytics.reviewQueueCount === 1 ? "" : "s"}</h3></div>
+          <a class="status-pill status-pill--button" href="#wrong-answer-journal">Open journal</a>
+        </div>
+        <div class="card-grid card-grid--four">
+          ${renderPhase4Metric("Questions attempted", String(analytics.total), analytics.total ? "From drills, lessons, and test-day attempts." : "Not enough data yet.")}
+          ${renderPhase4Metric("Overall accuracy", analytics.accuracy === null ? "Not enough data yet" : `${analytics.accuracy}%`, "All locally saved scored answers.")}
+          ${renderPhase4Metric("Missed questions", String(analytics.missedCount), "Auto-collected into the wrong-answer journal.")}
+          ${renderPhase4Metric("Average time", analytics.avgTime === null ? "Not enough data yet" : `${analytics.avgTime}s`, "LR target about 85s; RC question target about 105s.")}
+        </div>
+        <div class="review-recommendation-grid">
+          ${recommendations.map((rec) => `
+            <a class="recommendation-card" href="${rec.href}">
+              <strong>${escapeHtml(rec.reason)}</strong>
+              <span>${escapeHtml(rec.action)}</span>
+            </a>
+          `).join("")}
+        </div>
+      </article>
+
+      <article id="blind-review" class="panel panel--wide">
+        <div class="panel__head"><h3>Blind Review Analytics</h3><span class="status-pill">${br.count ? `${br.count} reviewed` : "Not enough data yet"}</span></div>
+        <div class="card-grid card-grid--four">
+          ${renderPhase4Metric("Original score", br.originalScore === null ? "Not enough data yet" : `${br.originalScore}%`, "First-pass performance.")}
+          ${renderPhase4Metric("Blind Review score", br.blindReviewScore === null ? "Not enough data yet" : `${br.blindReviewScore}%`, "Second-pass answers before explanations.")}
+          ${renderPhase4Metric("BR gap", br.gap === null ? "Not enough data yet" : `${br.gap} pts`, "Blind Review minus original score.")}
+          ${renderPhase4Metric("Changed answers", String(br.changed.total || 0), `${br.changed.wrongToRight || 0} wrong→right · ${br.changed.rightToWrong || 0} right→wrong.`)}
+        </div>
+        <div class="card-grid card-grid--four">
+          ${renderPhase4Metric("High-confidence wrong", String(br.highConfidenceWrong || 0), "Trap danger: you felt sure and still missed.")}
+          ${renderPhase4Metric("Low-confidence correct", String(br.lowConfidenceCorrect || 0), "Knowledge may be stronger than confidence.")}
+          ${renderPhase4Metric("Flagged", String(analytics.flaggedCount), "Questions you marked for return.")}
+          ${renderPhase4Metric("Unanswered", String(analytics.unansweredCount), "Pacing pressure or skip strategy gap.")}
+        </div>
+        <div class="recommendation-box"><strong>What this means:</strong> ${escapeHtml(brMeaning)}</div>
+      </article>
+
+      <article id="timing-review" class="panel panel--wide">
+        <div class="panel__head"><h3>Timing Review</h3><span class="status-pill">${analytics.overTarget.length} over target</span></div>
+        <div class="analytics-detail-grid">
+          <section class="transcript-block">
+            <p class="mini-card__label">Average time by type</p>
+            ${analytics.avgTimeByType.length ? analytics.avgTimeByType.slice(0, 8).map((item) => `
+              <div class="mastery-row compact-row">
+                <span>${escapeHtml(item.label)} · ${item.attempts} attempts</span><strong>${item.avgTime}s</strong><div><i style="width:${Math.max(8, Math.min(100, 140 - item.avgTime / 2))}%"></i></div>
+              </div>
+            `).join("") : `<p class="muted">Not enough timed data yet.</p>`}
+          </section>
+          <section class="transcript-block">
+            <p class="mini-card__label">Slowest questions</p>
+            ${analytics.slowest.length ? analytics.slowest.map((item) => `<p><strong>${escapeHtml(item.questionType)}</strong> · ${item.timeSeconds}s · ${escapeHtml(item.questionText)}</p>`).join("") : `<p class="muted">Not enough timed data yet.</p>`}
+          </section>
+          <section class="transcript-block">
+            <p class="mini-card__label">Fastest misses</p>
+            ${analytics.fastestMisses.length ? analytics.fastestMisses.map((item) => `<p><strong>${escapeHtml(item.questionType)}</strong> · ${item.timeSeconds}s · ${escapeHtml(item.recommendedAction)}</p>`).join("") : `<p class="muted">No fast misses yet.</p>`}
+          </section>
+          <section class="transcript-block">
+            <p class="mini-card__label">Timing practice</p>
+            <p>${analytics.overTarget.length ? "Run a timed set and force an earlier skip on questions past target time." : "No timing issue is visible yet. Add more timed attempts."}</p>
+            <a class="button button--ghost" href="#/practice/timed">Open timed drill</a>
+          </section>
+        </div>
+      </article>
+
+      <article id="question-type-weaknesses" class="panel panel--wide">
+        <div class="panel__head"><h3>Question-Type Weaknesses</h3><span class="status-pill">${analytics.trend}</span></div>
+        <div class="analytics-detail-grid">
+          <section class="transcript-block"><p class="mini-card__label">Weakest types</p>${renderPhase4BarRows(analytics.weakestTypes)}</section>
+          <section class="transcript-block"><p class="mini-card__label">Strongest types</p>${renderPhase4BarRows(analytics.strongestTypes)}</section>
+          <section class="transcript-block"><p class="mini-card__label">Accuracy by section</p>${renderPhase4BarRows(analytics.bySection)}</section>
+          <section class="transcript-block"><p class="mini-card__label">Accuracy by difficulty</p>${renderPhase4BarRows(analytics.byDifficulty)}</section>
+        </div>
+      </article>
+
+      <article id="wrong-answer-journal" class="panel panel--wide">
+        <div class="panel__head">
+          <div><p class="mini-card__label">Wrong-Answer Journal</p><h3>${filteredItems.length} shown · ${wrongItems.length} total</h3></div>
+          <span class="status-pill">localStorage</span>
+        </div>
+        <div class="review-filter-grid">
+          <label><span>Search</span><input type="search" data-review-filter="query" value="${escapeHtml(filters.query || "")}" placeholder="question, trap, note..."></label>
+          <label><span>Tag</span><select data-review-filter="tag">${tags.map((tag) => `<option value="${escapeHtml(tag)}" ${filters.tag === tag ? "selected" : ""}>${escapeHtml(tag)}</option>`).join("")}</select></label>
+          <label><span>Question type</span><select data-review-filter="type">${types.map((type) => `<option value="${escapeHtml(type)}" ${filters.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}</select></label>
+          <label><span>Status</span><select data-review-filter="status">${["open", "reviewed", "all"].map((status) => `<option value="${status}" ${filters.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></label>
+          <label><span>Section</span><select data-review-filter="section">${sections.map((section) => `<option value="${escapeHtml(section)}" ${filters.section === section ? "selected" : ""}>${escapeHtml(section)}</option>`).join("")}</select></label>
+        </div>
+        <div class="journal-list phase4-journal-list">
+          ${filteredItems.length ? filteredItems.slice(0, 40).map(renderReviewItemCard).join("") : `<p class="muted">No journal items match. Try all statuses or complete a missed question first.</p>`}
+        </div>
+      </article>
+
+      <article id="repeated-traps" class="panel panel--wide">
+        <div class="panel__head"><h3>Repeated Traps</h3><span class="status-pill">${analytics.repeatedTraps.length ? "detected" : "Not enough data yet"}</span></div>
+        <div class="card-grid card-grid--three">
+          ${analytics.repeatedTraps.length ? analytics.repeatedTraps.map(([trap, count]) => `
+            <section class="mini-card"><p class="mini-card__label">${count} miss${count === 1 ? "" : "es"}</p><h4>${escapeHtml(trap)}</h4><p>Fix: state the answer job before comparing familiar wording.</p></section>
+          `).join("") : `<section class="mini-card"><p class="mini-card__label">No pattern yet</p><h4>Not enough data yet</h4><p>Misses will group here by trap pattern.</p></section>`}
+        </div>
+      </article>
+    </section>
+  `;
+}
+
 function renderReviewPage(route = {}) {
   if (route.subtype === "preptest") {
     return renderPrepTestResults(route.id || "pt130");
   }
+  return renderPhase4ReviewPage(route);
   const weak = weakestFamily();
   const dueEntries = state.journal.filter((entry) => !entry.blindReviewOutcome || entry.blindReviewOutcome === "pending");
   const families = familyAnalytics().slice(0, 6);
@@ -6403,6 +7047,64 @@ function wireInteractions(route) {
       const entry = state.journal[Number(input.dataset.mistakeTag)];
       if (!entry) return;
       state.mistakeTags[entry.questionId] = input.value;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-review-filter]").forEach((field) => {
+    const eventName = field.tagName === "INPUT" ? "input" : "change";
+    field.addEventListener(eventName, () => {
+      const key = field.dataset.reviewFilter;
+      state.reviewFilters = { ...defaultState().reviewFilters, ...(state.reviewFilters || {}), [key]: field.value };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-review-tag]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const key = input.dataset.reviewTag;
+      const questionId = input.dataset.questionId;
+      state.mistakeTags[key] = input.value;
+      if (questionId) state.mistakeTags[questionId] = input.value;
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-review-note-save]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.reviewNoteSave;
+      const card = button.closest("[data-review-key]");
+      const note = card?.querySelector("[data-review-note]")?.value.trim() || "";
+      state.reviewNotes[key] = { note, updatedAt: new Date().toISOString() };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-review-reviewed]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.reviewReviewed;
+      const current = state.reviewStatus[key] || {};
+      state.reviewStatus[key] = {
+        ...current,
+        reviewed: !current.reviewed,
+        reviewedAt: !current.reviewed ? new Date().toISOString() : "",
+      };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-review-retry-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.reviewRetryItem;
+      state.mistakeRetries[key] = {
+        correct: true,
+        retriedAt: new Date().toISOString(),
+      };
       saveState();
       renderApp();
     });
