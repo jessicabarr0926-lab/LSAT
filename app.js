@@ -45,6 +45,15 @@ sidebarClose?.addEventListener("click", () => {
   document.body.classList.remove("sidebar-open");
 });
 
+navRail?.addEventListener("click", (event) => {
+  const link = event.target.closest(".nav__link");
+  if (!link) return;
+  document.body.classList.remove("sidebar-open");
+  document.body.classList.add("sidebar-route-closing");
+  window.setTimeout(() => document.body.classList.remove("sidebar-route-closing"), 900);
+  link.blur();
+});
+
 notificationBell?.addEventListener("click", () => {
   state.notificationsOpen = !state.notificationsOpen;
   saveState();

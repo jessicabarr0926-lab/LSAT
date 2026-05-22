@@ -275,6 +275,11 @@ body.sidebar-collapsed .topbar {
     box-shadow: 0 24px 70px rgba(54, 48, 88, 0.28);
   }
 
+  body.sidebar-auto-hide:not(.sidebar-collapsed).sidebar-route-closing .sidebar {
+    transform: translateX(calc(-100% + 18px));
+    pointer-events: none;
+  }
+
   body.sidebar-auto-hide:not(.sidebar-collapsed) .main {
     grid-column: 1 / -1;
     padding-left: 68px;
@@ -409,6 +414,7 @@ body.sidebar-collapsed .topbar {
 
 .nav__link[data-route="dashboard"]::before,
 .nav__link[data-route="learn"]::before,
+.nav__link[data-route="content"]::before,
 .nav__link[data-route="practice"]::before,
 .nav__link[data-route="review"]::before,
 .nav__link[data-route="plan"]::before,
@@ -425,6 +431,7 @@ body.sidebar-collapsed .topbar {
 
 .nav__link[data-route="dashboard"]::before { content: "🏠"; }
 .nav__link[data-route="learn"]::before { content: "📖"; }
+.nav__link[data-route="content"]::before { content: "🗂️"; }
 .nav__link[data-route="practice"]::before { content: "🎯"; }
 .nav__link[data-route="review"]::before { content: "🔍"; }
 .nav__link[data-route="plan"]::before { content: "📅"; }
