@@ -121,6 +121,11 @@ function defaultState() {
       editingDraftId: "",
       exportText: "",
     },
+    backupTools: {
+      exportText: "",
+      importText: "",
+      importStatus: "",
+    },
     contentDrafts: [],
     documentLinks: [],
     reviewFilters: {
@@ -151,6 +156,7 @@ function defaultState() {
     testAttempts: [],
     bookmarks: {},
     studyFocus: "auto",
+    studyPlanTasks: {},
     adaptiveMode: "weakness",
     studyCalendar: [],
     mistakeTags: {},
@@ -190,6 +196,11 @@ function defaultState() {
     prepTestView: "questions",
     liveReservations: {},
     coachMessages: [],
+    tutorWorkspace: {
+      selectedTemplate: "missed-question",
+      copyStatus: "",
+      lastCopiedAt: "",
+    },
     mayaTeacher: {
       open: false,
       tab: "ask",
@@ -285,6 +296,7 @@ function loadState() {
         lessonNotes: { ...base.lessonNotes, ...(parsed.lessonNotes || {}) },
         contentLibrary: { ...base.contentLibrary, ...(parsed.contentLibrary || {}) },
         contentManager: { ...base.contentManager, ...(parsed.contentManager || {}) },
+        backupTools: { ...base.backupTools, ...(parsed.backupTools || {}) },
         contentDrafts: Array.isArray(parsed.contentDrafts) ? parsed.contentDrafts : [],
         documentLinks: Array.isArray(parsed.documentLinks) ? parsed.documentLinks : [],
         reviewFilters: { ...base.reviewFilters, ...(parsed.reviewFilters || {}) },
@@ -301,6 +313,7 @@ function loadState() {
         testAttempts: parsed.testAttempts || [],
         bookmarks: parsed.bookmarks || {},
         studyFocus: parsed.studyFocus || base.studyFocus,
+        studyPlanTasks: parsed.studyPlanTasks || {},
         adaptiveMode: parsed.adaptiveMode || base.adaptiveMode,
         studyCalendar: parsed.studyCalendar || [],
         mistakeTags: parsed.mistakeTags || {},
@@ -323,6 +336,7 @@ function loadState() {
         prepTestView: parsed.prepTestView || base.prepTestView,
         liveReservations: parsed.liveReservations || {},
         coachMessages: parsed.coachMessages || [],
+        tutorWorkspace: { ...base.tutorWorkspace, ...(parsed.tutorWorkspace || {}) },
         mayaTeacher: { ...base.mayaTeacher, ...(parsed.mayaTeacher || {}) },
         answerLog: parsed.answerLog || [],
         testDay: {
@@ -625,12 +639,7 @@ function bookCompanionStats() {
 }
 
 function localBackupPayload() {
-  return JSON.stringify({
-    exportedAt: new Date().toISOString(),
-    appKey: APP_KEY,
-    version: "jessipreps-static-v2",
-    state,
-  }, null, 2);
+  return phase6BackupPayload();
 }
 
 function liveClassroomReply(prompt) {
@@ -1132,6 +1141,446 @@ function phase4Recommendations(analytics = phase4Analytics()) {
     action: "Keep the loop: timed set, Blind Review, journal one reusable rule.",
     href: "#/practice/test-day",
   }];
+}
+
+function phase6TodayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function phase6WeekKey() {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), 0, 1);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const week = Math.ceil((((now - first) / dayMs) + first.getDay() + 1) / 7);
+  return `${now.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function phase6TaskComplete(taskId) {
+  return Boolean(state.studyPlanTasks?.[taskId]?.complete);
+}
+
+function phase6StudyInsights(analytics = phase4Analytics()) {
+  const weakType = analytics.weakestTypes[0]?.label || adaptiveDrillTarget().weak.family;
+  const weakLesson = lessonForFamily(weakType);
+  const next = nextLesson();
+  const target = adaptiveDrillTarget();
+  const reviewCount = analytics.reviewQueueCount || 0;
+  const brGap = analytics.blindReview?.gap;
+  const timingIssue = analytics.overTarget?.[0] || analytics.slowest?.[0] || null;
+  return {
+    analytics,
+    weakType,
+    weakLesson,
+    nextLesson: weakLesson || next,
+    drillTarget: target,
+    reviewCount,
+    brGap,
+    timingIssue,
+    hasPracticeData: analytics.total > 0,
+  };
+}
+
+function phase6StudyPlanTasks() {
+  const today = phase6TodayKey();
+  const insights = phase6StudyInsights();
+  const noData = !insights.hasPracticeData;
+  const lesson = insights.nextLesson || nextLesson();
+  const drill = insights.drillTarget;
+  const reviewHref = insights.reviewCount ? "#/review" : "#/practice/test-day";
+  const tasks = [
+    {
+      id: `${today}:lesson:${lesson.id}`,
+      type: "Lesson",
+      title: noData ? `Start with ${lesson.title}` : `Review ${lesson.title}`,
+      href: `#/learn/${lesson.id}`,
+      reason: noData
+        ? "Not enough practice data yet, so the plan starts with the next course lesson."
+        : `${insights.weakType} is the weakest logged area from your recent work.`,
+    },
+    {
+      id: `${today}:drill:${drill.preset.id}`,
+      type: "Drill",
+      title: `${drill.weak.family} targeted drill`,
+      href: `#/practice/drill/${drill.preset.id}`,
+      reason: noData
+        ? "Complete a short drill so analytics can start finding patterns."
+        : `Chosen from local misses, timing, and adaptive mode.`,
+    },
+    {
+      id: `${today}:review:${insights.reviewCount ? "queue" : "seed"}`,
+      type: "Review",
+      title: insights.reviewCount ? `Review ${insights.reviewCount} queued miss${insights.reviewCount === 1 ? "" : "es"}` : "Create a review queue",
+      href: reviewHref,
+      reason: insights.reviewCount
+        ? "Wrong-answer journal items are waiting for notes, tags, or retry."
+        : "No queued misses yet. A 5-question test-day set will create review data.",
+    },
+    {
+      id: `${today}:blind-review:${insights.brGap === null ? "setup" : insights.brGap}`,
+      type: "Blind Review",
+      title: insights.brGap === null ? "Run one Blind Review set" : `Blind Review gap: ${insights.brGap} pts`,
+      href: "#/practice/test-day",
+      reason: insights.brGap === null
+        ? "Not enough Blind Review data yet."
+        : insights.brGap >= 15
+          ? "Knowledge is ahead of timed execution; pair timed work with confidence review."
+          : "Keep comparing first-pass and Blind Review answers after every set.",
+    },
+  ];
+  return tasks;
+}
+
+function phase6WeeklyGoals() {
+  const week = phase6WeekKey();
+  const tasks = Object.entries(state.studyPlanTasks || {}).filter(([id, item]) => id.includes(week) || item.weekKey === week);
+  const completed = tasks.filter(([, item]) => item.complete).length;
+  const analytics = phase4Analytics();
+  return [
+    { label: "Lessons", target: 3, progress: Math.min(3, completedLessons()) },
+    { label: "Timed sets", target: 2, progress: Math.min(2, recentTestAttempts(10).length) },
+    { label: "Review tasks", target: 4, progress: Math.min(4, phase4WrongAnswerItems().filter((item) => item.reviewed).length) },
+    { label: "Plan tasks", target: 5, progress: Math.min(5, completed) },
+    { label: "Accuracy signal", target: 1, progress: analytics.total ? 1 : 0 },
+  ];
+}
+
+function renderPhase6StudyPlanner() {
+  const insights = phase6StudyInsights();
+  const tasks = phase6StudyPlanTasks();
+  const weekly = phase6WeeklyGoals();
+  const recommendation = phase4Recommendations(insights.analytics)[0];
+  return `
+    <article class="panel panel--wide phase6-study-plan">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Smart study plan</p>
+          <h3>Today's plan from your actual JessiPreps data.</h3>
+        </div>
+        <span class="status-pill">${insights.hasPracticeData ? `${insights.analytics.total} questions analyzed` : "Not enough data yet"}</span>
+      </div>
+      <p>${insights.hasPracticeData
+        ? `Built from missed question types, timing, Blind Review gap, completed lessons, and your wrong-answer journal.`
+        : `Complete a short test-day set or drill and this plan will become weakness-based. For now, it gives you a clean starter loop.`}</p>
+      <div class="phase6-task-grid">
+        ${tasks.map((task) => `
+          <section class="study-task-card ${phase6TaskComplete(task.id) ? "is-complete" : ""}">
+            <div>
+              <p class="mini-card__label">${task.type}</p>
+              <h4>${escapeHtml(task.title)}</h4>
+              <p>${escapeHtml(task.reason)}</p>
+            </div>
+            <div class="study-task-actions">
+              <button class="bookmark-button" type="button" data-study-task-toggle="${escapeHtml(task.id)}">${phase6TaskComplete(task.id) ? "Done" : "Mark done"}</button>
+              <a class="button button--ghost" href="${task.href}">Open</a>
+            </div>
+          </section>
+        `).join("")}
+      </div>
+      <div class="recommendation-box">
+        <strong>Next recommendation:</strong> ${escapeHtml(recommendation.reason)} ${escapeHtml(recommendation.action)}
+        <a class="button button--ghost" href="${recommendation.href}">Go</a>
+      </div>
+      <div class="weekly-goal-grid">
+        ${weekly.map((goal) => `
+          <section>
+            <span>${goal.label}</span>
+            <strong>${goal.progress}/${goal.target}</strong>
+            <i style="width:${Math.min(100, Math.round((goal.progress / Math.max(goal.target, 1)) * 100))}%"></i>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function tutorContextSummary() {
+  const analytics = phase4Analytics();
+  const wrongItems = phase4WrongAnswerItems().slice(0, 5);
+  const recent = recentTestAttempts(3);
+  const weak = analytics.weakestTypes[0];
+  const timing = analytics.overTarget?.slice(0, 3).map((record) => `${record.questionType}: ${record.timeSeconds}s`).join("; ") || "No timing outliers yet";
+  const notes = wrongItems.map((item) => `${item.family}: ${item.note || item.tag || "No note yet"}`).join("; ") || "No wrong-answer notes yet";
+  return [
+    `Questions analyzed: ${analytics.total || 0}`,
+    `Overall accuracy: ${analytics.accuracy === null ? "Not enough data yet" : `${analytics.accuracy}%`}`,
+    `Weakest type: ${weak ? `${weak.label} (${weak.accuracy}% over ${weak.attempts})` : "Not enough data yet"}`,
+    `Blind Review gap: ${analytics.blindReview.gap === null ? "Not enough data yet" : `${analytics.blindReview.gap} points`}`,
+    `Timing problems: ${timing}`,
+    `Recent test attempts: ${recent.length ? recent.map((attempt) => `${attempt.sectionType || "mixed"} ${attempt.score || 0}/${attempt.length || (attempt.questions || []).length}`).join("; ") : "None yet"}`,
+    `Recent wrong-answer notes: ${notes}`,
+  ].join("\n");
+}
+
+function tutorPromptTemplates() {
+  return [
+    {
+      id: "missed-question",
+      title: "Explain this missed question",
+      instruction: "Explain the missed question using the stimulus task, why my answer was tempting, why the credited answer is better, and one rule to save.",
+    },
+    {
+      id: "wrong-pattern",
+      title: "Wrong-answer pattern",
+      instruction: "Analyze my repeated wrong-answer patterns and tell me the most likely reason I am making those mistakes.",
+    },
+    {
+      id: "study-plan",
+      title: "Build me a study plan",
+      instruction: "Build a one-week LSAT study plan using my weak areas, Blind Review gap, timing issues, and lesson progress.",
+    },
+    {
+      id: "conditional-logic",
+      title: "Explain conditional logic",
+      instruction: "Teach conditional logic from the ground up, then give me a short original drill and explain each answer.",
+    },
+    {
+      id: "blind-review",
+      title: "Help me blind review",
+      instruction: "Coach me through Blind Review without giving away answers first. Focus on confidence, proof, and answer-changing discipline.",
+    },
+    {
+      id: "journal-review",
+      title: "Review my mistake journal",
+      instruction: "Review my wrong-answer journal notes, group them into themes, and give me an on-the-spot fix for the top theme.",
+    },
+  ];
+}
+
+function selectedTutorTemplate() {
+  const selected = state.tutorWorkspace?.selectedTemplate || "missed-question";
+  return tutorPromptTemplates().find((template) => template.id === selected) || tutorPromptTemplates()[0];
+}
+
+function buildTutorPrompt(template = selectedTutorTemplate()) {
+  return [
+    "You are Professor Maya Brooks, JessiPreps' LSAT tutor.",
+    "Use only the local study context below plus original LSAT-style examples. Do not copy official LSAT, book, or paid-platform question text.",
+    "",
+    "Student context:",
+    tutorContextSummary(),
+    "",
+    "Student request:",
+    template.instruction,
+    "",
+    "Answer format:",
+    "1. Diagnosis",
+    "2. Plain-English explanation",
+    "3. One immediate fix",
+    "4. One drill or lesson to do next",
+  ].join("\n");
+}
+
+function renderTutorWorkspace() {
+  const templates = tutorPromptTemplates();
+  const selected = selectedTutorTemplate();
+  const prompt = buildTutorPrompt(selected);
+  const copyStatus = state.tutorWorkspace?.copyStatus || "";
+  return `
+    <article class="panel panel--wide tutor-workspace">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">AI tutor workspace</p>
+          <h3>Build a real tutor prompt from your JessiPreps data.</h3>
+        </div>
+        <span class="status-pill">Backend required for live chat</span>
+      </div>
+      <p>This is intentionally a prompt builder, not fake AI. It summarizes your local attempts, Blind Review gap, timing issues, and journal notes so you can copy it into an AI tutor until a secure backend/API is built.</p>
+      <div class="tutor-template-grid">
+        ${templates.map((template) => `
+          <button class="mini-card clickthrough-card ${selected.id === template.id ? "is-active" : ""}" type="button" data-tutor-template="${template.id}">
+            <p class="mini-card__label">Template</p>
+            <h4>${template.title}</h4>
+            <p>${template.instruction}</p>
+          </button>
+        `).join("")}
+      </div>
+      <div class="tutor-context-grid">
+        <section>
+          <h4>Context summary</h4>
+          <pre>${escapeHtml(tutorContextSummary())}</pre>
+        </section>
+        <section>
+          <div class="panel__head">
+            <h4>Generated prompt</h4>
+            <button class="button button--primary" type="button" data-copy-tutor-prompt>Copy prompt</button>
+          </div>
+          <textarea class="tutor-prompt-output" rows="14" readonly>${escapeHtml(prompt)}</textarea>
+          <p class="microcopy">${copyStatus ? escapeHtml(copyStatus) : "Copy uses your browser clipboard when supported."}</p>
+        </section>
+      </div>
+    </article>
+  `;
+}
+
+function phase6BackupPayload() {
+  const backupState = {
+    ...state,
+    backupTools: {
+      ...(state.backupTools || {}),
+      exportText: "",
+      importText: "",
+      importStatus: "",
+    },
+  };
+  return JSON.stringify({
+    schema: "jessipreps-local-backup-v1",
+    exportedAt: new Date().toISOString(),
+    appKey: APP_KEY,
+    includes: ["testAttempts", "lessonProgress", "contentDrafts", "documentLinks", "wrongAnswerJournal", "notes", "studyPlanTasks"],
+    state: backupState,
+  }, null, 2);
+}
+
+function validateBackupJson(value) {
+  try {
+    const parsed = JSON.parse(String(value || ""));
+    const restored = parsed.state || parsed;
+    if (!restored || typeof restored !== "object") return { ok: false, message: "Backup must contain a state object." };
+    if (!restored.lessonProgress && !restored.testAttempts && !restored.attempts) {
+      return { ok: false, message: "This does not look like a JessiPreps backup. Expected lessonProgress, attempts, or testAttempts." };
+    }
+    return { ok: true, message: "Backup looks valid. Applying it will replace the current local browser data.", state: restored };
+  } catch {
+    return { ok: false, message: "That JSON could not be parsed." };
+  }
+}
+
+function dataHealthCounts() {
+  const wrongItems = phase4WrongAnswerItems();
+  return {
+    testAttempts: (state.testAttempts || []).length,
+    wrongAnswerItems: wrongItems.length,
+    completedLessons: completedLessons(),
+    contentDrafts: (state.contentDrafts || []).length,
+    documentLinks: (state.documentLinks || []).length,
+    studyTasks: Object.keys(state.studyPlanTasks || {}).length,
+    reviewNotes: Object.keys(state.reviewNotes || {}).length,
+    localNotes: Object.keys(state.lessonNotes || {}).length + (state.journal || []).length,
+  };
+}
+
+function renderBackupToolsPanel() {
+  const importStatus = state.backupTools?.importStatus || "";
+  const exportText = state.backupTools?.exportText || "";
+  const importText = state.backupTools?.importText || "";
+  return `
+    <article class="panel panel--wide">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Backup tools</p>
+          <h3>Export, import, or reset local JessiPreps data.</h3>
+        </div>
+        <span class="status-pill">${APP_KEY}</span>
+      </div>
+      <p>These tools only touch this browser's localStorage. Import and reset both ask for confirmation before replacing anything.</p>
+      <div class="backup-tools-grid">
+        <section>
+          <div class="panel__head">
+            <h4>Export all data</h4>
+            <button class="button button--primary" type="button" data-export-all-json>Generate export</button>
+          </div>
+          <textarea id="phase6ExportOutput" rows="10" readonly placeholder="Generate a JSON backup.">${escapeHtml(exportText)}</textarea>
+        </section>
+        <section>
+          <div class="panel__head">
+            <h4>Import backup</h4>
+            <button class="button button--ghost" type="button" data-validate-import-json>Validate</button>
+          </div>
+          <textarea id="phase6ImportInput" rows="10" placeholder="Paste a JessiPreps JSON backup here.">${escapeHtml(importText)}</textarea>
+          <div class="dashboard-actions">
+            <button class="button button--primary" type="button" data-apply-import-json>Apply import</button>
+            <button class="button button--ghost" type="button" data-reset-local-data>Reset local data</button>
+          </div>
+          <p class="microcopy">${escapeHtml(importStatus || "Validation results appear here before import.")}</p>
+        </section>
+      </div>
+    </article>
+  `;
+}
+
+function renderDataHealthPanel() {
+  const counts = dataHealthCounts();
+  const rows = [
+    ["Test attempts", counts.testAttempts],
+    ["Wrong-answer items", counts.wrongAnswerItems],
+    ["Completed lessons", counts.completedLessons],
+    ["Content drafts", counts.contentDrafts],
+    ["Document links", counts.documentLinks],
+    ["Study tasks", counts.studyTasks],
+    ["Review notes", counts.reviewNotes],
+    ["Lesson/journal notes", counts.localNotes],
+  ];
+  return `
+    <article class="panel panel--wide data-health-panel">
+      <div class="panel__head">
+        <div>
+          <p class="mini-card__label">Builder data health</p>
+          <h3>Local state counts and backup shortcut.</h3>
+        </div>
+        <a class="button button--ghost" href="#/roadmap">Open roadmap</a>
+      </div>
+      <div class="data-health-grid">
+        ${rows.map(([label, value]) => `<section><span>${label}</span><strong>${value}</strong></section>`).join("")}
+        <section><span>Storage key</span><strong>${APP_KEY}</strong></section>
+        <section><span>Last saved</span><strong>${state.lastSavedAt ? new Date(state.lastSavedAt).toLocaleString() : "Not saved yet"}</strong></section>
+      </div>
+      <button class="button button--primary" type="button" data-export-all-json>Generate backup JSON</button>
+    </article>
+  `;
+}
+
+function renderRoadmapPage() {
+  const groups = [
+    {
+      title: "Built now",
+      items: ["Hash SPA on GitHub Pages", "Lessons and native MP4 wiring", "LawHub-style test-day practice", "Blind Review and results", "Content library/manager", "Wrong-answer journal", "Local analytics", "Mobile/accessibility polish"],
+    },
+    {
+      title: "Local-only now",
+      items: ["Progress in localStorage", "Study plan task completion", "Tutor prompt builder", "Document link manager", "Admissions notes", "Backup/import/reset tools", "Data health screen"],
+    },
+    {
+      title: "Needs backend later",
+      items: ["User accounts", "Cloud sync", "Database", "File uploads", "PDF indexing", "AI tutor API", "Official content licensing", "Payments", "Admin CMS", "Live classes"],
+    },
+    {
+      title: "Future public platform",
+      items: ["Teacher/admin portal", "Secure content permissions", "Class scheduling", "Mobile app", "Multi-device analytics", "Licensed official question logging", "Real-time voice tutor", "Payment enforcement"],
+    },
+  ];
+  return `
+    <section class="roadmap-page">
+      <article class="panel panel--wide roadmap-hero">
+        <div>
+          <p class="mini-card__label">Product readiness roadmap</p>
+          <h3>What JessiPreps is now, and what belongs after the static V2.</h3>
+          <p>This page keeps advanced ideas organized so the app does not pretend to have backend systems before they exist.</p>
+        </div>
+        <a class="button button--primary" href="#/settings">Open data tools</a>
+      </article>
+      <div class="roadmap-lane-grid">
+        ${groups.map((group) => `
+          <article class="panel roadmap-lane">
+            <h3>${group.title}</h3>
+            <ul>${group.items.map((item) => `<li>${item}</li>`).join("")}</ul>
+          </article>
+        `).join("")}
+      </div>
+      <article class="panel panel--wide">
+        <div class="panel__head">
+          <h3>Recommended next build order</h3>
+          <span class="status-pill">Post Phase 6</span>
+        </div>
+        <ol class="roadmap-build-list">
+          <li>Extract giant JS data into JSON modules without changing behavior.</li>
+          <li>Add a small backend only for authentication, cloud sync, and AI tutor calls.</li>
+          <li>Add file storage and PDF indexing after account sync is stable.</li>
+          <li>License or companion-log official content rather than copying protected text.</li>
+          <li>Add payments only after real accounts, permissions, and content rights exist.</li>
+        </ol>
+      </article>
+    </section>
+  `;
 }
 
 function finalFiveAccuracy() {
@@ -1897,14 +2346,12 @@ If Jessica asks for test-day help, give a concrete next move and one rule to sav
 
 function buildMayaLocalReply(prompt, route = routeInfo()) {
   const context = currentMayaContext(route);
-  const coachReply = buildCoachReply(prompt, "Professor Maya");
   const lesson = context.lesson;
-  const lessonLine = lesson ? `Right now we are inside ${lesson.title}. ` : "";
   return [
-    `Let us make this feel doable. ${lessonLine}${coachReply.answer}`,
-    lesson?.methodSteps?.length ? `Maya method: ${lesson.methodSteps.slice(0, 3).join(" -> ")}.` : `Maya method: ${coachFixForFamily(context.family)}`,
-    lesson?.trapWarnings?.[0] ? `Trap to watch: ${lesson.trapWarnings[0]}` : `Trap to watch: do not pick an answer just because it sounds familiar.`,
-    `Your next move: ${coachReply.nextMove || `Do a short ${context.family} block, predict first, then log one rule.`}`,
+    "Live Professor Maya replies require the backend/API connection. Until that is deployed, copy this prompt into your AI tutor workspace:",
+    mayaTeacherInstructions(context),
+    `Student question: ${prompt}`,
+    lesson ? `Current lesson link: #/learn/${lesson.id}` : `Current focus: ${context.family}`,
   ].join("\n\n");
 }
 
@@ -1937,7 +2384,7 @@ function renderMayaTeacher(route = routeInfo()) {
             </div>
             <button class="icon-button" type="button" data-maya-toggle aria-label="Close Professor Maya">×</button>
           </div>
-          <p class="microcopy">Typed answers use your local lesson library, attempts, and journal. Voice uses the optional backend only after you connect it.</p>
+          <p class="microcopy">This panel builds backend-ready tutor prompts from your local lesson library, attempts, and journal. Live typed or voice answers require the optional backend/API.</p>
           <p class="maya-context">${escapeHtml(lesson ? `Using lesson: ${lesson.title}` : `Using current focus: ${context.family}`)}</p>
           <div class="maya-tabs" role="tablist" aria-label="Professor Maya tabs">
             <button class="${teacher.tab !== "how" ? "is-active" : ""}" type="button" data-maya-tab="ask">Ask</button>
@@ -1979,7 +2426,7 @@ function renderMayaTeacher(route = routeInfo()) {
                 <p>${escapeHtml(item.text).replace(/\n/g, "<br>")}</p>
                 <small>${new Date(item.createdAt).toLocaleString()}</small>
               </section>
-            `).join("") : `<p class="muted">Ask Maya to explain, quiz you, or break down why an answer trap worked on you.</p>`}
+            `).join("") : `<p class="muted">Ask Maya to generate a tutor prompt for this lesson. Live responses turn on after the backend/API is connected.</p>`}
           </div>
         </section>
       ` : ""}
@@ -2002,7 +2449,7 @@ async function connectMayaRealtime(route = routeInfo()) {
   const backendUrl = String(state.mayaTeacher.backendUrl || "").replace(/\/+$/, "");
   if (!backendUrl) {
     state.mayaTeacher.voiceStatus = "offline";
-    addMayaMessage("assistant", "Add your deployed backend URL first. Typed coaching works here right now; voice turns on after the secure backend is deployed.");
+    addMayaMessage("assistant", "Add your deployed backend URL first. Prompt building works here now; live voice turns on after the secure backend is deployed.");
     saveState();
     renderApp();
     return;
@@ -2012,7 +2459,7 @@ async function connectMayaRealtime(route = routeInfo()) {
     window.mayaRealtime.stream?.getTracks?.().forEach((track) => track.stop());
     window.mayaRealtime = null;
     state.mayaTeacher.voiceStatus = "offline";
-    addMayaMessage("assistant", "Voice disconnected. I am still here for typed lesson help.");
+    addMayaMessage("assistant", "Voice disconnected. Prompt building still works for this lesson.");
     saveState();
     renderApp();
     return;
@@ -2355,10 +2802,11 @@ function renderNav() {
     content: ["Library", "Drafts", "Docs"],
     practice: ["Adaptive", "Timed", "Full PT"],
     review: ["Blind Review", "SRS", "Explanations"],
-    plan: ["Onboarding", "LawHub", "Import"],
+    plan: ["Daily plan", "Goals", "LawHub"],
     live: ["30-min classes", "AI teacher", "Recordings"],
-    coach: ["Tutor chat", "Admissions", "Strategy"],
-    settings: ["Display", "Colors", "Sidebar"],
+    coach: ["Prompt builder", "Context", "Admissions"],
+    settings: ["Display", "Backup", "Health"],
+    roadmap: ["Built", "Backend", "Future"],
   };
   navRail.innerHTML = data.navigation
     .map(
@@ -2608,6 +3056,8 @@ function renderSettingsPage() {
           <button class="mini-card clickthrough-card" type="button" data-setting-shortcut="predictionMode"><p class="mini-card__label">Review</p><h4>Prediction mode</h4><p>${state.settings.predictionMode ? "On now. Click to turn off." : "Click to train yourself to name the answer job before choices pull you around."}</p></button>
         </div>
       </article>
+      ${renderBackupToolsPanel()}
+      ${renderDataHealthPanel()}
     </section>
   `;
 }
@@ -3229,6 +3679,7 @@ function renderPage(route) {
     live: renderLivePage,
     coach: renderCoachPage,
     settings: renderSettingsPage,
+    roadmap: renderRoadmapPage,
   };
   pageMount.innerHTML = (pageRenderers[route.page] || renderDashboardPage)(route);
   wireInteractions(route);
@@ -5923,6 +6374,8 @@ function renderPlanPage() {
       </form>
     </article>
 
+    ${renderPhase6StudyPlanner()}
+
     <article class="panel panel--wide">
       <div class="panel__head">
         <h3>Study Plan Builder</h3>
@@ -6499,8 +6952,8 @@ function renderCoachPage() {
       <article class="feature-hero panel panel--wide">
         <div>
           <p class="mini-card__label">Personal LSAT coach</p>
-          <h3>AI tutor messaging plus admissions strategy, built around your actual LSAT work.</h3>
-          <p>Coach is the place to ask, "why did I miss this?" and get a direct explanation, a next drill, and an admissions-aware plan.</p>
+          <h3>AI tutor prompt workspace plus admissions strategy, built around your actual LSAT work.</h3>
+          <p>Coach now builds honest tutor prompts from your local analytics, review notes, and lesson progress. Live AI chat comes later with a secure backend/API.</p>
         </div>
         <div class="coach-stack">
           <section><strong>${profile.attempts}</strong><span>Questions answered and tracked locally.</span></section>
@@ -6508,16 +6961,17 @@ function renderCoachPage() {
           <section><strong>${profile.topFamily[0]}</strong><span>Most common miss family.</span></section>
         </div>
       </article>
+      ${renderTutorWorkspace()}
       <article class="panel panel--wide coach-console">
         <div class="panel__head">
-          <h3>Ask your JessiPreps coach</h3>
-          <span class="status-pill">Local mini-chat</span>
+          <h3>Saved coach history</h3>
+          <span class="status-pill">Local reference</span>
         </div>
         <div class="recommendation-box">
           <strong>Suggested next drill:</strong> ${suggestedFamily}. This updates from your local misses and whatever you ask Coach about.
           <a class="button button--ghost" href="#/practice/drill/${target.preset.id}" data-start-adaptive>Open suggested drill</a>
         </div>
-        <p class="microcopy">Coach answers locally from your lesson content, original questions, answered-question history, journal tags, and mistake patterns. No backend is required for typed help.</p>
+        <p class="microcopy">Past local coach messages stay here for reference. New live AI answers require the backend/API roadmap; use the prompt builder above for now.</p>
         <div class="coach-diagnosis-grid">
           <section>
             <p class="mini-card__label">Pattern read</p>
@@ -6535,18 +6989,6 @@ function renderCoachPage() {
             <p>${profile.slow ? `${profile.slow.question.family}: review whether time went into method or second-guessing.` : "Timing analysis appears after timed answers."}</p>
           </section>
         </div>
-        <form id="coachForm" class="coach-form">
-          <label><span>Help type</span>
-            <select name="supportType">
-              <option>Break down a lesson</option>
-              <option>Explain a missed question</option>
-              <option>Build my next week</option>
-              <option>Admissions strategy</option>
-            </select>
-          </label>
-          <label class="br-field--wide"><span>Ask anything about your LSAT work</span><textarea name="coachPrompt" rows="5" required placeholder="Example: How do I answer main idea questions? Give me the method and traps."></textarea></label>
-          <button class="button button--primary" type="submit">Ask coach</button>
-        </form>
         <div class="coach-message-list coach-chat-log">
           ${messages.length ? messages.map((item) => `
             <section class="coach-bubble coach-bubble--${item.role || "user"}">
@@ -6555,7 +6997,7 @@ function renderCoachPage() {
               ${item.sources ? `<details><summary>Content used</summary><p>${escapeHtml(item.sources)}</p></details>` : ""}
               <small>${new Date(item.createdAt).toLocaleString()}</small>
             </section>
-          `).join("") : `<p class="muted">Ask a question and Coach will answer using your lessons, question bank, attempts, journal, and mistake tags.</p>`}
+          `).join("") : `<p class="muted">No saved coach history yet. Use the prompt builder above to create a backend-ready tutor prompt.</p>`}
         </div>
       </article>
       <article class="panel panel--wide">
@@ -6610,6 +7052,123 @@ function wireInteractions(route) {
       saveState();
       renderApp();
     });
+  });
+
+  pageMount.querySelectorAll("[data-study-task-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const taskId = button.dataset.studyTaskToggle;
+      const current = state.studyPlanTasks?.[taskId] || {};
+      state.studyPlanTasks = {
+        ...(state.studyPlanTasks || {}),
+        [taskId]: {
+          ...current,
+          complete: !current.complete,
+          completedAt: !current.complete ? new Date().toISOString() : "",
+          weekKey: phase6WeekKey(),
+        },
+      };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-tutor-template]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.tutorWorkspace = {
+        ...(state.tutorWorkspace || {}),
+        selectedTemplate: button.dataset.tutorTemplate,
+        copyStatus: "",
+      };
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-copy-tutor-prompt]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const prompt = buildTutorPrompt(selectedTutorTemplate());
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(prompt);
+        state.tutorWorkspace = {
+          ...(state.tutorWorkspace || {}),
+          copyStatus: "Prompt copied to clipboard.",
+          lastCopiedAt: new Date().toISOString(),
+        };
+      } catch {
+        state.tutorWorkspace = {
+          ...(state.tutorWorkspace || {}),
+          copyStatus: "Clipboard was not available. Select and copy the generated prompt manually.",
+        };
+      }
+      saveState();
+      renderApp();
+    });
+  });
+
+  pageMount.querySelectorAll("[data-export-all-json]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const payload = phase6BackupPayload();
+      state.backupTools = {
+        ...(state.backupTools || {}),
+        exportText: payload,
+        importStatus: "Backup generated. Keep this JSON somewhere safe if you want a manual restore point.",
+      };
+      state.localAccount = {
+        ...(state.localAccount || {}),
+        lastBackupAt: new Date().toISOString(),
+      };
+      saveState();
+      const output = pageMount.querySelector("#phase6ExportOutput");
+      if (output) output.value = payload;
+    });
+  });
+
+  pageMount.querySelector("[data-validate-import-json]")?.addEventListener("click", () => {
+    const input = pageMount.querySelector("#phase6ImportInput");
+    const text = input?.value || "";
+    const validation = validateBackupJson(text);
+    state.backupTools = {
+      ...(state.backupTools || {}),
+      importText: text,
+      importStatus: validation.message,
+    };
+    saveState();
+    renderApp();
+  });
+
+  pageMount.querySelector("[data-apply-import-json]")?.addEventListener("click", () => {
+    const input = pageMount.querySelector("#phase6ImportInput");
+    const text = input?.value || "";
+    const validation = validateBackupJson(text);
+    if (!validation.ok) {
+      state.backupTools = {
+        ...(state.backupTools || {}),
+        importText: text,
+        importStatus: validation.message,
+      };
+      saveState();
+      renderApp();
+      return;
+    }
+    const proceed = window.confirm("Import will replace the current local JessiPreps data in this browser. Export a backup first if you want to keep the current state.");
+    if (!proceed) return;
+    const restored = {
+      ...validation.state,
+      journalEntries: validation.state.journal || validation.state.journalEntries || [],
+      lastSavedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(APP_KEY, JSON.stringify(restored));
+    LEGACY_APP_KEYS.forEach((key) => localStorage.removeItem(key));
+    window.location.reload();
+  });
+
+  pageMount.querySelector("[data-reset-local-data]")?.addEventListener("click", () => {
+    const proceed = window.confirm("Reset will clear all JessiPreps local data in this browser. Export a backup first if you may need it later.");
+    if (!proceed) return;
+    localStorage.removeItem(APP_KEY);
+    LEGACY_APP_KEYS.forEach((key) => localStorage.removeItem(key));
+    window.location.reload();
   });
 
   pageMount.querySelectorAll("[data-page-scroll]").forEach((button) => {
@@ -7778,6 +8337,8 @@ function wireInteractions(route) {
         try {
           const parsed = JSON.parse(input.value);
           const restored = parsed.state || parsed;
+          const proceed = window.confirm("Restore will replace the current local JessiPreps data in this browser. Export a backup first if you want to keep the current state.");
+          if (!proceed) return;
           const serialized = JSON.stringify({
             ...restored,
             journalEntries: restored.journal || restored.journalEntries || [],

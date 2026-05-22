@@ -420,7 +420,8 @@ body.sidebar-collapsed .topbar {
 .nav__link[data-route="plan"]::before,
 .nav__link[data-route="live"]::before,
 .nav__link[data-route="coach"]::before,
-.nav__link[data-route="settings"]::before {
+.nav__link[data-route="settings"]::before,
+.nav__link[data-route="roadmap"]::before {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -438,6 +439,7 @@ body.sidebar-collapsed .topbar {
 .nav__link[data-route="live"]::before { content: "▶"; }
 .nav__link[data-route="coach"]::before { content: "💬"; }
 .nav__link[data-route="settings"]::before { content: "⚙️"; }
+.nav__link[data-route="roadmap"]::before { content: "🧭"; }
 
 .nav__link:hover {
   transform: translateX(2px);
@@ -5992,6 +5994,188 @@ body.test-day-active .page-grid {
   .lesson-flow-modal__actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+}
+
+.phase6-study-plan,
+.tutor-workspace,
+.roadmap-page,
+.data-health-panel {
+  grid-column: 1 / -1;
+}
+
+.phase6-task-grid,
+.tutor-template-grid,
+.roadmap-lane-grid,
+.data-health-grid,
+.weekly-goal-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.phase6-task-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px 0;
+}
+
+.study-task-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.study-task-card.is-complete {
+  border-color: rgba(47, 157, 104, 0.42);
+  background: rgba(232, 248, 240, 0.86);
+}
+
+.study-task-card.is-complete h4 {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(47, 157, 104, 0.5);
+}
+
+.study-task-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.weekly-goal-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.weekly-goal-grid section,
+.data-health-grid section {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.weekly-goal-grid span,
+.data-health-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.weekly-goal-grid strong,
+.data-health-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.weekly-goal-grid i {
+  display: block;
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.tutor-template-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 18px 0;
+}
+
+.tutor-template-grid .mini-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.tutor-context-grid,
+.backup-tools-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+.tutor-context-grid section,
+.backup-tools-grid section {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.tutor-context-grid pre,
+.tutor-prompt-output,
+.backup-tools-grid textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.9);
+  font: inherit;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tutor-prompt-output,
+.backup-tools-grid textarea {
+  resize: vertical;
+}
+
+.data-health-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.roadmap-page {
+  display: grid;
+  gap: 18px;
+}
+
+.roadmap-lane-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.roadmap-lane ul,
+.roadmap-build-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.roadmap-lane li,
+.roadmap-build-list li {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 980px) {
+  .phase6-task-grid,
+  .tutor-template-grid,
+  .tutor-context-grid,
+  .backup-tools-grid,
+  .roadmap-lane-grid,
+  .data-health-grid,
+  .weekly-goal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .study-task-card {
+    flex-direction: column;
+  }
+
+  .study-task-actions {
+    align-items: stretch;
   }
 }
 
