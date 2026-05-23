@@ -11,6 +11,8 @@ const appSource = read("app.js");
 const contentSource = read("content.js");
 const manifestSource = read("video-lessons/media-manifest.js");
 const lessonsSource = read("requested-lessons-data.js");
+const safetySource = read("js/safety.js");
+const indexSource = read("index.html");
 
 const dataContext = { window: {}, console };
 dataContext.window = dataContext;
@@ -32,15 +34,14 @@ assert(renderedFiles.size === 127, `Expected 127 unique MP4 files, found ${rende
 assert(data.videoCoverage.nativeMp4Lessons >= 127, `Expected at least 127 MP4-backed lessons, found ${data.videoCoverage.nativeMp4Lessons}.`);
 assert(!appSource.includes("data.analyticsSnapshots.blindReviewGap"), "Static Blind Review Gap is still referenced.");
 
-const escapeMatch = appSource.match(/function escapeHtml\(value\) \{[\s\S]*?\n\}/);
-assert(escapeMatch, "escapeHtml helper is missing.");
 const escapeContext = {};
 vm.createContext(escapeContext);
-vm.runInContext(`${escapeMatch[0]}; globalThis.result = escapeHtml('<script>alert(\"xss\")</script>');`, escapeContext);
+vm.runInContext(`${safetySource}; globalThis.result = escapeHtml('<script>alert(\"xss\")</script>');`, escapeContext);
 assert(
   escapeContext.result === "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
   "escapeHtml did not render script markup as text.",
 );
+assert(indexSource.indexOf("js/safety.js") < indexSource.indexOf("app.js"), "safety helpers must load before app.js.");
 
 const legacyFiles = [
   "analytics.html",

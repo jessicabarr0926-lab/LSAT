@@ -1,6 +1,40 @@
 # JessiPreps LSAT Study Dashboard
 
-Open `index.html` for the dashboard app, or open `content.html` for the static multi-page course library. The static website pages share `styles.css` and `script.js`; the dashboard shell uses `content.js` and `app.js`.
+Open `index.html` for the canonical JessiPreps hash SPA. Legacy standalone pages such as `content.html`, `analytics.html`, and `lesson-player.html` are kept as redirects/archive shells so old links do not strand the user in a second app.
+
+## Current App Structure
+
+- `index.html` is the GitHub Pages entry point. It loads content data, the video manifest, shared safety helpers, `app.js`, and the small polish patch.
+- `app.js` is still the main bootstrap, router, renderer, event-wiring, state, analytics, test-day, review, content-library, plan, coach, and roadmap file. It is intentionally not fully split yet.
+- `js/safety.js` owns shared output-safety helpers (`escapeHtml`, `safeContentUrl`) and must load before `app.js`.
+- `content.js` owns base curriculum, navigation, settings metadata, seed analytics labels, and static data used by the SPA.
+- `requested-lessons-data.js` expands and normalizes lesson/question/RC content, including the large requested curriculum layer.
+- `video-lessons/media-manifest.js` lists rendered MP4 assets. `video-lesson-map.js` bridges manifest entries to lesson players.
+- `jessipreps.css` owns the current design system and page-specific UI.
+- Browser progress lives under the canonical localStorage key `jessipreps-v1`; legacy keys are read once and cleaned up.
+
+## Developer Workflow
+
+Routing is controlled by `routeInfo()`, `renderRouteMeta()`, and `renderPage()` in `app.js`. Add new active pages by adding a route in `content.js`, a renderer in `app.js`, and a nav subitem/icon only if it belongs in the sidebar.
+
+To add a built-in lesson, update the lesson data layer (`content.js` for base lessons or `requested-lessons-data.js` for generated/requested lessons), add a unique `id`, `title`, `track`, summary/script/storyboard fields, linked question families, and related practice metadata. Then run the smoke checks below.
+
+To add a document link without editing code, use `#/content` and the local document link manager; links save in localStorage. Built-in documents should eventually move into a JSON manifest rather than being hard-coded into `app.js`.
+
+Before pushing, run:
+
+```bash
+node --check app.js
+node --check content.js
+node --check requested-lessons-data.js
+node tools/phase-1-smoke-check.mjs
+node tools/phase-7-smoke-check.mjs
+git diff --check
+```
+
+GitHub Pages deploys from `main`. Commit only intentional source files. Do not commit `package.json`, cache files, generated temp files, or a build system unless you are deliberately changing the deployment model.
+
+Do not touch these without rendered QA: `loadState()`/`saveState()`, `renderPage()`, test-day functions, `phase4Analytics()`, lesson video wiring, legacy redirects, and the script order in `index.html`.
 
 ## Pages
 

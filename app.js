@@ -2271,15 +2271,6 @@ function coachTeachingPlan(family, prompt) {
   };
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function buildCoachReply(prompt, supportType) {
   const text = String(prompt || "").trim();
   const profile = coachMistakeProfile();
@@ -3075,13 +3066,6 @@ function contentStatusForLesson(lesson) {
   if (progress.complete) return "complete";
   if ((progress.masteryWins || 0) > 0 || progress.reflectionSaved || state.lessonNotes?.[lesson.id]) return "in progress";
   return "not started";
-}
-
-function safeContentUrl(value) {
-  const url = String(value || "").trim();
-  if (!url) return "";
-  if (/^(https?:\/\/|#\/|\.\/|\/|output\/|video-lessons\/)/i.test(url)) return url;
-  return "";
 }
 
 function youtubeEmbedFromUrl(value) {
